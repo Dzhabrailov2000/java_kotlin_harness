@@ -3,5 +3,17 @@
   "theme": "light",
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/harness-reminder.js\""
+          }
+        ]
+      }
+    ]
   }
 }
