@@ -1,0 +1,27 @@
+# В этот репозиторий идут только обезличенные инструменты обвязки.
+# Память и корпоративный контекст - НИКОГДА. Ниже сетка безопасности
+# на случай, если что-то из ~/.claude случайно скопируют сюда.
+
+memory/
+**/memory/
+MEMORY.md
+
+# Секреты и машинно-специфичное
+settings.local.json
+.claude.json
+*.pem
+*.key
+.env
+.env.*
+
+# Личная история и сессии
+history.jsonl
+sessions/
+shell-snapshots/
+file-history/
+telemetry/
+
+# Системное и IDE
+.DS_Store
+*.log
+.idea/
