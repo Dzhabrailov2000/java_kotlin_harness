@@ -29,7 +29,16 @@ function collectSkills() {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    // statSync, а не entry.isDirectory(): скиллы установлены симлинками на
+    // java_kotlin_harness, для симлинка isDirectory() возвращает false и
+    // такие скиллы молча выпадали из напоминания.
+    .filter((entry) => {
+      try {
+        return fs.statSync(path.join(dir, entry.name)).isDirectory();
+      } catch (err) {
+        return false;
+      }
+    })
     .map((entry) => ({
       name: entry.name,
       desc: readDescription(path.join(dir, entry.name, 'SKILL.md')),

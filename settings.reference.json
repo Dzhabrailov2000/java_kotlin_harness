@@ -4,6 +4,11 @@
   "enabledPlugins": {
     "swift-lsp@claude-plugins-official": true
   },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$HOME/.claude/statusline/statusline.js\"",
+    "padding": 0
+  },
   "hooks": {
     "UserPromptSubmit": [
       {

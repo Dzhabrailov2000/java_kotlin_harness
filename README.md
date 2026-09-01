@@ -9,6 +9,7 @@
 - `agents/` агенты (субподрядчики для делегирования задач)
 - `commands/` слэш-команды
 - `hooks/` вспомогательные скрипты
+- `statusline/` строка состояния под полем ввода
 - `settings.reference.json` образец settings.json (не применяется автоматически)
 - `install.sh` установка на новую машину
 
@@ -47,13 +48,16 @@
 - adversarial-self-check (самоопровержение перед сдачей)
 - lead-with-outcome (отчеты: вывод первым предложением)
 - context-hygiene (делегирование и экономия контекста)
+- self-correct (цикл самокоррекции: builder правит, judge проверяет по источникам)
 
 Агенты:
+- builder
 - code-architect
 - code-explorer
 - code-reviewer
 - comment-analyzer
 - database-reviewer
+- judge
 - pr-test-analyzer
 - silent-failure-hunter
 - type-design-analyzer
@@ -64,3 +68,11 @@
 Хуки:
 - harness-reminder / harness-banner (список обвязки в каждом запросе)
 - ascii-punctuation (PostToolUse: блокирует длинное/среднее тире в записываемых файлах)
+
+Строка состояния:
+- statusline (занятость контекста, лимит сессии на 5 часов, недельный лимит)
+
+Включается ключом `statusLine` в `settings.json`, см. `settings.reference.json`.
+Данные берутся целиком из payload Claude Code (`context_window` и `rate_limits`),
+своего учета скрипт не ведет. Лимиты приходят из заголовков ответа API, поэтому
+до первого ответа в сессии на их месте прочерк.

@@ -43,6 +43,11 @@ for file in "$REPO_DIR"/hooks/*; do
   link_item "$file" "$CLAUDE_DIR/hooks/$(basename "$file")"
 done
 
+for file in "$REPO_DIR"/statusline/*; do
+  [ -e "$file" ] || continue
+  link_item "$file" "$CLAUDE_DIR/statusline/$(basename "$file")"
+done
+
 echo ""
 echo "Готово. settings.json не трогаю намеренно."
 echo "Сверь его вручную с settings.reference.json (модель, тема, плагины)."
