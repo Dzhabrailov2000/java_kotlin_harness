@@ -1,163 +1,126 @@
 # java_kotlin_harness
 
-Личная обвязка Claude Code и Codex: переносимый набор инструментов, чтобы быстро
-поднять одинаковую рабочую среду на любой машине.
+Личная обвязка Claude Code и Codex: переносимый набор skills, агентов, команд,
+хуков и скриптов, чтобы поднять одинаковую рабочую среду на любой машине и
+вести задачи по одному процессу: менеджер готовит задание, внешний Claude
+реализует, тесты и независимое ревью решают приемку.
+
+Это единственная точка входа. Подробная процедура менеджера живет в
+[инструкции Claude/Codex](skills/self-correct/references/claude-codex.md),
+общие правила цикла - в [self-correct](skills/self-correct/SKILL.md), полный
+каталог компонентов - в [docs/components.md](docs/components.md).
 
 ## Что внутри
 
-- `skills/` скиллы (знание, подключается по смыслу)
-- `agents/` агенты (субподрядчики для делегирования задач)
-- `commands/` слэш-команды
-- `hooks/` вспомогательные скрипты
-- `statusline/` строка состояния под полем ввода
+- `skills/` знание и методы; подключаются по смыслу или явным выбором менеджера
+- `agents/` субагенты для делегирования и специализированной проверки
+- `commands/` слэш-команды: `/harness`, `/adr`, `/epic`, `/meeting-notes`, `/meeting-prep`
+- `hooks/` скрипты хуков, `statusline/` строка состояния
+- `scripts/` helper запуска исполнителя, диагностика, сверка обвязки, монитор
+- `templates/` шаблоны промпта задачи и отчета исполнителя
+- `docs/` каталог компонентов и маршрут памяти
 - `settings.reference.json` образец settings.json (не применяется автоматически)
-- `install.sh` установка на новую машину
+- `install.sh` установка, `tests/` проверки
 
 ## Чего здесь нет (намеренно)
 
-- Память (`memory/`) и любой корпоративный контекст. Знания компаний остаются
-  локально на машине и в облако не уходят. См. `.gitignore`.
-- Секреты, oauth, история, сессии.
+Репозиторий обезличен: в нем нет памяти, корпоративных фактов, секретов и
+истории сессий; `.gitignore` - страховка от случайного копирования. Знания о
+проектах остаются в их репозиториях и в локальном указателе, см.
+[docs/memory.md](docs/memory.md). Это граница хранения, а не техническая
+гарантия: все, что менеджер кладет в промпт или выбранный skill, уходит модели
+как обычный запрос. Что передавать, решает менеджер при подготовке задания.
 
-## Установка на новой машине
+## Установка
 
     git clone https://github.com/Dzhabrailov2000/java_kotlin_harness.git
     cd java_kotlin_harness
     ./install.sh
 
-`install.sh` симлинкует компоненты в `~/.claude`, а тот же `skills/self-correct`
-также в `~/.agents/skills/self-correct`, чтобы Codex находил общий skill.
-Существующие файлы и каталоги, которые не являются симлинками, не перезаписывает.
-`settings.json` настраивается вручную по образцу `settings.reference.json`.
+`install.sh` симлинкует skills, агентов, команды, хуки и statusline в
+`~/.claude`, а общие методы `self-correct`, `epic-decomposition` и
+`system-design-tradeoffs` также в `~/.agents/skills`, чтобы Codex читал тот же
+исходник. Существующие файлы и каталоги, которые не являются симлинками, не
+перезаписываются, о них печатается "пропуск". Повторный запуск безопасен.
+`settings.json` не трогается: сверь его вручную с `settings.reference.json`.
 
-## Реализация Claude с проверкой Codex
+`./install.sh --target-home <каталог>` ставит обвязку в другой корень. Это
+режим для тестов (`tests/test_install.py`), не для обычной работы.
 
-Пользователь дает задачу Codex. Основная сессия Codex по `self-correct` читает проект,
-готовит prompt и запускает Claude как исполнителя с явно выбранными skills через
-`scripts/run_claude_task.py`, затем проверяет тесты и проводит review по
-`agents/code-reviewer.md` с `gpt-6-astra`, effort `ultra`. После каждой проверки
-Codex сохраняет отчет и передает его Claude; исправляются только подтвержденные
-замечания. Основная сессия ведет цикл до COMPLETE или ESCALATE по
-[инструкции Claude/Codex](skills/self-correct/references/claude-codex.md).
+Образец настроек задает профиль конвейера: `claude-fable-5-1`, effort `max`,
+хуки reminder (UserPromptSubmit) и ascii-punctuation (PostToolUse Write|Edit),
+statusline. Флаги `--model` и `--effort` конкретного запуска главнее файла
+настроек; субагенты сохраняют model и tools из своего frontmatter; независимый
+ревьюер работает в Codex (`gpt-6-astra`, effort `ultra`) и в этих настройках не
+описывается.
 
-Пример запроса: "Выполни DM-05a: Claude реализует с нашей обвязкой, ты проверяешь
-через self-correct и передаешь ему отчет после каждой итерации".
+## Как идет задача
 
-Helper вызывается по абсолютному пути из инструкции skill; установщик не добавляет
-его в PATH. Профиль Claude по умолчанию - Fable 5.1, effort `max`; таймаут 1800 секунд
-можно настроить при вызове. Денежный лимит задается только явным `--max-budget-usd`.
-Передача инструкций и отчета фиксирует вход модели, но не доказывает соблюдение
-инструкций: результат подтверждают проверки кода и сохраненные результаты тестов.
+1. **Пользователь ставит задачу управляющей сессии** (по умолчанию Codex).
+   Пример запроса: "Выполни задачу <ID> из <файл или ссылка>: Claude реализует
+   с нашей обвязкой, ты проверяешь через self-correct и передаешь ему отчет
+   после каждой итерации".
+2. **Менеджер изучает проект и пишет промпт.** Читает задачу, код, применимые
+   инструкции и локальный указатель на источники; фиксирует Define: критерии с
+   ID, источники и ревизии, разрешенные и защищенные пути, лимит попыток. Явно
+   выбирает компоненты: skills через `--skill`, нужных агентов через `--agent`,
+   MCP через `--mcp-config`, с причиной для каждого. Промпт оформляется по
+   [templates/task.md](templates/task.md) после этого анализа; шаблон сам
+   промпт не составляет.
+3. **Внешний Claude реализует.** `scripts/run_claude_task.py` запускает один
+   вызов исполнителя с профилем `claude-fable-5-1` / `max` (таймаут 1800 с,
+   денежный лимит только явным `--max-budget-usd`), передает полный текст
+   выбранных skills, фиксирует выбор в `selection.json` и блокирует невыбранные
+   Skill, Agent и MCP. Исполнитель не расширяет набор, не ведет self-correct и
+   не запускает внешнее ревью; недостающую возможность возвращает менеджеру.
+   Отчет - по [templates/implementation-report.md](templates/implementation-report.md),
+   с основаниями: команды, exit code, file:line.
+4. **Менеджер проверяет.** После каждого вызова helper сохраняет `claude doctor`
+   и `harness-audit.json`: это диагностика установки и сверка реальных вызовов
+   с выбором, не приемка. `completed: false` в `result.json` - результат CLI,
+   а не доказательство дефекта кода. Приемку определяют тесты, сборка, lint и
+   независимое ревью в новом контексте Codex (`gpt-6-astra`, `ultra`) по
+   `agents/code-reviewer.md` и критериям задачи.
+5. **Полный отчет возвращается исполнителю дословно** с решениями менеджера по
+   каждому замечанию: CONFIRMED, REFUTED или UNVERIFIED. Правятся только
+   подтвержденные; повторный вопрос не является замечанием. После правок -
+   полный Check заново.
+6. **Явное завершение.** COMPLETE только для проверенной версии: все критерии
+   покрыты, Critical = 0, Major = 0, ключевых UNVERIFIED нет. Иначе RETRY,
+   VERIFY или ESCALATE с вопросами человеку; лимит попыток по умолчанию 3.
+   Финальный handoff - `--read-only`, без правок. Commit, push и активация в
+   реальном доме - только в авторизованном объеме. Что остается после задачи
+   и где, описано в [docs/memory.md](docs/memory.md).
 
-Компоненты выбирает Codex после изучения задачи: в промпте указывает назначение
-каждого, передает skills через `--skill`, нужных установленных агентов через
-`--agent`, выбранные MCP через `--mcp-config`. Исполнитель сообщает о недостающих
-возможностях менеджеру. Набор сохраняется в `selection.json`; PreToolUse hook
-отклоняет вызовы невыбранных Skill/Agent/MCP. Native model/tools выбранных агентов
-определяются их файлами и проверяются менеджером при выборе.
+Живой монитор: helper ведет `progress.jsonl` и `progress.log` (по умолчанию в
+`--output-dir`; общий `--progress-dir` связывает вызовы одной задачи),
+`python3 scripts/run_progress.py serve --progress-dir <dir>` показывает
+страницу на 127.0.0.1, `emit` пишет этапы менеджера. Поля, статусы и
+ограничения журнала - в инструкции менеджера.
 
-После каждого вызова, в том числе неуспешного, автоматически запускается
-`claude doctor`. Вывод сохраняется в `doctor.stdout.log`, `doctor.stderr.log`,
-статус запуска - в `doctor.json`. Менеджер читает диагностику установки отдельно
-от `harness-audit.json`, где отражены реальные вызовы и пропуски выбранных агентов.
-Статус RECORDED подтверждает сбор сведений; приемку кода определяют тесты и review.
+## Состав
 
-## Живой монитор конвейера
+Кратко; полный каталог с назначением каждого компонента - в
+[docs/components.md](docs/components.md).
 
-Helper ведет журнал прогресса `progress.jsonl` (единственный источник, только
-проверенные метаданные) и его читаемую проекцию `progress.log`. Без
-`--progress-dir` оба файла лежат в каталоге `--output-dir`; общий
-`--progress-dir` вне workspace связывает все вызовы одного конвейера в одну
-историю. Каждая запись несет источник: `native` (события stream-json CLI: init,
-вызовы инструментов, hooks, фоновые задачи, result), `launcher` (запуск, выход
-CLI, doctor, сверка обвязки, готовность) и `manager` (этапы, замечания, решения).
-В журнал не попадают промпты, аргументы и результаты инструментов, текст ответов,
-thinking, окружение, ключи, сообщения об ошибках API и пути из событий; сырой
-поток остается в `events.jsonl`.
+- Skills предметные: api-design, architecture-decision-records,
+  database-migrations, hexagonal-architecture, kotlin-comment-style,
+  kotlin-coroutines-flows, kotlin-patterns, kotlin-testing, postgres-patterns.
+- Skills-методы: epic-decomposition, system-design-tradeoffs.
+- Skills дисциплины: scope-fence, evidence-before-claim, adversarial-self-check,
+  lead-with-outcome, context-hygiene, self-correct.
+- Агенты: builder, judge, code-architect, code-explorer, code-reviewer,
+  comment-analyzer, database-reviewer, pr-test-analyzer, silent-failure-hunter,
+  type-design-analyzer.
+- Команды: harness, adr, epic, meeting-notes, meeting-prep.
+- Хуки: harness-reminder (UserPromptSubmit: каталог обвязки в каждом запросе),
+  harness-banner (по `/harness`, как hook не подключен), ascii-punctuation
+  (PostToolUse Write|Edit: проверяет записанный фрагмент, не весь файл).
+- Statusline: занятость контекста, лимит сессии на 5 часов, недельный лимит.
+- Скрипты: run_claude_task.py, claude_doctor.py, harness_run_audit.py,
+  run_progress.py.
 
-Консоль (те же записи, что и на странице):
+Проверки: `python3 -B -m unittest discover -s tests -v`.
 
-    tail -f /path/to/run/progress/progress.log
-
-Helper дублирует те же строки в свой stderr и не ждет читателя: если stderr
-перестали читать, строки сверх очереди отбрасываются, а их число попадает в
-`result.json` как `progress_observer.console_dropped`; `progress.log` хранит все
-записи. Идентификаторы вызовов и задач CLI локальны для одного вызова helper:
-страница показывает их вместе с шагом и не связывает одинаковые ID разных шагов.
-
-Страница на 127.0.0.1; порт 0 выбирает свободный, URL печатается в stdout:
-
-    python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress
-
-Сервер отдает только страницу и `/api/events`; каталог артефактов по HTTP
-недоступен, внешних ресурсов страница не загружает. Остановка страницы или
-сервера не влияет на задачу. Отказ записи журнала (недоступный каталог, занятый
-lock) не прерывает вызов и фиксируется в `result.json` как
-`progress_status: UNVERIFIED` отдельно от `completed` и `ready_for_review`.
-Чужой файл на месте `progress.jsonl` или `progress.log` (символическая или
-жесткая ссылка, посторонний текст) helper отвергает до запуска CLI.
-
-Этапы менеджера пишет только менеджер, явной командой на каждый переход:
-
-    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status passed --count 40
-    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status failed --model gpt-6-astra --effort ultra
-    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase triage --status confirmed --count 8
-    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase decision --status retry
-
-`--phase`: build, tests, review, triage, verify, handoff, decision. Статусы этапов:
-started, passed, failed, blocked, unverified, stopped; для triage: confirmed,
-refuted, unverified; для decision: retry, verify, escalate, complete. Успех CLI
-и `ready_for_review` не делают конвейер COMPLETE: страница показывает COMPLETE
-только по решению менеджера. `--attempt` по умолчанию - последняя попытка в
-журнале, при RETRY менеджер передает новый номер helper и emit. `--step-id`
-helper по умолчанию - имя каталога вывода (при совпадении в той же попытке
-добавляется суффикс `-2`), для emit - имя этапа. Helper печатает выбранные
-`run_id`, `attempt` и `step_id` первой строкой stdout.
-
-## Состав обвязки
-
-Скиллы - предметные:
-- api-design
-- architecture-decision-records
-- database-migrations
-- hexagonal-architecture
-- kotlin-comment-style
-- kotlin-coroutines-flows
-- kotlin-patterns
-- kotlin-testing
-- postgres-patterns
-
-Скиллы - дисциплина работы модели (дистилляция Fable 5):
-- scope-fence (границы задачи: не больше и не меньше)
-- evidence-before-claim (утверждения только с доказательствами)
-- adversarial-self-check (самоопровержение перед сдачей)
-- lead-with-outcome (отчеты: вывод первым предложением)
-- context-hygiene (делегирование и экономия контекста)
-- self-correct (цикл самокоррекции: builder правит, judge проверяет по источникам)
-
-Агенты:
-- builder
-- code-architect
-- code-explorer
-- code-reviewer
-- comment-analyzer
-- database-reviewer
-- judge
-- pr-test-analyzer
-- silent-failure-hunter
-- type-design-analyzer
-
-Команды:
-- harness (печатает список всей обвязки)
-
-Хуки:
-- harness-reminder / harness-banner (список обвязки в каждом запросе)
-- ascii-punctuation (PostToolUse: проверяет записанный фрагмент на длинное/среднее тире и просит исправить; весь итоговый файл проверяет менеджер self-correct, если это критерий приемки)
-
-Строка состояния:
-- statusline (занятость контекста, лимит сессии на 5 часов, недельный лимит)
-
-Включается ключом `statusLine` в `settings.json`, см. `settings.reference.json`.
-Данные берутся целиком из payload Claude Code (`context_window` и `rate_limits`),
-своего учета скрипт не ведет. Лимиты приходят из заголовков ответа API, поэтому
-до первого ответа в сессии на их месте прочерк.
+Часть агентов и skills скопирована из Everything Claude Code и адаптирована;
+точный список и лицензия - в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
