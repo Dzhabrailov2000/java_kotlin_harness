@@ -66,7 +66,7 @@ def hook_decision(payload, selection):
 
 def audit_run(events_path, selection):
     """Audit observable delivery and calls, without judging implementation quality."""
-    errors, catalogs, hooks, calls, results = [], [], [], {}, {}
+    errors, catalogs, hooks, calls, results, tasks = [], [], [], {}, {}, {}
     try:
         selected = validate_selection(selection)
     except ValueError:
@@ -87,8 +87,11 @@ def audit_run(events_path, selection):
                 error(line, "invalid_tool_use")
                 return
             kind, component = component_for(name, tool_input)
+            # The request mode is kept as a flag only; a provisional stream block carries no input yet.
+            requested = bool(tool_input.get("run_in_background"))
             call = {"id": identifier, "name": name, "kind": kind, "component": component,
-                    "parent_tool_use_id": parent, "result_status": "NO_RESULT"}
+                    "parent_tool_use_id": parent, "background_requested": requested,
+                    "result_status": "NO_RESULT", "task_id": None, "task_status": None}
             previous = calls.get(identifier)
             if previous:
                 if (previous["name"] != name or previous["parent_tool_use_id"] != parent
@@ -97,6 +100,7 @@ def audit_run(events_path, selection):
                     return
                 if component is not None:
                     previous["component"] = component
+                previous["background_requested"] = previous["background_requested"] or requested
             else:
                 calls[identifier] = call
             if kind != "builtin" and component is None and not provisional:
@@ -111,6 +115,35 @@ def audit_run(events_path, selection):
             if previous and previous != status:
                 error(line, "conflicting_tool_result")
             results[identifier] = "ERROR" if "ERROR" in (previous, status) else status
+
+    def task_seen(event, line):
+        """Native background lifecycle: a task is linked to its call by tool_use_id, else by task_id."""
+        task_id, identifier = event.get("task_id"), event.get("tool_use_id")
+        if (not isinstance(task_id, str) or not task_id
+                or identifier is not None and (not isinstance(identifier, str) or not identifier)):
+            error(line, "invalid_task_event")
+            return
+        if event["subtype"] == "task_started":
+            status = "STARTED"
+        elif event.get("status") in ("completed", "failed", "stopped"):
+            status = event["status"].upper()
+        else:
+            error(line, "invalid_task_notification")
+            return
+        task = tasks.setdefault(task_id, {"tool_use_id": None, "status": None})
+        if identifier is not None:
+            if task["tool_use_id"] not in (None, identifier):
+                error(line, "conflicting_task_link")
+                return
+            task["tool_use_id"] = identifier
+        if status == "STARTED":
+            task["status"] = task["status"] or status
+        elif task["status"] in (None, "STARTED", status):
+            task["status"] = status
+        else:
+            error(line, "conflicting_task_notification")
+            if task["status"] == "COMPLETED":
+                task["status"] = status
 
     try:
         lines = Path(events_path).read_text(encoding="utf-8").splitlines()
@@ -154,6 +187,8 @@ def audit_run(events_path, selection):
                 "subtype", "hook_id", "hook_name", "hook_event", "exit_code", "outcome",
                 "session_id", "uuid", "parent_tool_use_id",
             ) if key in event and isinstance(event[key], (str, int, float, bool, type(None)))})
+        if event["type"] == "system" and subtype in ("task_started", "task_notification"):
+            task_seen(event, line_number)
         if event["type"] in ("assistant", "user"):
             message = event.get("message", {})
             if not isinstance(message, dict):
@@ -183,12 +218,35 @@ def audit_run(events_path, selection):
             calls[identifier]["result_status"] = status
         else:
             errors.append({"reason": "unmatched_tool_result", "tool_use_id": identifier})
+    # Tasks belong to whichever call they are linked to, never to an agent by name or order.
+    for task_id, task in tasks.items():
+        call = calls.get(task["tool_use_id"])
+        if call is None:
+            errors.append({"reason": "unmatched_task", "task_id": task_id})
+        elif call["task_id"] not in (None, task_id):
+            errors.append({"reason": "conflicting_task_link", "task_id": task_id})
+        else:
+            call["task_id"], call["task_status"] = task_id, task["status"]
     observed = list(calls.values())
     unexpected = [call for call in observed
                   if call["kind"] != "builtin" and call["component"] not in selected[call["kind"]]]
-    returned_agents = {call["component"] for call in observed
-                       if call["kind"] == "agents" and call["result_status"] == "TOOL_RETURNED"}
-    missing_agents = [name for name in selected["agents"] if name not in returned_agents]
+
+    def delivered(call):
+        # A background launch acknowledgement is not completion; only a completed linked task is.
+        # A requested background run without any observed task lifecycle is unproven, not foreground.
+        if call["result_status"] != "TOOL_RETURNED":
+            return False
+        if call["task_status"] is None:
+            return not call["background_requested"]
+        return call["task_status"] == "COMPLETED"
+
+    agent_calls = {}
+    for call in observed:
+        if call["kind"] == "agents" and call["component"] is not None:
+            agent_calls.setdefault(call["component"], []).append(call)
+    # An errored, failed, stopped or unfinished call is not masked by another completed one.
+    missing_agents = [name for name in selected["agents"]
+                      if name not in agent_calls or not all(map(delivered, agent_calls[name]))]
     called_servers = sorted({call["component"] for call in observed
                              if call["kind"] == "mcp_servers" and call["component"] is not None})
     return {
@@ -203,6 +261,9 @@ def audit_run(events_path, selection):
                         "unused": [name for name in selected["mcp_servers"] if name not in called_servers]},
         "hook_events": hooks,
         "meaning": "TOOL_RETURNED records a non-error tool result, not review or acceptance of its contents. "
+                   "background_requested records the requested run mode; task_status records the native "
+                   "background task lifecycle linked to the call. A requested or observed background call "
+                   "counts for a required agent only once its linked task completed. "
                    "This audit does not establish code correctness or skill compliance.",
     }
 

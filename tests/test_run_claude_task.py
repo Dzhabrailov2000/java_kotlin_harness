@@ -2,16 +2,44 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tempfile
 import textwrap
+import time
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER = ROOT / "scripts" / "run_claude_task.py"
+# The group leader exits on SIGTERM while its descendant ignores it and keeps writing to the workspace.
+DESCENDANT_CLI = textwrap.dedent("""\
+    import json
+    import os
+    from pathlib import Path
+    import signal
+    import sys
+    import time
+
+    if sys.argv[1:] == ["doctor"]:
+        print("Installation diagnostics recorded.", flush=True)
+        sys.exit(0)
+    sys.stdin.read()
+    print(json.dumps({"type": "system", "subtype": "init", "model": os.environ["FAKE_MODEL"]}), flush=True)
+    Path("cli-pid").write_text(str(os.getpid()))
+    if os.fork() == 0:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        Path("child-pid").write_text(str(os.getpid()))
+        while True:
+            with open("ticks", "a") as ticks:
+                ticks.write("tick\\n")
+            time.sleep(0.03)
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    time.sleep(60)
+    """)
 
 
 class RunClaudeTaskTest(unittest.TestCase):
@@ -89,7 +117,20 @@ class RunClaudeTaskTest(unittest.TestCase):
             },
         ]
 
-    def invoke(self, *, events=None, exit_code=0, raw_lines=(), output=None, extra=(), doctor_exit_code=0):
+    def command(self, output, extra=(), timeout="10"):
+        return [
+            sys.executable, str(LAUNCHER),
+            "--workspace", str(self.workspace),
+            "--prompt", str(self.prompt),
+            "--output-dir", str(output),
+            "--model", self.MODEL,
+            "--effort", "max",
+            "--timeout", timeout,
+            *extra,
+        ]
+
+    def invoke(self, *, events=None, exit_code=0, raw_lines=(), output=None, extra=(), doctor_exit_code=0,
+               timeout="10"):
         self.invocation_index += 1
         if output is None:
             output = self.directory / ("output-" + str(self.invocation_index))
@@ -103,18 +144,8 @@ class RunClaudeTaskTest(unittest.TestCase):
             }),
             encoding="utf-8",
         )
-        command = [
-            sys.executable, str(LAUNCHER),
-            "--workspace", str(self.workspace),
-            "--prompt", str(self.prompt),
-            "--output-dir", str(output),
-            "--model", self.MODEL,
-            "--effort", "max",
-            "--timeout", "10",
-            *extra,
-        ]
         process = subprocess.run(
-            command,
+            self.command(output, extra, timeout),
             cwd=self.workspace,
             env=self.environment,
             capture_output=True,
@@ -135,6 +166,40 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
         result = self.read_json(output / "result.json")
         self.assertTrue(result["completed"], result)
+        return result
+
+    def install_descendant_fake(self):
+        (self.bin_directory / "claude").write_text("#!" + sys.executable + "\n" + DESCENDANT_CLI, encoding="utf-8")
+        self.environment["FAKE_MODEL"] = self.MODEL
+        # The fake processes must not outlive the test even when the launcher leaves them running.
+        self.addCleanup(self.kill_fake_processes)
+
+    def kill_fake_processes(self):
+        for name, kill in (("cli-pid", os.killpg), ("child-pid", os.kill)):
+            path = self.workspace / name
+            if path.exists():
+                try:
+                    kill(int(path.read_text()), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def assert_descendant_stopped_writing(self):
+        ticks = self.workspace / "ticks"
+        size = ticks.stat().st_size
+        time.sleep(0.2)
+        self.assertEqual(ticks.stat().st_size, size, "Descendant must stop writing once the launcher has returned")
+
+    def assert_stopped_run(self, output, *, timed_out, interrupted):
+        result = self.read_json(output / "result.json")
+        self.assertEqual(result["timed_out"], timed_out, result)
+        self.assertEqual(result["interrupted"], interrupted, result)
+        self.assertFalse(result["completed"])
+        self.assertFalse(result["ready_for_review"])
+        self.assertEqual(result["exit_code"], 0, "The leader exits from its own SIGTERM handler")
+        self.assertEqual(result["observed_main_models"], [self.MODEL])
+        self.assertEqual(result["cleanup_errors"], [])
+        self.assertEqual(result["doctor_status"], "RECORDED")
+        self.assertEqual(self.read_json(output / "doctor.json")["exit_code"], 0)
         return result
 
     def test_selected_skill_text_and_hashes_match_actual_invocation(self):
@@ -332,6 +397,99 @@ class RunClaudeTaskTest(unittest.TestCase):
         invocation = self.read_json(output / "invocation.json")
         self.assertEqual(invocation["agent_sources"][0]["path"], str(user_agent.resolve()))
         self.assertEqual((output / "agent-reader.md").read_bytes(), user_agent.read_bytes())
+
+    def test_timeout_stops_descendant_that_outlives_the_group_leader(self):
+        self.install_descendant_fake()
+        process, output = self.invoke(timeout="1")
+        self.assertTrue((self.workspace / "child-pid").exists(), process.stdout + process.stderr)
+        self.assert_descendant_stopped_writing()
+        self.assertNotEqual(process.returncode, 0)
+        self.assert_stopped_run(output, timed_out=True, interrupted=False)
+
+    def test_interrupt_stops_descendant_and_records_interrupted_run(self):
+        self.install_descendant_fake()
+        output = self.directory / "output-interrupt"
+        child_pid = self.workspace / "child-pid"
+        launcher = subprocess.Popen(
+            self.command(output), cwd=self.workspace, env=self.environment,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8",
+            preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL),
+        )
+        try:
+            deadline = time.monotonic() + 10
+            while not child_pid.exists() and time.monotonic() < deadline:
+                time.sleep(0.02)
+            self.assertTrue(child_pid.exists(), "Fake executable did not start within the deadline")
+            launcher.send_signal(signal.SIGINT)
+            stdout, stderr = launcher.communicate(timeout=20)
+        finally:
+            launcher.kill()
+        self.assert_descendant_stopped_writing()
+        self.assertEqual(launcher.returncode, 1, stdout + stderr)
+        self.assert_stopped_run(output, timed_out=False, interrupted=True)
+
+    def test_background_subagent_state_controls_review_readiness(self):
+        agent = self.workspace / ".claude/agents/local-reader.md"
+        agent.parent.mkdir(parents=True)
+        agent.write_text("---\nname: local-reader\ndescription: Reader.\ntools: Read\nmodel: inherit\n---\nRead the input.\n")
+
+        def events_for(status, notification_link, *, requested=True, started=True):
+            lifecycle = [
+                {"type": "assistant", "message": {"model": self.MODEL, "content": [
+                    {"type": "tool_use", "id": "agent-1", "name": "Agent",
+                     "input": {"subagent_type": "local-reader", "run_in_background": requested,
+                               "prompt": "Read the input."}}]}},
+            ]
+            if started:
+                lifecycle.append(
+                    {"type": "system", "subtype": "task_started", "task_id": "task-1", "tool_use_id": "agent-1",
+                     "description": "Read the input.", "task_type": "local_agent", "uuid": "event-1", "session_id": "s-1"})
+            lifecycle.append(
+                {"type": "user", "message": {"content": [
+                    {"type": "tool_result", "tool_use_id": "agent-1", "is_error": False,
+                     "content": "Async agent launched. agentId: task-1" if requested else "Read input completed."}]}})
+            if status is not None:
+                notification = {"type": "system", "subtype": "task_notification", "task_id": "task-1",
+                                "status": status, "output_file": "task-output", "summary": "Task summary",
+                                "uuid": "event-2", "session_id": "s-1"}
+                if notification_link:
+                    notification["tool_use_id"] = "agent-1"
+                lifecycle.append(notification)
+            events = self.successful_events()
+            events[-1:-1] = lifecycle
+            return events
+
+        for label, events in (
+            ("failed", events_for("failed", True)),
+            ("stopped", events_for("stopped", True)),
+            ("started without notification", events_for(None, True)),
+            ("acknowledged without task events", events_for(None, True, started=False)),
+        ):
+            with self.subTest(case=label):
+                process, output = self.invoke(events=events, extra=("--agent", "local-reader"))
+                self.assertNotEqual(process.returncode, 0, process.stdout)
+                result = self.read_json(output / "result.json")
+                self.assertTrue(result["completed"], result)
+                self.assertFalse(result["ready_for_review"])
+                self.assertEqual(result["harness_status"], "UNVERIFIED")
+                audit = self.read_json(output / "harness-audit.json")
+                self.assertEqual(audit["missing_agents"], ["local-reader"])
+                self.assertEqual(audit["parse_errors"], [])
+                recorded = (output / "harness-audit.json").read_text(encoding="utf-8")
+                self.assertNotIn("Task summary", recorded)
+                self.assertNotIn("agentId", recorded)
+        for label, events in (
+            ("completed background task linked by task_id", events_for("completed", False)),
+            ("explicit foreground result", events_for(None, False, requested=False, started=False)),
+        ):
+            with self.subTest(case=label):
+                process, output = self.invoke(events=events, extra=("--agent", "local-reader"))
+                result = self.assert_completed(process, output)
+                self.assertTrue(result["ready_for_review"])
+                audit = self.read_json(output / "harness-audit.json")
+                self.assertEqual(audit["status"], "RECORDED")
+                self.assertEqual(audit["missing_agents"], [])
+                self.assertEqual(audit["calls"][0].get("task_status"), "COMPLETED" if label.startswith("completed") else None)
 
 
 if __name__ == "__main__":

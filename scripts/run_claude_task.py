@@ -8,12 +8,11 @@ import os
 from pathlib import Path
 import re
 import shutil
-import signal
 import shlex
 import subprocess
 import sys
 
-from claude_doctor import run_doctor
+from claude_doctor import run_doctor, stop_group
 from harness_run_audit import audit_run
 
 
@@ -182,7 +181,7 @@ def run(args):
     (out / "invocation.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
     env = os.environ.copy()
     env.pop("CLAUDE_CODE_EFFORT_LEVEL", None)
-    timed_out, interrupted, launch_error, exit_code = False, False, None, None
+    timed_out, interrupted, launch_error, exit_code, cleanup_errors = False, False, None, None, []
     try:
         with (out / "events.jsonl").open("w") as stdout, (out / "stderr.log").open("w") as stderr:
             process = subprocess.Popen(argv, cwd=workspace, env=env, stdin=subprocess.PIPE,
@@ -194,15 +193,8 @@ def run(args):
             except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
                 timed_out = isinstance(error, subprocess.TimeoutExpired)
                 interrupted = isinstance(error, KeyboardInterrupt)
-                try:
-                    os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                try:
-                    process.communicate(timeout=10)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.communicate()
+                # The leader may exit on SIGTERM while a descendant keeps writing to the workspace.
+                cleanup_errors = stop_group(process)
             exit_code = process.returncode
     except OSError as error:
         launch_error = str(error)
@@ -213,7 +205,7 @@ def run(args):
     audit["injected_skills"] = sources
     (out / "harness-audit.json").write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n")
     cli_result = summary["cli_result"] or {}
-    summary.update(exit_code=exit_code, timed_out=timed_out, interrupted=interrupted,
+    summary.update(exit_code=exit_code, timed_out=timed_out, interrupted=interrupted, cleanup_errors=cleanup_errors,
                    launch_error=launch_error, doctor_status=doctor["status"], harness_status=audit["status"],
                    completed=(exit_code == 0 and not timed_out and not interrupted
                               and summary["model_matches"] and bool(cli_result)

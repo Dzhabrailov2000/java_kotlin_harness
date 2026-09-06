@@ -9,7 +9,8 @@ import subprocess
 import time
 
 
-def _stop_group(process):
+def stop_group(process):
+    """Terminate the whole process group with bounded waits; returns cleanup errors."""
     errors = []
 
     def send(sig):
@@ -73,7 +74,7 @@ def run_doctor(executable, workspace, output_dir, timeout=30):
             record["interrupted"] = isinstance(error, KeyboardInterrupt)
             errors.append(f"{type(error).__name__}: {error}")
             if process is not None:
-                errors.extend(_stop_group(process))
+                errors.extend(stop_group(process))
         if process is not None:
             record["exit_code"] = process.returncode
     record["error"] = "; ".join(errors) or None

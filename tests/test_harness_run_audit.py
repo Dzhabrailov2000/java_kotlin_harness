@@ -27,6 +27,24 @@ def tool_result(identifier, *, is_error=False, parent=None):
                                      "is_error": is_error, "content": "PRIVATE_RESULT"}]}}
 
 
+def task_started(task_id, tool_use_id=None, task_type="local_agent"):
+    event = {"type": "system", "subtype": "task_started", "task_id": task_id,
+             "description": "PRIVATE_DESCRIPTION", "task_type": task_type,
+             "uuid": "uuid-started-" + task_id, "session_id": "session-1"}
+    if tool_use_id is not None:
+        event["tool_use_id"] = tool_use_id
+    return event
+
+
+def task_notification(task_id, status, tool_use_id=None):
+    event = {"type": "system", "subtype": "task_notification", "task_id": task_id,
+             "status": status, "output_file": "PRIVATE_OUTPUT_FILE", "summary": "PRIVATE_SUMMARY",
+             "uuid": "uuid-notified-" + task_id, "session_id": "session-1"}
+    if tool_use_id is not None:
+        event["tool_use_id"] = tool_use_id
+    return event
+
+
 class HarnessRunAuditTest(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="harness-audit-test-")
@@ -109,6 +127,171 @@ class HarnessRunAuditTest(unittest.TestCase):
                 self.assertEqual(result["status"], "UNVERIFIED")
                 self.assertTrue(result["parse_errors"])
                 self.assertNotIn("PRIVATE_", json.dumps(result))
+
+    def background_agent(self, status, *, flag=True, notification_link="agent-1"):
+        tool_input = {"subagent_type": "code-explorer", "prompt": "PRIVATE_PROMPT"}
+        if flag:
+            tool_input["run_in_background"] = True
+        events = [tool_call("agent-1", "Agent", tool_input), task_started("task-1", "agent-1"),
+                  tool_result("agent-1")]
+        if status is not None:
+            events.append(task_notification("task-1", status, notification_link))
+        return events
+
+    def test_background_launch_ack_failed_and_stopped_tasks_do_not_satisfy_required_agent(self):
+        for status, expected in ((None, "STARTED"), ("failed", "FAILED"), ("stopped", "STOPPED")):
+            with self.subTest(status=status):
+                result = self.audit(self.background_agent(status))
+                self.assertEqual(result["status"], "UNVERIFIED", result)
+                self.assertEqual(result["missing_agents"], ["code-explorer"])
+                self.assertEqual(result["parse_errors"], [])
+                call = result["calls"][0]
+                self.assertEqual(call["result_status"], "TOOL_RETURNED")
+                self.assertEqual(call.get("task_status"), expected)
+                self.assertEqual(call.get("task_id"), "task-1")
+                self.assertNotIn("PRIVATE_", json.dumps(result))
+
+    def test_completed_task_satisfies_required_agent_only_when_linked_without_errors(self):
+        for label, events in (
+            ("linked by tool_use_id", self.background_agent("completed")),
+            ("linked by task_id only", self.background_agent("completed", notification_link=None)),
+            ("linked by notification only", [
+                tool_call("agent-1", "Agent", {"subagent_type": "code-explorer"}),
+                tool_result("agent-1"), task_notification("task-1", "completed", "agent-1")]),
+        ):
+            with self.subTest(case=label):
+                result = self.audit(events)
+                self.assertEqual(result["status"], "RECORDED", result)
+                self.assertEqual(result["missing_agents"], [])
+                self.assertEqual(result["calls"][0].get("task_status"), "COMPLETED")
+                self.assertNotIn("PRIVATE_", json.dumps(result))
+        errored = [tool_call("agent-1", "Agent", {"subagent_type": "code-explorer"}),
+                   task_started("task-1", "agent-1"), tool_result("agent-1", is_error=True),
+                   task_notification("task-1", "completed", "agent-1")]
+        result = self.audit(errored)
+        self.assertEqual(result["status"], "UNVERIFIED")
+        self.assertEqual(result["missing_agents"], ["code-explorer"])
+        self.assertEqual(result["calls"][0]["result_status"], "ERROR")
+        self.assertEqual(result["calls"][0].get("task_status"), "COMPLETED")
+
+    def test_native_task_lifecycle_counts_without_run_in_background_flag(self):
+        failed = self.audit(self.background_agent("failed", flag=False))
+        self.assertEqual(failed["status"], "UNVERIFIED", failed)
+        self.assertEqual(failed["missing_agents"], ["code-explorer"])
+        self.assertEqual(failed["calls"][0]["task_status"], "FAILED")
+        completed = self.audit(self.background_agent("completed", flag=False))
+        self.assertEqual(completed["status"], "RECORDED", completed)
+        self.assertEqual(completed["calls"][0]["task_status"], "COMPLETED")
+        # Without a native task lifecycle a foreground tool result is the actual result.
+        for tool_input in ({"subagent_type": "code-explorer"},
+                           {"subagent_type": "code-explorer", "run_in_background": False}):
+            with self.subTest(tool_input=tool_input):
+                result = self.audit([tool_call("agent-1", "Agent", tool_input), tool_result("agent-1")])
+                self.assertEqual(result["status"], "RECORDED", result)
+                self.assertEqual(result["missing_agents"], [])
+                self.assertFalse(result["calls"][0]["background_requested"])
+                self.assertIsNone(result["calls"][0]["task_status"])
+                self.assertIsNone(result["calls"][0]["task_id"])
+
+    def test_requested_background_run_without_task_lifecycle_does_not_satisfy_required_agent(self):
+        requested = {"subagent_type": "code-explorer", "run_in_background": True, "prompt": "PRIVATE_PROMPT"}
+        provisional = {"type": "stream_event", "event": {"type": "content_block_start", "index": 0,
+                       "content_block": {"type": "tool_use", "id": "agent-1", "name": "Agent", "input": {}}}}
+        bash = tool_call("bash-1", "Bash", {"command": "PRIVATE_COMMAND", "run_in_background": True})
+        for label, events in (
+            ("acknowledged only", [tool_call("agent-1", "Agent", requested), tool_result("agent-1")]),
+            ("acknowledged after provisional stream block",
+             [provisional, tool_call("agent-1", "Agent", requested), tool_result("agent-1")]),
+            ("another call's task completed",
+             [tool_call("agent-1", "Agent", requested), tool_result("agent-1"), bash,
+              task_started("task-b", "bash-1", task_type="local_bash"), tool_result("bash-1"),
+              task_notification("task-b", "completed", "bash-1")]),
+        ):
+            with self.subTest(case=label):
+                result = self.audit(events)
+                self.assertEqual(result["status"], "UNVERIFIED", result)
+                self.assertEqual(result["missing_agents"], ["code-explorer"])
+                self.assertEqual(result["parse_errors"], [])
+                call = result["calls"][0]
+                self.assertEqual(call["result_status"], "TOOL_RETURNED")
+                self.assertTrue(call["background_requested"])
+                self.assertIsNone(call["task_status"])
+                self.assertIsNone(call["task_id"])
+                self.assertNotIn("PRIVATE_", json.dumps(result))
+
+    def test_task_events_are_linked_by_identifiers_not_by_agent_name_or_order(self):
+        agent = tool_call("agent-1", "Agent", {"subagent_type": "code-explorer", "prompt": "PRIVATE_PROMPT"})
+        bash = tool_call("bash-1", "Bash", {"command": "PRIVATE_COMMAND", "run_in_background": True})
+        bash_task = [task_started("task-b", "bash-1", task_type="local_bash"), tool_result("bash-1")]
+        result = self.audit([agent, tool_result("agent-1"), bash, *bash_task,
+                             task_notification("task-b", "failed", "bash-1")])
+        self.assertEqual(result["status"], "RECORDED", result)
+        self.assertEqual(result["missing_agents"], [])
+        statuses = {call["id"]: call.get("task_status") for call in result["calls"]}
+        self.assertEqual(statuses, {"agent-1": None, "bash-1": "FAILED"})
+        result = self.audit([agent, task_started("task-1", "agent-1"), tool_result("agent-1"), bash, *bash_task,
+                             task_notification("task-b", "completed", "bash-1")])
+        self.assertEqual(result["status"], "UNVERIFIED", result)
+        self.assertEqual(result["missing_agents"], ["code-explorer"])
+        statuses = {call["id"]: call["task_status"] for call in result["calls"]}
+        self.assertEqual(statuses, {"agent-1": "STARTED", "bash-1": "COMPLETED"})
+        for label, events in (
+            ("no link at all", [task_started("task-x"), task_notification("task-x", "completed")]),
+            ("unknown tool_use_id", [task_notification("task-y", "completed", "ghost")]),
+        ):
+            with self.subTest(case=label):
+                result = self.audit([agent, tool_result("agent-1"), *events])
+                self.assertEqual(result["status"], "UNVERIFIED", result)
+                self.assertIn("unmatched_task", {error["reason"] for error in result["parse_errors"]})
+                self.assertIsNone(result["calls"][0]["task_status"])
+                self.assertNotIn("PRIVATE_", json.dumps(result))
+
+    def test_repeated_consistent_task_events_pass_and_contradictions_are_unverified(self):
+        call, started, ack, completed = self.background_agent("completed")
+        result = self.audit([call, started, started, ack, ack, completed, completed])
+        self.assertEqual(result["status"], "RECORDED", result)
+        self.assertEqual(result["parse_errors"], [])
+        self.assertEqual(result["calls"][0].get("task_status"), "COMPLETED")
+        contradicted = self.audit([call, started, ack, completed, task_notification("task-1", "failed", "agent-1")])
+        self.assertEqual(contradicted["status"], "UNVERIFIED")
+        self.assertEqual(contradicted["missing_agents"], ["code-explorer"])
+        self.assertEqual(contradicted["calls"][0]["task_status"], "FAILED")
+        self.assertIn("conflicting_task_notification", {error["reason"] for error in contradicted["parse_errors"]})
+        for reason, extra in (
+            ("conflicting_task_link", [task_notification("task-1", "completed", "other-call")]),
+            ("conflicting_task_link", [task_started("task-2", "agent-1"), task_notification("task-2", "completed")]),
+            ("invalid_task_notification", [task_notification("task-1", "PRIVATE_UNKNOWN", "agent-1")]),
+            ("invalid_task_event", [{"type": "system", "subtype": "task_started", "task_id": 7}]),
+        ):
+            with self.subTest(reason=reason, extra=extra):
+                result = self.audit([call, started, ack, *extra])
+                self.assertEqual(result["status"], "UNVERIFIED", result)
+                self.assertIn(reason, {error["reason"] for error in result["parse_errors"]})
+                self.assertNotIn("PRIVATE_", json.dumps(result))
+
+    def test_required_agent_failure_or_pending_call_is_not_masked_by_another_completed_call(self):
+        explorer = {"subagent_type": "code-explorer"}
+        for label, events in (
+            ("errored foreground call", [tool_call("a", "Agent", explorer), tool_result("a", is_error=True),
+                                         tool_call("b", "Agent", explorer), tool_result("b")]),
+            ("call without result", [tool_call("a", "Agent", explorer),
+                                     tool_call("b", "Agent", explorer), tool_result("b")]),
+            ("background request without task events",
+             [tool_call("a", "Agent", {**explorer, "run_in_background": True}), tool_result("a"),
+              tool_call("b", "Agent", explorer), tool_result("b")]),
+            ("failed background call", [tool_call("a", "Agent", explorer), task_started("task-a", "a"),
+                                        tool_result("a"), task_notification("task-a", "failed", "a"),
+                                        tool_call("b", "Agent", explorer), tool_result("b")]),
+            ("pending background call", [tool_call("a", "Agent", explorer), task_started("task-a", "a"),
+                                         tool_result("a"), tool_call("b", "Agent", explorer),
+                                         task_started("task-b", "b"), tool_result("b"),
+                                         task_notification("task-b", "completed", "b")]),
+        ):
+            with self.subTest(case=label):
+                result = self.audit(events)
+                self.assertEqual(result["status"], "UNVERIFIED", result)
+                self.assertEqual(result["missing_agents"], ["code-explorer"])
+                self.assertEqual(result["parse_errors"], [])
 
     def test_hook_lifecycle_metadata_is_preserved_without_command_output(self):
         events = [{"type": "system", "subtype": subtype, "hook_id": "hook-1",
