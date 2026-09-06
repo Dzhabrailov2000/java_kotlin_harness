@@ -23,6 +23,8 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.directory = Path(self.temporary.name)
         self.workspace = self.directory / "workspace"
         self.workspace.mkdir()
+        self.user_home = self.directory / "home"
+        self.user_home.mkdir()
         self.prompt = self.directory / "task.md"
         self.prompt.write_text("Проверь ограниченную задачу.\nLiteral: $HOME `ignored`\n", encoding="utf-8")
         self.scenario = self.directory / "scenario.json"
@@ -38,6 +40,10 @@ class RunClaudeTaskTest(unittest.TestCase):
                 import sys
 
                 scenario = json.loads(Path(os.environ["FAKE_CLAUDE_SCENARIO"]).read_text())
+                if sys.argv[1:] == ["doctor"]:
+                    Path(os.environ["FAKE_DOCTOR_CAPTURE"]).write_text(os.getcwd())
+                    print(scenario.get("doctor_output", "Installation diagnostics recorded."), flush=True)
+                    sys.exit(scenario.get("doctor_exit_code", 0))
                 capture = {
                     "argv": sys.argv[1:],
                     "cwd": os.getcwd(),
@@ -57,8 +63,10 @@ class RunClaudeTaskTest(unittest.TestCase):
         # use this interpreter directly, without a shell or a real CLI fallback.
         self.environment = {
             "PATH": str(self.bin_directory),
+            "HOME": str(self.user_home),
             "FAKE_CLAUDE_SCENARIO": str(self.scenario),
             "FAKE_CLAUDE_CAPTURE": str(self.capture),
+            "FAKE_DOCTOR_CAPTURE": str(self.directory / "doctor-captured.txt"),
         }
         self.invocation_index = 0
 
@@ -81,7 +89,7 @@ class RunClaudeTaskTest(unittest.TestCase):
             },
         ]
 
-    def invoke(self, *, events=None, exit_code=0, raw_lines=(), output=None, extra=()):
+    def invoke(self, *, events=None, exit_code=0, raw_lines=(), output=None, extra=(), doctor_exit_code=0):
         self.invocation_index += 1
         if output is None:
             output = self.directory / ("output-" + str(self.invocation_index))
@@ -91,6 +99,7 @@ class RunClaudeTaskTest(unittest.TestCase):
                 "events": self.successful_events() if events is None else events,
                 "exit_code": exit_code,
                 "raw_lines": list(raw_lines),
+                "doctor_exit_code": doctor_exit_code,
             }),
             encoding="utf-8",
         )
@@ -253,6 +262,76 @@ class RunClaudeTaskTest(unittest.TestCase):
                     self.option(argv, "--append-system-prompt"),
                     (output / "instructions.md").read_text(encoding="utf-8"),
                 )
+
+    def test_doctor_runs_after_success_and_failed_implementation(self):
+        for exit_code in (0, 2):
+            process, output = self.invoke(exit_code=exit_code)
+            doctor = self.read_json(output / "doctor.json")
+            self.assertEqual(doctor["status"], "RECORDED")
+            self.assertEqual(doctor["exit_code"], 0)
+            self.assertEqual((self.directory / "doctor-captured.txt").read_text(), str(self.workspace.resolve()))
+            self.assertIn("Installation diagnostics recorded", (output / "doctor.stdout.log").read_text())
+
+    def test_doctor_failure_does_not_masquerade_as_code_failure_or_completion(self):
+        process, output = self.invoke(doctor_exit_code=2)
+        self.assertNotEqual(process.returncode, 0)
+        result = self.read_json(output / "result.json")
+        self.assertTrue(result["completed"])
+        self.assertFalse(result["ready_for_review"])
+        self.assertEqual(result["doctor_status"], "UNVERIFIED")
+
+    def test_selected_project_skill_and_subagent_are_recorded_and_checked(self):
+        skill = self.workspace / ".claude/skills/local-rule/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("---\nname: local-rule\ndescription: Local fixture.\n---\nLocal instruction.\n")
+        agent = self.workspace / ".claude/agents/local-reader.md"
+        agent.parent.mkdir(parents=True)
+        agent.write_text("---\nname: local-reader\ndescription: Reader.\ntools: Read\nmodel: inherit\n---\nRead the input.\n")
+        events = self.successful_events()
+        events.insert(-1, {"type": "assistant", "message": {"model": self.MODEL, "content": [
+            {"type": "tool_use", "id": "agent-1", "name": "Agent", "input": {"subagent_type": "local-reader"}}]}})
+        events.insert(-1, {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "agent-1", "content": "Read input.", "is_error": False}]}})
+        process, output = self.invoke(events=events, extra=("--skill", "local-rule", "--agent", "local-reader"))
+        self.assert_completed(process, output)
+        argv = self.read_json(self.capture)["argv"]
+        self.assertIn("Agent", self.option(argv, "--tools").split(","))
+        selection = self.read_json(output / "selection.json")
+        self.assertEqual(selection["agents"], ["local-reader"])
+        self.assertIn("Local instruction.", (output / "instructions.md").read_text())
+        self.assertEqual((output / "agent-local-reader.md").read_bytes(), agent.read_bytes())
+        self.assertEqual(self.read_json(output / "harness-audit.json")["status"], "RECORDED")
+        process, output = self.invoke(extra=("--agent", "local-reader"))
+        self.assertNotEqual(process.returncode, 0)
+        self.assertFalse(self.read_json(output / "result.json")["ready_for_review"])
+
+    def test_selected_mcp_config_is_forwarded_without_copying_credentials_to_records(self):
+        config = self.directory / "selected-mcp.json"
+        config.write_text(json.dumps({"mcpServers": {"docs": {
+            "type": "http", "url": "http://127.0.0.1:1", "headers": {"X-Key": "fake-private-token"}}}}))
+        process, output = self.invoke(extra=("--mcp-config", str(config)))
+        self.assert_completed(process, output)
+        invocation = self.read_json(output / "invocation.json")
+        self.assertEqual(invocation["selection"]["mcp_servers"], ["docs"])
+        self.assertEqual(self.option(invocation["argv"], "--mcp-config"), str(config.resolve()))
+        self.assertIn("mcp__docs__*", self.option(invocation["argv"], "--allowedTools"))
+        self.assertNotIn("fake-private-token", (output / "invocation.json").read_text())
+        self.assertNotIn("fake-private-token", (output / "instructions.md").read_text())
+        process, output = self.invoke(extra=("--read-only", "--mcp-config", str(config)))
+        self.assertNotEqual(process.returncode, 0)
+        self.assertFalse(self.capture.exists())
+
+    def test_agent_resolution_does_not_escape_repository_into_parent_project(self):
+        (self.workspace / ".git").mkdir()
+        parent_agent = self.directory / ".claude/agents/reader.md"
+        user_agent = self.user_home / ".claude/agents/reader.md"
+        for path, instruction in ((parent_agent, "Wrong parent definition"), (user_agent, "User definition")):
+            path.parent.mkdir(parents=True)
+            path.write_text("---\nname: reader\ndescription: Fixture.\nmodel: inherit\ntools: Read\n---\n" + instruction)
+        process, output = self.invoke(extra=("--agent", "reader"))
+        invocation = self.read_json(output / "invocation.json")
+        self.assertEqual(invocation["agent_sources"][0]["path"], str(user_agent.resolve()))
+        self.assertEqual((output / "agent-reader.md").read_bytes(), user_agent.read_bytes())
 
 
 if __name__ == "__main__":
