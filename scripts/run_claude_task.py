@@ -11,9 +11,11 @@ import shutil
 import shlex
 import subprocess
 import sys
+import threading
 
 from claude_doctor import run_doctor, stop_group
 from harness_run_audit import audit_run
+from run_progress import ConsoleEcho, NativeObserver, ProgressJournal, identifier, stop_observer
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -139,7 +141,35 @@ def run(args):
     # Artifacts must not become implementation changes or overwrite an earlier iteration.
     if out == workspace or workspace in out.parents:
         raise ValueError("Output directory must be outside the implementation workspace")
+    progress_dir = args.progress_dir.resolve() if args.progress_dir else out
+    if progress_dir == workspace or workspace in progress_dir.parents:
+        raise ValueError("Progress directory must be outside the implementation workspace")
     out.mkdir(parents=True, exist_ok=False)
+    phase = args.phase or ("handoff" if args.read_only else "build")
+    identity = {"run_id": args.run_id, "attempt": args.attempt, "step_id": args.step_id, "step_base": out.name}
+    # Console copies of the records are queued for a daemon writer: a stalled stderr reader costs
+    # dropped console lines, never a delayed record, observer stop, doctor or result.
+    console = ConsoleEcho.for_stream(sys.stderr)
+    try:
+        # The journal joins a shared pipeline or starts one under the output directory. One lock covers
+        # reading the journal and appending the run record, so the step identity is reserved atomically.
+        journal = ProgressJournal.open(
+            progress_dir, source="launcher", phase=phase, unique_step=True, echo=console,
+            first=("run", "started", {"model": identifier(args.model), "effort": identifier(args.effort)}),
+            **identity)
+    except ValueError:
+        # A foreign file in place of the journal or a duplicate explicit step is refused before anything starts.
+        try:
+            out.rmdir()
+        except OSError:
+            pass
+        raise
+    except OSError as error:
+        # The journal is optional: an unwritable directory or a held lock makes progress UNVERIFIED, not the task.
+        journal = ProgressJournal.unavailable(progress_dir, error, source="launcher", phase=phase, **identity)
+        # The warning takes the same queued console path as the records: a stalled stderr reader
+        # can drop it, counted in console_dropped, but can never hold the launch before the CLI starts.
+        console.write("progress UNVERIFIED: " + journal.error + "\n")
     (out / "instructions.md").write_text(instructions)
     (out / "prompt.md").write_text(prompt)
     (out / "selection.json").write_text(json.dumps(selection, ensure_ascii=False, indent=2) + "\n")
@@ -182,12 +212,19 @@ def run(args):
     env = os.environ.copy()
     env.pop("CLAUDE_CODE_EFFORT_LEVEL", None)
     timed_out, interrupted, launch_error, exit_code, cleanup_errors = False, False, None, None, []
+    # The observer tails the raw stream in a daemon thread; its failure is a progress status, not a task failure.
+    observer = NativeObserver(out / "events.jsonl", journal)
+    stop = threading.Event()
+    watcher = threading.Thread(target=observer.follow, args=(stop,), name="progress-observer", daemon=True)
+    progress = None
     try:
         with (out / "events.jsonl").open("w") as stdout, (out / "stderr.log").open("w") as stderr:
             process = subprocess.Popen(argv, cwd=workspace, env=env, stdin=subprocess.PIPE,
                                        stdout=stdout, stderr=stderr, text=True, start_new_session=True)
-            print(json.dumps({"pid": process.pid, "artifacts": str(out),
+            print(json.dumps({"pid": process.pid, "artifacts": str(out), "progress": str(progress_dir),
+                              "run_id": journal.run_id, "attempt": journal.attempt, "step_id": journal.step_id,
                               "model": args.model, "effort": args.effort}), flush=True)
+            watcher.start()
             try:
                 process.communicate(prompt, timeout=args.timeout)
             except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
@@ -196,9 +233,18 @@ def run(args):
                 # The leader may exit on SIGTERM while a descendant keeps writing to the workspace.
                 cleanup_errors = stop_group(process)
             exit_code = process.returncode
+        # The stream is complete once the process is gone: it is drained before the exit is recorded,
+        # so native events never trail the exit line in the journal.
+        progress = stop_observer(watcher, observer, stop)
+        journal.record("cli_exit", "timeout" if timed_out else "interrupted" if interrupted else "exited",
+                       exit_code=exit_code)
     except OSError as error:
         launch_error = str(error)
+        progress = stop_observer(watcher, observer, stop)
+        journal.record("cli_exit", "launch_error")
     finally:
+        if progress is None:
+            progress = stop_observer(watcher, observer, stop)
         doctor = run_doctor(executable, workspace, out)
     summary = summarize_events(out / "events.jsonl", args.model)
     audit = audit_run(out / "events.jsonl", selection)
@@ -215,10 +261,22 @@ def run(args):
                               and summary["parse_errors"] == 0))
     summary["ready_for_review"] = (summary["completed"] and doctor["status"] == "RECORDED"
                                    and audit["status"] == "RECORDED")
+    journal.record("doctor", doctor["status"].lower(), exit_code=doctor["exit_code"])
+    journal.record("audit", audit["status"].lower(),
+                   count=len(audit["parse_errors"]) + len(audit["missing_agents"]) + len(audit["unexpected_calls"]))
+    # Readiness is the helper's own outcome; COMPLETE is only ever an explicit manager decision.
+    journal.record("result", "ready" if summary["ready_for_review"] else
+                   "completed" if summary["completed"] else "incomplete")
+    # Bounded: the console gets one wait for its queued lines; what it did not accept is counted, not awaited.
+    progress.update(error=progress["error"] or journal.error, records=journal.records,
+                    console_dropped=console.close())
+    progress["status"] = "UNVERIFIED" if progress["error"] else "RECORDED"
+    summary.update(progress_status=progress["status"], progress_error=progress["error"],
+                   progress_dir=progress["directory"], progress_observer=progress)
     (out / "result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({key: summary[key] for key in
-                      ("completed", "ready_for_review", "doctor_status", "harness_status", "exit_code",
-                       "timed_out", "interrupted", "observed_main_models")}), flush=True)
+                      ("completed", "ready_for_review", "doctor_status", "harness_status", "progress_status",
+                       "exit_code", "timed_out", "interrupted", "observed_main_models")}), flush=True)
     return 0 if summary["ready_for_review"] else 1
 
 
@@ -235,9 +293,18 @@ def main():
     parser.add_argument("--timeout", type=int, default=1800)
     parser.add_argument("--max-budget-usd", type=float)
     parser.add_argument("--read-only", action="store_true")
+    parser.add_argument("--progress-dir", type=Path,
+                        help="Shared pipeline journal (progress.jsonl, progress.log); default: the output directory")
+    parser.add_argument("--attempt", type=int, help="Self-correct attempt number; default: latest in the journal")
+    parser.add_argument("--step-id", help="Journal step identity; default: the output directory name")
+    parser.add_argument("--run-id", help="Pipeline identity; default: the journal's run id")
+    parser.add_argument("--phase", choices=("build", "verify", "handoff"),
+                        help="Recorded phase; default: handoff with --read-only, otherwise build")
     args = parser.parse_args()
     if args.timeout <= 0 or (args.max_budget_usd is not None and args.max_budget_usd <= 0):
         parser.error("Timeout and an explicit budget must be positive")
+    if args.attempt is not None and args.attempt <= 0:
+        parser.error("Attempt must be positive")
     try:
         return run(args)
     except (OSError, ValueError) as error:

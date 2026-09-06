@@ -62,6 +62,58 @@ Helper вызывается по абсолютному пути из инстр
 от `harness-audit.json`, где отражены реальные вызовы и пропуски выбранных агентов.
 Статус RECORDED подтверждает сбор сведений; приемку кода определяют тесты и review.
 
+## Живой монитор конвейера
+
+Helper ведет журнал прогресса `progress.jsonl` (единственный источник, только
+проверенные метаданные) и его читаемую проекцию `progress.log`. Без
+`--progress-dir` оба файла лежат в каталоге `--output-dir`; общий
+`--progress-dir` вне workspace связывает все вызовы одного конвейера в одну
+историю. Каждая запись несет источник: `native` (события stream-json CLI: init,
+вызовы инструментов, hooks, фоновые задачи, result), `launcher` (запуск, выход
+CLI, doctor, сверка обвязки, готовность) и `manager` (этапы, замечания, решения).
+В журнал не попадают промпты, аргументы и результаты инструментов, текст ответов,
+thinking, окружение, ключи, сообщения об ошибках API и пути из событий; сырой
+поток остается в `events.jsonl`.
+
+Консоль (те же записи, что и на странице):
+
+    tail -f /path/to/run/progress/progress.log
+
+Helper дублирует те же строки в свой stderr и не ждет читателя: если stderr
+перестали читать, строки сверх очереди отбрасываются, а их число попадает в
+`result.json` как `progress_observer.console_dropped`; `progress.log` хранит все
+записи. Идентификаторы вызовов и задач CLI локальны для одного вызова helper:
+страница показывает их вместе с шагом и не связывает одинаковые ID разных шагов.
+
+Страница на 127.0.0.1; порт 0 выбирает свободный, URL печатается в stdout:
+
+    python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress
+
+Сервер отдает только страницу и `/api/events`; каталог артефактов по HTTP
+недоступен, внешних ресурсов страница не загружает. Остановка страницы или
+сервера не влияет на задачу. Отказ записи журнала (недоступный каталог, занятый
+lock) не прерывает вызов и фиксируется в `result.json` как
+`progress_status: UNVERIFIED` отдельно от `completed` и `ready_for_review`.
+Чужой файл на месте `progress.jsonl` или `progress.log` (символическая или
+жесткая ссылка, посторонний текст) helper отвергает до запуска CLI.
+
+Этапы менеджера пишет только менеджер, явной командой на каждый переход:
+
+    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status passed --count 40
+    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status failed --model gpt-6-astra --effort ultra
+    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase triage --status confirmed --count 8
+    python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase decision --status retry
+
+`--phase`: build, tests, review, triage, verify, handoff, decision. Статусы этапов:
+started, passed, failed, blocked, unverified, stopped; для triage: confirmed,
+refuted, unverified; для decision: retry, verify, escalate, complete. Успех CLI
+и `ready_for_review` не делают конвейер COMPLETE: страница показывает COMPLETE
+только по решению менеджера. `--attempt` по умолчанию - последняя попытка в
+журнале, при RETRY менеджер передает новый номер helper и emit. `--step-id`
+helper по умолчанию - имя каталога вывода (при совпадении в той же попытке
+добавляется суффикс `-2`), для emit - имя этапа. Helper печатает выбранные
+`run_id`, `attempt` и `step_id` первой строкой stdout.
+
 ## Состав обвязки
 
 Скиллы - предметные:

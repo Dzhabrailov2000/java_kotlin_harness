@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Монитор конвейера</title>
+<style>
+:root {
+  --bg: #f4f5f7; --panel: #ffffff; --line: #d9dde3; --text: #1c2430; --muted: #66707d;
+  --neutral: #e6e9ee; --pending: #fff1cc; --pending-text: #7a5a00; --ok: #dcebff; --ok-text: #1a4f9c;
+  --done: #d8f3df; --done-text: #1a6b35; --warn: #ffe2c2; --warn-text: #8a4a00; --bad: #ffd9d9; --bad-text: #9b1c1c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+header.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+header .meta { color: var(--muted); margin-top: 2px; }
+main { padding: 16px 24px 32px; max-width: 1400px; margin: 0 auto; }
+.notice { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+.notice.warn { background: var(--warn); color: var(--warn-text); border-color: transparent; }
+.notice.bad { background: var(--bad); color: var(--bad-text); border-color: transparent; }
+.hidden { display: none; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-height: 92px; }
+.card h2, .panel h2 { margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.card .value { font-size: 17px; font-weight: 600; word-break: break-word; }
+.card .sub { color: var(--muted); margin-top: 4px; word-break: break-word; }
+.card.state-pending { border-left: 4px solid #e0b100; }
+.card.state-ok { border-left: 4px solid #3a7bd5; }
+.card.state-done { border-left: 4px solid #2a9d5c; }
+.card.state-warn { border-left: 4px solid #e08a1e; }
+.card.state-bad { border-left: 4px solid #d64545; }
+.card.state-neutral { border-left: 4px solid #b8c0cc; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.panel-head label { color: var(--muted); user-select: none; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; position: sticky; top: 0; background: var(--panel); }
+tbody tr:last-child td { border-bottom: none; }
+.scroll { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--neutral); color: var(--text); }
+.pill-pending { background: var(--pending); color: var(--pending-text); }
+.pill-ok { background: var(--ok); color: var(--ok-text); }
+.pill-done { background: var(--done); color: var(--done-text); }
+.pill-warn { background: var(--warn); color: var(--warn-text); }
+.pill-bad { background: var(--bad); color: var(--bad-text); }
+.src { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; border: 1px solid var(--line); color: var(--muted); }
+.src-manager { color: #5b2d9c; border-color: #c9b5e8; }
+.src-native { color: #1a4f9c; border-color: #b5cdf0; }
+.src-launcher { color: #3d5a3d; border-color: #b9d2b9; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
+.empty { color: var(--muted); padding: 10px 4px; }
+.time { color: var(--muted); white-space: nowrap; }
+footer { color: var(--muted); padding: 0 24px 24px; max-width: 1400px; margin: 0 auto; }
+footer code { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Монитор конвейера</h1>
+    <div class="meta"><span id="run">run: -</span> · <span id="attempt">попытка: -</span> · <span id="records">записей: 0</span></div>
+  </div>
+  <span id="connection" class="pill">подключение...</span>
+</header>
+<main>
+  <div id="notice" class="notice hidden"></div>
+  <section class="cards">
+    <article id="card-stage" class="card state-neutral"><h2>Текущий этап</h2><div id="stage" class="value">-</div><div id="stage-detail" class="sub">событий еще нет</div></article>
+    <article id="card-decision" class="card state-neutral"><h2>Решение менеджера</h2><div id="decision" class="value">не принято</div><div id="decision-detail" class="sub">COMPLETE только по явному событию менеджера</div></article>
+    <article id="card-model" class="card state-neutral"><h2>Исполнитель</h2><div id="model" class="value">-</div><div id="model-detail" class="sub">модель не наблюдалась</div></article>
+    <article id="card-time" class="card state-neutral"><h2>Время</h2><div id="elapsed" class="value">-</div><div id="last-age" class="sub">-</div></article>
+    <article id="card-journal" class="card state-neutral"><h2>Журнал прогресса</h2><div id="journal" class="value">-</div><div id="journal-detail" class="sub">-</div></article>
+  </section>
+  <section class="panel">
+    <h2>Шаги</h2>
+    <table><thead><tr><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Начало</th><th>Модель CLI</th><th>Последнее состояние</th><th>Вызовы</th></tr></thead><tbody id="steps"></tbody></table>
+    <div id="steps-empty" class="empty">шагов пока нет</div>
+  </section>
+  <section class="panel">
+    <h2>Агенты и фоновые задачи</h2>
+    <table><thead><tr><th>Шаг</th><th>Вызов</th><th>Компонент</th><th>Родитель</th><th>Задача</th><th>Состояние</th><th>Обновлено</th></tr></thead><tbody id="agents"></tbody></table>
+    <div id="agents-empty" class="empty">вызовов Agent/Task не наблюдалось</div>
+  </section>
+  <section class="panel">
+    <h2>Инструменты</h2>
+    <div id="tools" class="chips"></div>
+    <div id="tools-empty" class="empty">вызовов инструментов не наблюдалось</div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>События</h2><label><input type="checkbox" id="follow" checked> следить за концом</label></div>
+    <div id="events-scroll" class="scroll">
+      <table><thead><tr><th>Время</th><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Событие</th><th>Статус</th></tr></thead><tbody id="events"></tbody></table>
+    </div>
+    <div id="events-empty" class="empty">журнал пока пуст</div>
+  </section>
+</main>
+<footer>Тот же журнал в консоли: <code id="tail">tail -f progress.log</code></footer>
+<script>
+(function () {
+  'use strict';
+  var state = { cursor: 0, discard: false, events: [], seen: {}, invalid: 0, journal: null, log: '', failures: 0,
+                connected: false, serverNow: null, receivedAt: null, timer: null };
+  var AGENT_TOOLS = { Agent: true, Task: true };
+  var CLASS_BY_STATUS = {
+    error: 'bad', failed: 'bad', timeout: 'bad', interrupted: 'bad', launch_error: 'bad', escalate: 'bad', cancelled: 'bad',
+    unverified: 'warn', blocked: 'warn', stopped: 'warn', verify: 'warn', retry: 'warn', incomplete: 'warn',
+    returned: 'ok', completed: 'ok', success: 'ok', passed: 'ok', recorded: 'ok', ready: 'ok', confirmed: 'ok', refuted: 'ok',
+    complete: 'done',
+    started: 'pending', observed: 'pending', requested: 'pending', progress: 'pending'
+  };
+  var DECISIONS = { retry: 'RETRY', verify: 'VERIFY', escalate: 'ESCALATE', complete: 'COMPLETE' };
+
+  function $(id) { return document.getElementById(id); }
+  function text(id, value) { $(id).textContent = value; }
+  function cell(row, value, className) {
+    var td = document.createElement('td');
+    td.textContent = value == null ? '' : String(value);
+    if (className) { td.className = className; }
+    row.appendChild(td);
+    return td;
+  }
+  function pill(value, kind) {
+    var span = document.createElement('span');
+    span.className = 'pill pill-' + (kind || 'neutral');
+    span.textContent = value;
+    return span;
+  }
+  function source(value) {
+    var span = document.createElement('span');
+    span.className = 'src src-' + value;
+    span.textContent = value;
+    return span;
+  }
+  function statusClass(status) { return CLASS_BY_STATUS[status] || 'neutral'; }
+  function setCard(id, kind) { $(id).className = 'card state-' + kind; }
+  function clock(iso) {
+    var date = new Date(iso);
+    if (isNaN(date.getTime())) { return iso; }
+    var pad = function (n, w) { return String(n).padStart(w || 2, '0'); };
+    return pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds()) + '.' + pad(date.getMilliseconds(), 3);
+  }
+  function span(seconds) {
+    if (seconds == null || isNaN(seconds)) { return '-'; }
+    seconds = Math.max(0, Math.round(seconds));
+    var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
+    return (h ? h + ' ч ' : '') + (h || m ? m + ' мин ' : '') + s + ' с';
+  }
+  function now() {
+    // Server time plus the time since it was received: the page never invents progress on its own clock skew.
+    return state.serverNow == null ? Date.now() : state.serverNow + (Date.now() - state.receivedAt);
+  }
+
+  function schedule(delay) {
+    if (state.timer) { clearTimeout(state.timer); }
+    state.timer = setTimeout(poll, delay);
+  }
+  function poll() {
+    // The discard flag returns to the server with the cursor so an oversized line is skipped whole.
+    fetch('/api/events?cursor=' + state.cursor + '&limit=500&discard=' + (state.discard ? 1 : 0), { cache: 'no-store' })
+      .then(function (response) {
+        if (!response.ok) { throw new Error('HTTP ' + response.status); }
+        return response.json();
+      })
+      .then(function (page) {
+        state.failures = 0;
+        state.connected = true;
+        state.receivedAt = Date.now();
+        state.serverNow = Date.parse(page.now) || Date.now();
+        if (page.reset) {
+          state.cursor = 0; state.discard = false; state.events = []; state.seen = {}; state.invalid = 0;
+          $('events').textContent = '';
+          render();
+          schedule(0);
+          return;
+        }
+        state.journal = page.journal;
+        state.log = page.log || '';
+        state.invalid += page.invalid_lines || 0;
+        page.events.forEach(function (event) {
+          if (!event || state.seen[event.event_id]) { return; }
+          state.seen[event.event_id] = true;
+          state.events.push(event);
+          appendEventRow(event);
+        });
+        state.cursor = page.cursor;
+        state.discard = !!page.discard;
+        render();
+        schedule(page.more ? 50 : 1000);
+      })
+      .catch(function () {
+        state.failures += 1;
+        state.connected = false;
+        render();
+        schedule(Math.min(2000 * state.failures, 10000));
+      });
+  }
+
+  function appendEventRow(event) {
+    var body = $('events'), row = document.createElement('tr');
+    cell(row, clock(event.time), 'time mono');
+    cell(row, event.attempt);
+    cell(row, event.step_id, 'mono');
+    cell(row).appendChild(source(event.source));
+    cell(row, event.phase);
+    cell(row, event.label);
+    cell(row).appendChild(pill(event.status, statusClass(event.status)));
+    body.appendChild(row);
+    if ($('follow').checked) {
+      var scroll = $('events-scroll');
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+  }
+
+  function summarize() {
+    var summary = { attempt: 0, runId: null, first: null, last: null, decision: null, stage: null, current: null,
+                    steps: {}, stepOrder: [], failedObservers: [], calls: {}, callOrder: [], tasks: {}, tools: {} };
+    state.events.forEach(function (event) {
+      summary.attempt = Math.max(summary.attempt, event.attempt);
+      summary.runId = summary.runId || event.run_id;
+      summary.first = summary.first || event.time;
+      summary.last = event.time;
+      var key = event.attempt + ' ' + event.step_id, step = summary.steps[key];
+      if (!step) {
+        step = summary.steps[key] = { attempt: event.attempt, id: event.step_id, sources: {}, phase: event.phase,
+                                      start: event.time, state: event, calls: 0, errors: 0,
+                                      run: null, init: null, observer: null, lastNative: null, exit: null, result: null };
+        summary.stepOrder.push(key);
+      }
+      step.sources[event.source] = true;
+      if (event.status === 'error' || event.status === 'failed') { step.errors += 1; }
+      if (event.event !== 'tool_call' && event.event !== 'tool_result' && event.event !== 'hook') { step.state = event; }
+      // Observations belong to the invocation (attempt + step) that produced them, never to a later one.
+      if (event.source === 'native') { step.lastNative = event; }
+      if (event.event === 'run') { step.run = event; summary.current = step; }
+      if (event.event === 'init') { step.init = step.init || event; }
+      if (event.event === 'observer') {
+        step.observer = event;
+        if (event.status === 'failed') { summary.failedObservers.push(step); }
+      }
+      if (event.event === 'cli_exit') { step.exit = event; }
+      if (event.event === 'result') { step.result = event; }
+      if (event.event === 'decision') { summary.decision = event; }
+      if (event.event === 'run' || event.event === 'cli_exit' || event.event === 'result' || event.event === 'phase'
+          || event.event === 'finding' || event.event === 'decision') { summary.stage = event; }
+      // Native call and task IDs are local to one CLI invocation: the same ID in another step is
+      // another call, so every association is keyed by attempt + step + ID and shown with its step.
+      if (event.event === 'tool_call' && event.tool) {
+        var tool = summary.tools[event.tool] = summary.tools[event.tool] || { calls: 0, errors: 0 };
+        var callKey = event.call_id ? key + ' ' + event.call_id : null, call = callKey ? summary.calls[callKey] : null;
+        if (call) {
+          // The observer records a second line when metadata arrives later; it is the same call.
+          call.component = call.component || event.component;
+          if (event.status === 'requested') { call.status = 'requested'; }
+          call.updated = event.time;
+        } else {
+          step.calls += 1;
+          tool.calls += 1;
+          if (callKey) {
+            summary.calls[callKey] = { id: event.call_id, attempt: event.attempt, step: event.step_id, tool: event.tool, component: event.component,
+                                       parent: event.parent_call_id, status: event.status, result: null, task: null, taskStatus: null,
+                                       updated: event.time, agent: !!AGENT_TOOLS[event.tool] };
+            summary.callOrder.push(callKey);
+          }
+        }
+      }
+      if (event.event === 'tool_result' && event.call_id) {
+        var result = summary.calls[key + ' ' + event.call_id];
+        if (result) { result.result = event.status; result.updated = event.time; }
+        if (event.tool && summary.tools[event.tool] && event.status === 'error') { summary.tools[event.tool].errors += 1; }
+      }
+      if (event.event === 'task' && event.task_id) {
+        var taskKey = key + ' ' + event.task_id;
+        var task = summary.tasks[taskKey] = summary.tasks[taskKey] || { id: event.task_id, attempt: event.attempt, step: event.step_id,
+                                                                        call: event.call_id, tool: event.tool, component: event.component };
+        task.status = event.status; task.updated = event.time; task.call = task.call || event.call_id;
+        var owner = task.call ? summary.calls[key + ' ' + task.call] : null;
+        if (owner) { owner.task = task.id; owner.taskStatus = event.status; owner.updated = event.time; }
+      }
+    });
+    return summary;
+  }
+
+  function callState(call) {
+    if (call.taskStatus === 'completed') { return ['фоновая задача завершена', 'ok']; }
+    if (call.taskStatus === 'failed') { return ['фоновая задача завершилась ошибкой', 'bad']; }
+    if (call.taskStatus === 'stopped') { return ['фоновая задача остановлена', 'warn']; }
+    if (call.result === 'error') { return ['инструмент вернул ошибку', 'bad']; }
+    if (call.taskStatus === 'started') { return ['выполняется в фоне', 'pending']; }
+    if (call.result === 'returned' && call.status === 'requested') { return ['фоновый запуск подтвержден, завершения нет', 'pending']; }
+    if (call.result === 'returned') { return ['результат получен (не приемка)', 'ok']; }
+    if (call.status === 'requested') { return ['запрошен в фоне, результата нет', 'pending']; }
+    return ['ожидает результат', 'pending'];
+  }
+
+  function render() {
+    var summary = summarize(), current = summary.current, moment = now();
+    var connection = $('connection');
+    if (state.connected) {
+      connection.className = 'pill pill-ok'; connection.textContent = 'связь с сервером есть';
+    } else {
+      connection.className = 'pill pill-bad';
+      connection.textContent = state.failures ? 'нет связи, повтор через ' + Math.min(2 * state.failures, 10) + ' с' : 'подключение...';
+    }
+    var notice = $('notice');
+    if (!state.connected && state.failures) {
+      notice.className = 'notice bad';
+      notice.textContent = 'Сервер прогресса не отвечает: данные ниже могли устареть. Страница продолжает попытки подключения.';
+    } else if (state.journal === false) {
+      notice.className = 'notice warn';
+      notice.textContent = 'Журнал progress.jsonl еще не создан: дождитесь запуска helper или проверьте --progress-dir.';
+    } else {
+      notice.className = 'notice hidden';
+    }
+    text('run', 'run: ' + (summary.runId || '-'));
+    text('attempt', 'попытка: ' + (summary.attempt || '-'));
+    text('records', 'записей: ' + state.events.length + (state.invalid ? ', поврежденных строк: ' + state.invalid : ''));
+
+    var stage = summary.stage;
+    if (!stage) {
+      text('stage', state.events.length ? 'только наблюдаемые вызовы' : 'нет данных');
+      text('stage-detail', state.events.length ? 'событий этапа еще не было' : 'событий еще нет');
+      setCard('card-stage', 'neutral');
+    } else {
+      var running = stage.event === 'run', own = summary.steps[stage.attempt + ' ' + stage.step_id];
+      text('stage', stage.phase + ' · ' + stage.step_id);
+      var detail = stage.label + ', ' + clock(stage.time);
+      if (running) {
+        detail = 'исполнитель работает; ' + (own && own.lastNative ? 'последнее наблюдение: ' + own.lastNative.label
+                 + ', ' + span((moment - Date.parse(own.lastNative.time)) / 1000) + ' назад' : 'из потока CLI еще ничего не наблюдалось');
+      }
+      text('stage-detail', detail);
+      setCard('card-stage', running ? 'pending' : statusClass(stage.status));
+    }
+
+    var decision = summary.decision;
+    if (decision) {
+      text('decision', DECISIONS[decision.status] || decision.status);
+      text('decision-detail', 'попытка ' + decision.attempt + ', ' + clock(decision.time) + (decision.status === 'complete' ? '' : '; конвейер не завершен'));
+      setCard('card-decision', statusClass(decision.status));
+    } else {
+      text('decision', 'не принято');
+      text('decision-detail', 'COMPLETE только по явному событию менеджера; успех CLI им не является');
+      setCard('card-decision', 'neutral');
+    }
+
+    if (current) {
+      text('model', (current.run.model || '?') + ' / ' + (current.run.effort || '?'));
+      var observed = current.init ? 'наблюдаемая модель CLI: ' + (current.init.model || '?')
+                   : (current.exit ? 'модель CLI в этом шаге не наблюдалась' : 'инициализация CLI еще не наблюдалась');
+      text('model-detail', 'шаг ' + current.id + ', попытка ' + current.attempt + '; ' + observed);
+      setCard('card-model', current.init ? (current.init.model === current.run.model ? 'ok' : 'warn') : (current.exit ? 'warn' : 'pending'));
+    } else {
+      text('model', '-');
+      text('model-detail', 'запуск исполнителя не зафиксирован');
+      setCard('card-model', 'neutral');
+    }
+
+    if (summary.first) {
+      var finished = decision && (decision.status === 'complete' || decision.status === 'escalate');
+      var end = finished ? Date.parse(summary.last) : moment;
+      text('elapsed', span((end - Date.parse(summary.first)) / 1000) + (finished ? ' (итог)' : ''));
+      var age = (moment - Date.parse(summary.last)) / 1000;
+      var quiet = age > 60 && !finished;
+      text('last-age', (quiet ? 'тишина: ' : 'последнее событие: ') + span(age) + ' назад');
+      setCard('card-time', quiet ? 'warn' : (finished ? 'neutral' : 'ok'));
+    } else {
+      text('elapsed', '-'); text('last-age', '-'); setCard('card-time', 'neutral');
+    }
+
+    var earlier = summary.failedObservers.filter(function (step) { return step !== current; }).map(function (step) { return step.id; });
+    var tail = earlier.length ? '; ранее отказ журнала: ' + earlier.join(', ') : '';
+    if (state.journal === false) {
+      text('journal', 'не найден'); text('journal-detail', 'progress.jsonl отсутствует в каталоге'); setCard('card-journal', 'warn');
+    } else if (current && current.observer && current.observer.status === 'failed') {
+      text('journal', 'UNVERIFIED');
+      text('journal-detail', 'шаг ' + current.id + ': наблюдатель или запись журнала отказали; см. result.json' + tail);
+      setCard('card-journal', 'bad');
+    } else if (state.invalid) {
+      text('journal', 'поврежденные строки: ' + state.invalid); text('journal-detail', 'строки пропущены, события не додуманы' + tail); setCard('card-journal', 'warn');
+    } else if (current && current.observer) {
+      text('journal', 'наблюдатель остановлен');
+      text('journal-detail', 'шаг ' + current.id + ': нативных событий: ' + (current.observer.count == null ? '?' : current.observer.count) + tail);
+      setCard('card-journal', earlier.length ? 'warn' : 'ok');
+    } else if (current) {
+      text('journal', current.exit ? 'наблюдатель завершает работу' : 'наблюдение идет');
+      text('journal-detail', 'шаг ' + current.id + ': progress.jsonl читается постранично' + tail);
+      setCard('card-journal', earlier.length ? 'warn' : 'pending');
+    } else {
+      text('journal', 'записей: ' + state.events.length); text('journal-detail', 'запуск исполнителя не зафиксирован' + tail); setCard('card-journal', earlier.length ? 'warn' : 'neutral');
+    }
+
+    var steps = $('steps');
+    steps.textContent = '';
+    summary.stepOrder.forEach(function (key) {
+      var step = summary.steps[key], row = document.createElement('tr');
+      cell(row, step.attempt);
+      cell(row, step.id, 'mono');
+      var sources = cell(row);
+      Object.keys(step.sources).forEach(function (name) { sources.appendChild(source(name)); sources.appendChild(document.createTextNode(' ')); });
+      cell(row, step.phase);
+      cell(row, clock(step.start), 'time mono');
+      cell(row, step.init ? (step.init.model || '?') : (step.run ? 'не наблюдалась' : '-'), 'mono');
+      var stateCell = cell(row, step.state.label + ' ');
+      stateCell.appendChild(pill(step.state.status, statusClass(step.state.status)));
+      cell(row, step.calls + (step.errors ? ' (ошибок: ' + step.errors + ')' : ''));
+      steps.appendChild(row);
+    });
+    $('steps-empty').className = summary.stepOrder.length ? 'empty hidden' : 'empty';
+
+    var agents = $('agents'), agentRows = 0;
+    agents.textContent = '';
+    summary.callOrder.forEach(function (callKey) {
+      var call = summary.calls[callKey];
+      if (!call.agent) { return; }
+      var row = document.createElement('tr'), status = callState(call);
+      cell(row, '#' + call.attempt + ' ' + call.step, 'mono');
+      cell(row, call.id, 'mono');
+      cell(row, call.tool + (call.component ? ' (' + call.component + ')' : ' (компонент не определен)'));
+      cell(row, call.parent || 'основная сессия', 'mono');
+      cell(row, call.task ? call.task + ': ' + call.taskStatus : '-', 'mono');
+      cell(row).appendChild(pill(status[0], status[1]));
+      cell(row, clock(call.updated), 'time mono');
+      agents.appendChild(row);
+      agentRows += 1;
+    });
+    Object.keys(summary.tasks).forEach(function (taskKey) {
+      var task = summary.tasks[taskKey];
+      if (task.call && summary.calls[task.attempt + ' ' + task.step + ' ' + task.call]) { return; }
+      var row = document.createElement('tr');
+      cell(row, '#' + task.attempt + ' ' + task.step, 'mono');
+      cell(row, task.call || '-', 'mono');
+      cell(row, task.tool ? task.tool + (task.component ? ' (' + task.component + ')' : '') : 'фоновая задача без вызова');
+      cell(row, '-');
+      cell(row, task.id + ': ' + task.status, 'mono');
+      cell(row).appendChild(pill(task.status, statusClass(task.status)));
+      cell(row, clock(task.updated), 'time mono');
+      agents.appendChild(row);
+      agentRows += 1;
+    });
+    $('agents-empty').className = agentRows ? 'empty hidden' : 'empty';
+
+    var tools = $('tools');
+    tools.textContent = '';
+    var names = Object.keys(summary.tools).sort();
+    names.forEach(function (name) {
+      var chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = name + ' x' + summary.tools[name].calls + (summary.tools[name].errors ? ', ошибок: ' + summary.tools[name].errors : '');
+      tools.appendChild(chip);
+    });
+    $('tools-empty').className = names.length ? 'empty hidden' : 'empty';
+    $('events-empty').className = state.events.length ? 'empty hidden' : 'empty';
+    text('tail', 'tail -f ' + (state.log || 'progress.log'));
+  }
+
+  setInterval(function () { if (state.events.length) { render(); } }, 1000);
+  poll();
+})();
+</script>
+</body>
+</html>

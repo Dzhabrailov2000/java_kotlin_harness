@@ -63,6 +63,46 @@ Helper передает полный текст выбранных skills в sys
 Это ограничение инструментов, а не файловая/сетевая песочница: Bash и native
 настройки агентов требуют обычной проверки. Глобальные настройки не меняются.
 
+## Журнал прогресса конвейера
+
+Все вызовы helper одной задачи получают общий `--progress-dir` вне workspace
+(например, `/path/to/run/progress`); при RETRY передавай helper и emit
+`--attempt N`. Helper сам записывает `run`, наблюдаемые события CLI (init,
+вызовы инструментов, hooks, фоновые задачи, result), `cli_exit`, `doctor`,
+`audit`, `result` и handoff в `--read-only` как фазу `handoff`. Этапы
+менеджера появляются в журнале только от менеджера, по одной команде на переход:
+
+   ```sh
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status started
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status passed --count 40
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status started --model gpt-6-astra --effort ultra
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status failed
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase triage --status confirmed --count 8
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase decision --status retry
+   ```
+
+Кто и когда пишет: `tests` вокруг запуска проверок (шаг 5), `review` вокруг
+независимого ревью (шаг 6), `triage` после фиксации CONFIRMED / REFUTED /
+UNVERIFIED (шаг 7; отдельная запись на каждый статус, `--count` - число
+замечаний), `verify` для повторной проверки без правок, `decision` - RETRY /
+VERIFY / ESCALATE / COMPLETE после каждой проверки. Заблокированная сеть или
+недоступный ревьюер записываются как `--status blocked` или `unverified`, а не
+пропускаются. Статусы этапов: started, passed, failed, blocked, unverified,
+stopped; для triage: confirmed, refuted, unverified.
+
+Просмотр: `tail -f /path/to/run/progress/progress.log` или
+`python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress`
+(URL печатается в stdout, сервер слушает только 127.0.0.1 и не отдает каталог
+артефактов). Журнал не заменяет отчет и не является приемкой:
+`progress_status` в `result.json` говорит только о записи прогресса, а COMPLETE
+на странице появляется лишь после явного решения менеджера. Helper не запускает
+этапы менеджера сам; страница показывает только то, что было записано.
+Копию строк helper печатает в stderr, не дожидаясь читателя: если stderr не
+читают, лишние строки отбрасываются, а их число записывается в `result.json`
+как `progress_observer.console_dropped`; полный журнал остается в `progress.log`.
+ID вызовов и задач CLI локальны для шага: одинаковые ID в разных шагах страница
+показывает как разные вызовы, каждый со своим шагом.
+
 ## Проверка и отчет Claude
 
 5. После КАЖДОГО запущенного вызова, включая ошибку или таймаут, helper выполняет

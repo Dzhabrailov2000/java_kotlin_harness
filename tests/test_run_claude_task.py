@@ -158,6 +158,11 @@ class RunClaudeTaskTest(unittest.TestCase):
     def read_json(self, path):
         return json.loads(path.read_text(encoding="utf-8"))
 
+    def progress_outline(self, output):
+        """(source, event, status) of every record in the default journal under the output directory."""
+        lines = (output / "progress.jsonl").read_text(encoding="utf-8").splitlines()
+        return [(record["source"], record["event"], record["status"]) for record in map(json.loads, lines)]
+
     def option(self, argv, name):
         self.assertEqual(argv.count(name), 1, argv)
         return argv[argv.index(name) + 1]
@@ -200,6 +205,11 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.assertEqual(result["cleanup_errors"], [])
         self.assertEqual(result["doctor_status"], "RECORDED")
         self.assertEqual(self.read_json(output / "doctor.json")["exit_code"], 0)
+        # The journal keeps the same story: the stop reason is recorded, the observer is joined, doctor still runs.
+        self.assertEqual(result["progress_status"], "RECORDED")
+        self.assertEqual(self.progress_outline(output)[-5:], [
+            ("launcher", "observer", "stopped"), ("launcher", "cli_exit", "timeout" if timed_out else "interrupted"),
+            ("launcher", "doctor", "recorded"), ("launcher", "audit", "recorded"), ("launcher", "result", "incomplete")])
         return result
 
     def test_selected_skill_text_and_hashes_match_actual_invocation(self):
@@ -238,6 +248,13 @@ class RunClaudeTaskTest(unittest.TestCase):
                 self.assertNotEqual(process.returncode, 0)
                 self.assertFalse(self.capture.exists(), "Rejected output must not start the executable")
                 self.assertEqual(list(self.workspace.iterdir()), [])
+        for progress in (self.workspace, self.workspace / "progress"):
+            with self.subTest(progress=progress):
+                process, output = self.invoke(extra=("--progress-dir", str(progress)))
+                self.assertNotEqual(process.returncode, 0)
+                self.assertFalse(self.capture.exists(), "Rejected progress directory must not start the executable")
+                self.assertEqual(list(self.workspace.iterdir()), [])
+                self.assertFalse(output.exists())
 
     def test_output_symlink_cannot_bypass_workspace_boundary(self):
         alias = self.directory / "workspace-alias"
@@ -266,6 +283,17 @@ class RunClaudeTaskTest(unittest.TestCase):
         captured = self.read_json(self.capture)
         self.assertEqual(self.option(captured["argv"], "--model"), self.MODEL)
         self.assertEqual(self.option(captured["argv"], "--effort"), "max")
+        # Without --progress-dir the readable progress lives beside the other artifacts.
+        first, last = (json.loads(line) for line in (process.stdout.splitlines()[0], process.stdout.splitlines()[-1]))
+        resolved = str(output.resolve())
+        self.assertEqual((first["artifacts"], first["progress"], first["step_id"]), (resolved, resolved, output.name))
+        self.assertEqual((last["progress_status"], result["progress_status"], result["progress_dir"]),
+                         ("RECORDED", "RECORDED", resolved))
+        self.assertTrue((output / "progress.log").read_text(encoding="utf-8").startswith("# progress.log v1"))
+        self.assertEqual(self.progress_outline(output), [
+            ("launcher", "run", "started"), ("native", "init", "observed"), ("native", "cli_result", "success"),
+            ("launcher", "observer", "stopped"), ("launcher", "cli_exit", "exited"), ("launcher", "doctor", "recorded"),
+            ("launcher", "audit", "recorded"), ("launcher", "result", "ready")])
 
     def test_incomplete_or_unsuccessful_runs_do_not_report_completed(self):
         cases = []
@@ -344,6 +372,8 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.assertTrue(result["completed"])
         self.assertFalse(result["ready_for_review"])
         self.assertEqual(result["doctor_status"], "UNVERIFIED")
+        self.assertEqual(self.progress_outline(output)[-3:], [
+            ("launcher", "doctor", "unverified"), ("launcher", "audit", "recorded"), ("launcher", "result", "completed")])
 
     def test_selected_project_skill_and_subagent_are_recorded_and_checked(self):
         skill = self.workspace / ".claude/skills/local-rule/SKILL.md"
