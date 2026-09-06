@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Установка личной обвязки Claude Code на новую машину.
-# Симлинкует компоненты из этого репозитория в ~/.claude.
+# Установка личной обвязки Claude Code и общего self-correct для Codex.
+# Симлинкует компоненты в ~/.claude, self-correct также в ~/.agents/skills.
 # Память и секреты сюда НЕ входят (см. README.md и .gitignore).
 set -euo pipefail
 
@@ -26,6 +26,9 @@ for dir in "$REPO_DIR"/skills/*/; do
   [ -d "$dir" ] || continue
   link_item "${dir%/}" "$CLAUDE_DIR/skills/$(basename "$dir")"
 done
+
+# Тот же self-correct доступен основной сессии Codex; остальные общие скиллы не меняем.
+link_item "$REPO_DIR/skills/self-correct" "$HOME/.agents/skills/self-correct"
 
 # Агенты, команды, хуки: пофайлово.
 for file in "$REPO_DIR"/agents/*.md; do
