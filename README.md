@@ -95,8 +95,18 @@ statusline. Флаги `--model` и `--effort` конкретного запус
 Живой монитор: helper ведет `progress.jsonl` и `progress.log` (по умолчанию в
 `--output-dir`; общий `--progress-dir` связывает вызовы одной задачи),
 `python3 scripts/run_progress.py serve --progress-dir <dir>` показывает
-страницу на 127.0.0.1, `emit` пишет этапы менеджера. Поля, статусы и
-ограничения журнала - в инструкции менеджера.
+страницу на 127.0.0.1, `emit` пишет этапы менеджера. Рядом с журналом helper
+ведет `trace.jsonl`: промпт задачи, публичные ответы модели и usage токенов;
+`scripts/run_codex_review.py` так же записывает ревью Codex, а
+`scripts/run_trace.py` регистрирует запрос пользователя, замечания и решения
+менеджера и импортирует старые журналы вместе с артефактами запуска. Helper
+записывает и выбранную обвязку каждого вызова (скиллы, агенты, MCP с hash
+источников), наблюдаемые вызовы компонентов, статусы `claude doctor` и сверки;
+для каждой сессии Claude и Codex страница показывает идентификатор, емкость
+окна контекста и приближение занятости, а неизвестное называет неизвестным.
+Страница показывает этапы по попыткам, разговор, токены, лимиты и блок по
+каждому вызову LLM. Поля, статусы, команды записи и ограничения - в
+[инструкции менеджера](skills/self-correct/references/claude-codex.md#журнал-прогресса-конвейера).
 
 ## Состав
 
@@ -117,8 +127,8 @@ statusline. Флаги `--model` и `--effort` конкретного запус
   harness-banner (по `/harness`, как hook не подключен), ascii-punctuation
   (PostToolUse Write|Edit: проверяет записанный фрагмент, не весь файл).
 - Statusline: занятость контекста, лимит сессии на 5 часов, недельный лимит.
-- Скрипты: run_claude_task.py, claude_doctor.py, harness_run_audit.py,
-  run_progress.py.
+- Скрипты: run_claude_task.py, run_codex_review.py, claude_doctor.py,
+  harness_run_audit.py, run_progress.py, run_trace.py.
 
 Проверки: `python3 -B -m unittest discover -s tests -v`.
 

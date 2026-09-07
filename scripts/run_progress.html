@@ -9,36 +9,48 @@
   --bg: #f4f5f7; --panel: #ffffff; --line: #d9dde3; --text: #1c2430; --muted: #66707d;
   --neutral: #e6e9ee; --pending: #fff1cc; --pending-text: #7a5a00; --ok: #dcebff; --ok-text: #1a4f9c;
   --done: #d8f3df; --done-text: #1a6b35; --warn: #ffe2c2; --warn-text: #8a4a00; --bad: #ffd9d9; --bad-text: #9b1c1c;
+  --wait: #f3ecff; --wait-text: #5b2d9c; --stale: #ececec; --stale-text: #555c66;
+  --user: #2f6f4f; --manager: #5b2d9c; --claude: #1a4f9c; --codex: #8a4a00; --import: #555c66;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
-header.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
+code, .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+header.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 24px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 header h1 { margin: 0; font-size: 18px; font-weight: 600; }
 header .meta { color: var(--muted); margin-top: 2px; }
-main { padding: 16px 24px 32px; max-width: 1400px; margin: 0 auto; }
+main { padding: 16px 24px 32px; max-width: 1500px; margin: 0 auto; }
 .notice { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
 .notice.warn { background: var(--warn); color: var(--warn-text); border-color: transparent; }
 .notice.bad { background: var(--bad); color: var(--bad-text); border-color: transparent; }
 .hidden { display: none; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-height: 92px; }
-.card h2, .panel h2 { margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-.card .value { font-size: 17px; font-weight: 600; word-break: break-word; }
-.card .sub { color: var(--muted); margin-top: 4px; word-break: break-word; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-height: 96px; }
+.card h2, .panel h2, details.diagnostics summary { margin: 0 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.card .value { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.card .sub { color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.card .sub + .sub { margin-top: 2px; }
 .card.state-pending { border-left: 4px solid #e0b100; }
 .card.state-ok { border-left: 4px solid #3a7bd5; }
 .card.state-done { border-left: 4px solid #2a9d5c; }
 .card.state-warn { border-left: 4px solid #e08a1e; }
 .card.state-bad { border-left: 4px solid #d64545; }
+.card.state-wait { border-left: 4px solid #8b5cf6; }
+.card.state-stale { border-left: 4px solid #8a9099; }
 .card.state-neutral { border-left: 4px solid #b8c0cc; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
-.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.panel-head label { color: var(--muted); user-select: none; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panel-head label, .toolbar label { color: var(--muted); user-select: none; white-space: nowrap; }
+.toolbar { display: flex; gap: 10px 14px; flex-wrap: wrap; align-items: center; margin: 6px 0 10px; }
+.toolbar select, .toolbar button, .entry button, .entry a.link { font: inherit; font-size: 13px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer; text-decoration: none; }
+.toolbar button:focus-visible, .entry button:focus-visible, .entry a.link:focus-visible, .toolbar select:focus-visible { outline: 2px solid #3a7bd5; outline-offset: 1px; }
 table { width: 100%; border-collapse: collapse; }
+.table-wrap { overflow-x: auto; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: 12px; position: sticky; top: 0; background: var(--panel); }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 tbody tr:last-child td { border-bottom: none; }
+tr.model-row td { color: var(--muted); }
 .scroll { max-height: 420px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
 .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; background: var(--neutral); color: var(--text); }
 .pill-pending { background: var(--pending); color: var(--pending-text); }
@@ -46,65 +58,188 @@ tbody tr:last-child td { border-bottom: none; }
 .pill-done { background: var(--done); color: var(--done-text); }
 .pill-warn { background: var(--warn); color: var(--warn-text); }
 .pill-bad { background: var(--bad); color: var(--bad-text); }
+.pill-wait { background: var(--wait); color: var(--wait-text); }
+.pill-stale { background: var(--stale); color: var(--stale-text); }
 .src { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; border: 1px solid var(--line); color: var(--muted); }
 .src-manager { color: #5b2d9c; border-color: #c9b5e8; }
 .src-native { color: #1a4f9c; border-color: #b5cdf0; }
 .src-launcher { color: #3d5a3d; border-color: #b9d2b9; }
+.src-import { color: #555c66; border-color: #c5c9cf; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); }
 .empty { color: var(--muted); padding: 10px 4px; }
 .time { color: var(--muted); white-space: nowrap; }
-footer { color: var(--muted); padding: 0 24px 24px; max-width: 1400px; margin: 0 auto; }
+.stages { display: flex; flex-direction: column; gap: 8px; }
+.stage-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stage-row .cycle { min-width: 96px; font-weight: 600; }
+.stage { display: inline-flex; flex-direction: column; min-width: 128px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--neutral); color: var(--text); }
+.stage .name { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.stage .state { font-size: 12px; }
+.stage.s-pending { background: var(--pending); color: var(--pending-text); border-color: #e0b100; }
+.stage.s-ok { background: var(--ok); color: var(--ok-text); }
+.stage.s-done { background: var(--done); color: var(--done-text); }
+.stage.s-warn { background: var(--warn); color: var(--warn-text); }
+.stage.s-bad { background: var(--bad); color: var(--bad-text); }
+.stage.s-wait { background: var(--wait); color: var(--wait-text); border-style: dashed; }
+.stage.s-stale { background: var(--stale); color: var(--stale-text); border-style: dotted; }
+.stage.s-neutral { color: var(--muted); }
+.pulse { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 177, 0, 0); } 50% { box-shadow: 0 0 0 4px rgba(224, 177, 0, .35); } }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } * { scroll-behavior: auto !important; } }
+.conversation { max-height: 70vh; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--bg); position: relative; }
+.entry { background: var(--panel); border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
+.entry.role-user { border-left-color: var(--user); }
+.entry.role-manager { border-left-color: var(--manager); }
+.entry.role-claude { border-left-color: var(--claude); }
+.entry.role-codex { border-left-color: var(--codex); }
+.entry.role-system { border-left-color: var(--import); background: var(--bg); }
+.entry.activity { padding: 4px 12px; color: var(--muted); border-left-color: #b8c0cc; font-size: 13px; }
+.entry-head { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.who { font-weight: 700; }
+.who-user { color: var(--user); }
+.who-manager { color: var(--manager); }
+.who-claude { color: var(--claude); }
+.who-codex { color: var(--codex); }
+.who-system { color: var(--import); }
+.kind { color: var(--muted); }
+.flag { font-size: 12px; padding: 0 6px; border-radius: 4px; background: var(--neutral); color: var(--muted); }
+.flag.final { background: var(--done); color: var(--done-text); }
+.flag.cut { background: var(--warn); color: var(--warn-text); }
+.entry-head .meta { color: var(--muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+pre.text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; line-height: 1.4; }
+pre.text.collapsed { max-height: 9.8em; overflow: hidden; }
+.divider { text-align: center; color: var(--muted); font-weight: 600; margin: 10px 0; }
+.jump { position: sticky; bottom: 6px; float: right; margin-right: 6px; }
+.invocations { display: flex; flex-direction: column; gap: 6px; }
+.invocation { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--bg); }
+.invocation summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.invocation summary .pill { margin-left: 6px; white-space: normal; }
+.invocation h3 { margin: 8px 0 2px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.invocation .line { margin: 2px 0 0 8px; overflow-wrap: anywhere; }
+.invocation .line.muted { color: var(--muted); }
+footer { color: var(--muted); padding: 0 24px 24px; max-width: 1500px; margin: 0 auto; }
 footer code { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+footer details { margin-top: 8px; }
+footer pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+footer, header .meta, .kind, .flag { overflow-wrap: anywhere; }
+details.diagnostics summary { cursor: pointer; padding: 4px 0; }
+@media (max-width: 900px) {
+  header.top, main, footer { padding-left: 12px; padding-right: 12px; }
+  .entry-head .meta { margin-left: 0; white-space: normal; }
+  .stage { min-width: 0; flex: 1 1 40%; }
+  .conversation { max-height: 60vh; }
+}
 </style>
 </head>
 <body>
 <header class="top">
   <div>
-    <h1>Монитор конвейера</h1>
-    <div class="meta"><span id="run">run: -</span> · <span id="attempt">попытка: -</span> · <span id="records">записей: 0</span></div>
+    <h1 id="title">Монитор конвейера</h1>
+    <div class="meta"><span id="run">run: -</span> · <span id="attempt">попытка: -</span> · <span id="records">записей: 0</span> · <span id="updated">обновлено: -</span></div>
   </div>
-  <span id="connection" class="pill">подключение...</span>
+  <div><span id="connection" class="pill">подключение...</span> <span id="status-text" class="sr-only" role="status" aria-live="polite"></span></div>
 </header>
 <main>
-  <div id="notice" class="notice hidden"></div>
+  <div id="notice" class="notice hidden" role="alert"></div>
   <section class="cards">
-    <article id="card-stage" class="card state-neutral"><h2>Текущий этап</h2><div id="stage" class="value">-</div><div id="stage-detail" class="sub">событий еще нет</div></article>
+    <article id="card-stage" class="card state-neutral"><h2>Этап</h2><div id="stage" class="value">-</div><div id="stage-detail" class="sub">событий еще нет</div><div id="next-action" class="sub">следующий шаг: неизвестен</div></article>
+    <article id="card-model" class="card state-neutral"><h2>Активные модели</h2><div id="model" class="value">-</div><div id="model-detail" class="sub">модель не наблюдалась</div><div id="models" class="sub"></div></article>
+    <article id="card-usage" class="card state-neutral"><h2>Токены</h2><div id="usage" class="value">неизвестно</div><div id="usage-detail" class="sub">данных об использовании нет</div><div id="usage-cost" class="sub"></div></article>
+    <article id="card-context" class="card state-neutral"><h2>Контекст и лимиты</h2><div id="context" class="value">-</div><div id="context-detail" class="sub">-</div><div id="limits" class="sub">-</div><div id="budget" class="sub">-</div></article>
     <article id="card-decision" class="card state-neutral"><h2>Решение менеджера</h2><div id="decision" class="value">не принято</div><div id="decision-detail" class="sub">COMPLETE только по явному событию менеджера</div></article>
-    <article id="card-model" class="card state-neutral"><h2>Исполнитель</h2><div id="model" class="value">-</div><div id="model-detail" class="sub">модель не наблюдалась</div></article>
-    <article id="card-time" class="card state-neutral"><h2>Время</h2><div id="elapsed" class="value">-</div><div id="last-age" class="sub">-</div></article>
-    <article id="card-journal" class="card state-neutral"><h2>Журнал прогресса</h2><div id="journal" class="value">-</div><div id="journal-detail" class="sub">-</div></article>
   </section>
   <section class="panel">
+    <h2>Этапы по попыткам</h2>
+    <div id="stages" class="stages"></div>
+    <div id="stages-empty" class="empty">этапов пока нет</div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Разговор</h2><span id="conversation-count" class="kind"></span></div>
+    <div class="toolbar">
+      <label>цикл <select id="filter-cycle"><option value="">все</option></select></label>
+      <label>шаг <select id="filter-step"><option value="">все</option></select></label>
+      <label><input type="checkbox" id="show-user" checked> пользователь</label>
+      <label><input type="checkbox" id="show-manager" checked> менеджер</label>
+      <label><input type="checkbox" id="show-claude" checked> Claude</label>
+      <label><input type="checkbox" id="show-codex" checked> Codex</label>
+      <label><input type="checkbox" id="show-subagents"> субагенты</label>
+      <label><input type="checkbox" id="show-activity"> активность инструментов</label>
+      <label><input type="checkbox" id="follow" checked> следить за концом</label>
+      <button type="button" id="expand-all">развернуть все</button>
+      <button type="button" id="collapse-all">свернуть все</button>
+      <button type="button" id="jump-latest">к последнему</button>
+    </div>
+    <div id="conversation" class="conversation" tabindex="0" aria-label="Разговор конвейера"></div>
+    <div id="conversation-empty" class="empty">сообщений пока нет: промпт задачи появится с запуском исполнителя, запрос пользователя регистрирует менеджер</div>
+  </section>
+  <section class="panel">
+    <h2>Использование токенов</h2>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Модель</th><th>Статус</th><th class="num">Вход всего</th><th class="num">Вход без кеша</th><th class="num">Создание кеша</th><th class="num">Чтение кеша</th><th class="num">Из кеша (Codex)</th><th class="num">Выход</th><th class="num">Рассуждения</th><th class="num">Оценка $</th></tr></thead><tbody id="usage-rows"></tbody></table></div>
+    <div id="usage-empty" class="empty">использование токенов не наблюдалось</div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Вызовы LLM: обвязка и контекст сессий</h2><span class="kind">одна строка на запуск Claude или Codex; подробности раскрываются</span></div>
+    <div id="invocations" class="invocations"></div>
+    <div id="invocations-empty" class="empty">запусков LLM пока нет</div>
+  </section>
+  <details class="diagnostics panel">
+    <summary>Диагностика метаданных: шаги, агенты, инструменты, журнал событий</summary>
+    <section class="cards">
+      <article id="card-time" class="card state-neutral"><h2>Время</h2><div id="elapsed" class="value">-</div><div id="last-age" class="sub">-</div></article>
+      <article id="card-journal" class="card state-neutral"><h2>Журнал прогресса</h2><div id="journal" class="value">-</div><div id="journal-detail" class="sub">-</div></article>
+      <article id="card-trace" class="card state-neutral"><h2>Трассировка</h2><div id="trace" class="value">-</div><div id="trace-detail" class="sub">-</div></article>
+    </section>
     <h2>Шаги</h2>
-    <table><thead><tr><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Начало</th><th>Модель CLI</th><th>Последнее состояние</th><th>Вызовы</th></tr></thead><tbody id="steps"></tbody></table>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Начало</th><th>Модель CLI</th><th>Последнее состояние</th><th>Вызовы</th></tr></thead><tbody id="steps"></tbody></table></div>
     <div id="steps-empty" class="empty">шагов пока нет</div>
-  </section>
-  <section class="panel">
     <h2>Агенты и фоновые задачи</h2>
-    <table><thead><tr><th>Шаг</th><th>Вызов</th><th>Компонент</th><th>Родитель</th><th>Задача</th><th>Состояние</th><th>Обновлено</th></tr></thead><tbody id="agents"></tbody></table>
+    <div class="table-wrap"><table><thead><tr><th>Шаг</th><th>Вызов</th><th>Компонент</th><th>Родитель</th><th>Задача</th><th>Состояние</th><th>Обновлено</th></tr></thead><tbody id="agents"></tbody></table></div>
     <div id="agents-empty" class="empty">вызовов Agent/Task не наблюдалось</div>
-  </section>
-  <section class="panel">
     <h2>Инструменты</h2>
     <div id="tools" class="chips"></div>
     <div id="tools-empty" class="empty">вызовов инструментов не наблюдалось</div>
-  </section>
-  <section class="panel">
-    <div class="panel-head"><h2>События</h2><label><input type="checkbox" id="follow" checked> следить за концом</label></div>
+    <div class="panel-head"><h2>События</h2><label><input type="checkbox" id="follow-events" checked> следить за концом</label></div>
     <div id="events-scroll" class="scroll">
       <table><thead><tr><th>Время</th><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Событие</th><th>Статус</th></tr></thead><tbody id="events"></tbody></table>
     </div>
     <div id="events-empty" class="empty">журнал пока пуст</div>
-  </section>
+  </details>
 </main>
-<footer>Тот же журнал в консоли: <code id="tail">tail -f progress.log</code></footer>
+<footer>
+  Тот же журнал в консоли: <code id="tail">tail -f progress.log</code>
+  <details>
+    <summary>Как читать страницу и что записывает менеджер</summary>
+    <pre>Этапы: работает (желтый), ожидает менеджера (сиреневый пунктир), тишина без подтверждения (серый точечный), CLI завершил успешно без приемки (синий), завершен или принят (зеленый), ошибка (красный), не начат (серый).
+Тишина не означает завершения: состояние шага подтверждают только записи helper и менеджера. Активность считается по обоим потокам: журналу метаданных и трассировке сообщений.
+Успешный выход CLI не является приемкой задачи: приемку записывает только менеджер.
+Токены: итог по завершенным вызовам, промежуточные снимки помечены; неизвестное показано как неизвестное, не как ноль; "не менее" означает, что часть вызовов счетчик не сообщила.
+Вход Claude = без кеша + создание кеша + чтение кеша (все три оплачиваются отдельно); у Codex кешированный вход входит в общий вход; рассуждения входят в выход.
+Контекст: размер последнего запроса к API (вход + кеш последнего сообщения), не текущая занятость и не сумма по всем ходам; емкость окна - по итогу CLI для Claude и по каталогу моделей CLI для Codex; занятость и остаток контекста headless-потоки не сообщают.
+Лимиты аккаунта - только из событий CLI с их статусом; бюджет - только заданный явно. Оценка $ - расчет CLI, а не списание с подписки.
+Обвязка: выбранные скиллы, агенты и MCP - это то, что менеджер выбрал и лаунчер внедрил в системный промпт; наблюдаемые вызовы - то, что CLI реально вызвал; сверка (audit) и claude doctor - записи после выхода CLI. Внедренный текст не доказывает соблюдение скилла; каталог сессии - доступные компоненты, а не вызванные.
+Импорт старых журналов помечен; время наблюдения показывается только когда его сообщают артефакты запуска, иначе оно неизвестно.
+
+Команды менеджера (из корня обвязки, --progress-dir общий для задачи):
+  python3 scripts/run_trace.py register --progress-dir DIR --role user --kind user_prompt --file prompt.md
+  python3 scripts/run_trace.py register --progress-dir DIR --role manager --kind feedback --file review-1-triage.md
+  python3 scripts/run_trace.py register --progress-dir DIR --role manager --kind decision --text "RETRY: ..."
+  python3 scripts/run_codex_review.py --workspace WS --prompt review-1.md --output-dir RUN/review-1 --progress-dir DIR
+  python3 scripts/run_trace.py import-claude --progress-dir DIR --launcher-dir RUN/build-1 --attempt 1 --step-id build-1
+  python3 scripts/run_trace.py budget --progress-dir DIR --tokens N</pre>
+  </details>
+</footer>
 <script>
 (function () {
   'use strict';
-  var state = { cursor: 0, discard: false, events: [], seen: {}, invalid: 0, journal: null, log: '', failures: 0,
-                connected: false, serverNow: null, receivedAt: null, timer: null };
+  var state = {
+    events: { cursor: 0, discard: false, list: [], seen: {}, invalid: 0, journal: null, log: '' },
+    trace: { cursor: 0, discard: false, list: [], seen: {}, invalid: 0, journal: null },
+    failures: 0, connected: false, serverNow: null, receivedAt: null, timer: null, feed: 'events',
+    ui: { cycle: '', step: '', subagents: false, activity: false, expanded: {}, forceExpanded: null,
+          renderedKey: '', atBottom: true, unread: 0, cycleOptions: '', stepOptions: '', opened: {} }
+  };
   var AGENT_TOOLS = { Agent: true, Task: true };
+  var STALE_SECONDS = 120;
   var CLASS_BY_STATUS = {
     error: 'bad', failed: 'bad', timeout: 'bad', interrupted: 'bad', launch_error: 'bad', escalate: 'bad', cancelled: 'bad',
     unverified: 'warn', blocked: 'warn', stopped: 'warn', verify: 'warn', retry: 'warn', incomplete: 'warn',
@@ -113,35 +248,50 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     started: 'pending', observed: 'pending', requested: 'pending', progress: 'pending'
   };
   var DECISIONS = { retry: 'RETRY', verify: 'VERIFY', escalate: 'ESCALATE', complete: 'COMPLETE' };
+  var PHASES = ['build', 'tests', 'review', 'triage', 'verify', 'decision', 'handoff'];
+  var PHASE_NAMES = { build: 'сборка', tests: 'проверки', review: 'ревью', triage: 'triage', verify: 'verify', decision: 'решение', handoff: 'handoff' };
+  var ROLE_NAMES = { user: 'Пользователь', manager: 'Менеджер', claude: 'Claude', codex: 'Codex', system: 'Монитор' };
+  var KIND_NAMES = { user_prompt: 'запрос пользователя', task_prompt: 'промпт задачи', response: 'ответ', final: 'итоговый ответ',
+                     review_prompt: 'запрос на ревью', review: 'ревью', feedback: 'замечания и решения по ревью', decision: 'решение', note: 'заметка' };
+  var STATE_NAMES = { capture_started: 'захват потока начат', capture_unavailable: 'захват недоступен', cli_started: 'CLI запущен',
+                      cli_exited: 'CLI завершен', cli_error: 'CLI сообщил ошибку', thread_started: 'сессия Codex открыта',
+                      turn_started: 'ход Codex начат', turn_completed: 'ход Codex завершен', turn_failed: 'ход Codex завершился ошибкой',
+                      api_retry: 'ожидание повторного запроса к API', result_error: 'CLI завершил без успешного результата',
+                      final_marked: 'итоговый ответ подтвержден', import_started: 'импорт старого журнала начат', import_finished: 'импорт завершен' };
+  // Token counters a provider reports; a counted invocation that lacks one of them makes that total a lower bound, never complete.
+  // The cost estimate is tracked apart: Codex reports none, so its absence is noted on the cost line, not on the token totals.
+  var COUNTERS = { claude: ['input', 'cacheCreation', 'cacheRead', 'output', 'reasoning'], codex: ['input', 'cached', 'output', 'reasoning'] };
+  var NATIVE = { input: 'input_tokens', cacheCreation: 'cache_creation_input_tokens', cacheRead: 'cache_read_input_tokens',
+                 cached: 'cached_input_tokens', output: 'output_tokens', reasoning: 'reasoning_tokens', cost: 'cost_usd' };
+  var TOTAL_FIELDS = ['uncached', 'cacheCreation', 'cacheRead', 'cached', 'output', 'reasoning', 'totalInput', 'cost'];
 
   function $(id) { return document.getElementById(id); }
   function text(id, value) { $(id).textContent = value; }
+  function node(tag, className, value) {
+    var element = document.createElement(tag);
+    if (className) { element.className = className; }
+    if (value != null) { element.textContent = String(value); }
+    return element;
+  }
   function cell(row, value, className) {
-    var td = document.createElement('td');
-    td.textContent = value == null ? '' : String(value);
-    if (className) { td.className = className; }
+    var td = node('td', className, value == null ? '' : String(value));
     row.appendChild(td);
     return td;
   }
-  function pill(value, kind) {
-    var span = document.createElement('span');
-    span.className = 'pill pill-' + (kind || 'neutral');
-    span.textContent = value;
-    return span;
-  }
-  function source(value) {
-    var span = document.createElement('span');
-    span.className = 'src src-' + value;
-    span.textContent = value;
-    return span;
-  }
+  function pill(value, kind) { return node('span', 'pill pill-' + (kind || 'neutral'), value); }
+  function source(value) { return node('span', 'src src-' + value, value); }
   function statusClass(status) { return CLASS_BY_STATUS[status] || 'neutral'; }
   function setCard(id, kind) { $(id).className = 'card state-' + kind; }
+  function pad(n, w) { return String(n).padStart(w || 2, '0'); }
   function clock(iso) {
     var date = new Date(iso);
     if (isNaN(date.getTime())) { return iso; }
-    var pad = function (n, w) { return String(n).padStart(w || 2, '0'); };
     return pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds()) + '.' + pad(date.getMilliseconds(), 3);
+  }
+  function shortClock(millis) {
+    var date = new Date(millis);
+    if (isNaN(date.getTime())) { return '?'; }
+    return pad(date.getDate()) + '.' + pad(date.getMonth() + 1) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
   function span(seconds) {
     if (seconds == null || isNaN(seconds)) { return '-'; }
@@ -149,47 +299,70 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     var h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
     return (h ? h + ' ч ' : '') + (h || m ? m + ' мин ' : '') + s + ' с';
   }
+  function fmt(value) {
+    if (value == null || isNaN(value)) { return 'неизвестно'; }
+    var digits = String(Math.round(value)), out = '';
+    while (digits.length > 3) { out = ' ' + digits.slice(-3) + out; digits = digits.slice(0, -3); }
+    return digits + out;
+  }
+  function money(value) { return value == null || isNaN(value) ? 'неизвестно' : '$' + value.toFixed(value < 1 ? 4 : 2); }
+  function plural(n, one, few, many) { var m10 = n % 10, m100 = n % 100; return n + ' ' + (m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? few : many); }
   function now() {
     // Server time plus the time since it was received: the page never invents progress on its own clock skew.
     return state.serverNow == null ? Date.now() : state.serverNow + (Date.now() - state.receivedAt);
   }
+  function ageOf(iso) { return (now() - Date.parse(iso)) / 1000; }
+  function key(attempt, step) { return attempt + ' ' + step; }
+  // An imported record was written now but describes an earlier observation; its place in time is that observation, when known.
+  function when(record) { return record.observed || record.time; }
+  function live(record) { return record.source !== 'import'; }
 
   function schedule(delay) {
     if (state.timer) { clearTimeout(state.timer); }
     state.timer = setTimeout(poll, delay);
   }
-  function poll() {
-    // The discard flag returns to the server with the cursor so an oversized line is skipped whole.
-    fetch('/api/events?cursor=' + state.cursor + '&limit=500&discard=' + (state.discard ? 1 : 0), { cache: 'no-store' })
+  function fetchPage(feed) {
+    var box = state[feed];
+    return fetch('/api/' + feed + '?cursor=' + box.cursor + '&limit=500&discard=' + (box.discard ? 1 : 0), { cache: 'no-store' })
       .then(function (response) {
         if (!response.ok) { throw new Error('HTTP ' + response.status); }
         return response.json();
       })
       .then(function (page) {
-        state.failures = 0;
-        state.connected = true;
         state.receivedAt = Date.now();
         state.serverNow = Date.parse(page.now) || Date.now();
         if (page.reset) {
-          state.cursor = 0; state.discard = false; state.events = []; state.seen = {}; state.invalid = 0;
-          $('events').textContent = '';
-          render();
-          schedule(0);
-          return;
+          // The file shrank: the whole feed is read again; nothing already shown is trusted or counted twice.
+          box.cursor = 0; box.discard = false; box.list = []; box.seen = {}; box.invalid = 0;
+          if (feed === 'events') { $('events').textContent = ''; }
+          state.ui.renderedKey = '';
+          return true;
         }
-        state.journal = page.journal;
-        state.log = page.log || '';
-        state.invalid += page.invalid_lines || 0;
-        page.events.forEach(function (event) {
-          if (!event || state.seen[event.event_id]) { return; }
-          state.seen[event.event_id] = true;
-          state.events.push(event);
-          appendEventRow(event);
+        box.journal = page.journal;
+        if (feed === 'events') { box.log = page.log || ''; }
+        box.invalid += page.invalid_lines || 0;
+        page.events.forEach(function (record) {
+          var id = record && (record.event_id || record.record_id);
+          if (!id || box.seen[id]) { return; }
+          box.seen[id] = true;
+          box.list.push(record);
+          if (feed === 'events') { appendEventRow(record); }
         });
-        state.cursor = page.cursor;
-        state.discard = !!page.discard;
+        box.cursor = page.cursor;
+        box.discard = !!page.discard;
+        return !!page.more;
+      });
+  }
+  function poll() {
+    var more = false;
+    fetchPage('events')
+      .then(function (pending) { more = more || pending; return fetchPage('trace'); })
+      .then(function (pending) {
+        more = more || pending;
+        state.failures = 0;
+        state.connected = true;
         render();
-        schedule(page.more ? 50 : 1000);
+        schedule(more ? 50 : 1000);
       })
       .catch(function () {
         state.failures += 1;
@@ -209,7 +382,7 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     cell(row, event.label);
     cell(row).appendChild(pill(event.status, statusClass(event.status)));
     body.appendChild(row);
-    if ($('follow').checked) {
+    if ($('follow-events').checked) {
       var scroll = $('events-scroll');
       scroll.scrollTop = scroll.scrollHeight;
     }
@@ -217,20 +390,23 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
 
   function summarize() {
     var summary = { attempt: 0, runId: null, first: null, last: null, decision: null, stage: null, current: null,
-                    steps: {}, stepOrder: [], failedObservers: [], calls: {}, callOrder: [], tasks: {}, tools: {} };
-    state.events.forEach(function (event) {
+                    steps: {}, stepOrder: [], failedObservers: [], calls: {}, callOrder: [], tasks: {}, tools: {},
+                    manager: [], lastTime: null };
+    state.events.list.forEach(function (event) {
       summary.attempt = Math.max(summary.attempt, event.attempt);
       summary.runId = summary.runId || event.run_id;
       summary.first = summary.first || event.time;
       summary.last = event.time;
-      var key = event.attempt + ' ' + event.step_id, step = summary.steps[key];
+      var k = key(event.attempt, event.step_id), step = summary.steps[k];
       if (!step) {
-        step = summary.steps[key] = { attempt: event.attempt, id: event.step_id, sources: {}, phase: event.phase,
-                                      start: event.time, state: event, calls: 0, errors: 0,
-                                      run: null, init: null, observer: null, lastNative: null, exit: null, result: null };
-        summary.stepOrder.push(key);
+        step = summary.steps[k] = { key: k, attempt: event.attempt, id: event.step_id, sources: {}, phase: event.phase,
+                                    start: event.time, state: event, calls: 0, errors: 0, last: event.time,
+                                    run: null, init: null, observer: null, lastNative: null, exit: null, result: null, cliResult: null,
+                                    components: { skills: {}, agents: {}, mcp_servers: {} } };
+        summary.stepOrder.push(k);
       }
       step.sources[event.source] = true;
+      step.last = event.time;
       if (event.status === 'error' || event.status === 'failed') { step.errors += 1; }
       if (event.event !== 'tool_call' && event.event !== 'tool_result' && event.event !== 'hook') { step.state = event; }
       // Observations belong to the invocation (attempt + step) that produced them, never to a later one.
@@ -242,17 +418,20 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
         if (event.status === 'failed') { summary.failedObservers.push(step); }
       }
       if (event.event === 'cli_exit') { step.exit = event; }
+      if (event.event === 'cli_result') { step.cliResult = event; }
       if (event.event === 'result') { step.result = event; }
       if (event.event === 'decision') { summary.decision = event; }
+      if (event.source === 'manager') { summary.manager.push(event); }
       if (event.event === 'run' || event.event === 'cli_exit' || event.event === 'result' || event.event === 'phase'
           || event.event === 'finding' || event.event === 'decision') { summary.stage = event; }
       // Native call and task IDs are local to one CLI invocation: the same ID in another step is
       // another call, so every association is keyed by attempt + step + ID and shown with its step.
       if (event.event === 'tool_call' && event.tool) {
         var tool = summary.tools[event.tool] = summary.tools[event.tool] || { calls: 0, errors: 0 };
-        var callKey = event.call_id ? key + ' ' + event.call_id : null, call = callKey ? summary.calls[callKey] : null;
+        var callKey = event.call_id ? k + ' ' + event.call_id : null, call = callKey ? summary.calls[callKey] : null;
+        // Harness components the CLI really called, by kind; a builtin tool is neither a skill nor an agent.
+        var kind = event.tool === 'Skill' ? 'skills' : AGENT_TOOLS[event.tool] ? 'agents' : event.tool.indexOf('mcp__') === 0 ? 'mcp_servers' : null;
         if (call) {
-          // The observer records a second line when metadata arrives later; it is the same call.
           call.component = call.component || event.component;
           if (event.status === 'requested') { call.status = 'requested'; }
           call.updated = event.time;
@@ -262,26 +441,278 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
           if (callKey) {
             summary.calls[callKey] = { id: event.call_id, attempt: event.attempt, step: event.step_id, tool: event.tool, component: event.component,
                                        parent: event.parent_call_id, status: event.status, result: null, task: null, taskStatus: null,
-                                       updated: event.time, agent: !!AGENT_TOOLS[event.tool] };
+                                       updated: event.time, agent: !!AGENT_TOOLS[event.tool], kind: kind };
             summary.callOrder.push(callKey);
+          } else if (kind) {
+            // A call without an id can never be enriched later: it is counted under the name it was seen with.
+            countComponent(step, kind, event.tool, event.component);
           }
         }
       }
       if (event.event === 'tool_result' && event.call_id) {
-        var result = summary.calls[key + ' ' + event.call_id];
+        var result = summary.calls[k + ' ' + event.call_id];
         if (result) { result.result = event.status; result.updated = event.time; }
         if (event.tool && summary.tools[event.tool] && event.status === 'error') { summary.tools[event.tool].errors += 1; }
       }
       if (event.event === 'task' && event.task_id) {
-        var taskKey = key + ' ' + event.task_id;
+        var taskKey = k + ' ' + event.task_id;
         var task = summary.tasks[taskKey] = summary.tasks[taskKey] || { id: event.task_id, attempt: event.attempt, step: event.step_id,
                                                                         call: event.call_id, tool: event.tool, component: event.component };
         task.status = event.status; task.updated = event.time; task.call = task.call || event.call_id;
-        var owner = task.call ? summary.calls[key + ' ' + task.call] : null;
+        var owner = task.call ? summary.calls[k + ' ' + task.call] : null;
         if (owner) { owner.task = task.id; owner.taskStatus = event.status; owner.updated = event.time; }
       }
     });
+    // Component names come from the reconciled calls, so metadata that arrives after the first record of a call
+    // (the completed block after its provisional start) names the call instead of leaving it counted as unknown.
+    summary.callOrder.forEach(function (callKey) {
+      var call = summary.calls[callKey];
+      if (call.kind) { countComponent(summary.steps[key(call.attempt, call.step)], call.kind, call.tool, call.component); }
+    });
     return summary;
+  }
+  function countComponent(step, kind, tool, component) {
+    var name = component || (kind === 'mcp_servers' ? tool.split('__')[1] : null) || '?';
+    step.components[kind][name] = (step.components[kind][name] || 0) + 1;
+  }
+
+  function finalKey(record) { return record.message_id + '/' + (record.block == null ? '' : record.block); }
+
+  function summarizeTrace() {
+    var trace = { steps: {}, stepOrder: [], messages: [], index: {}, artifacts: {}, budget: null, title: null, userTitle: null, rate: null,
+                  rateImported: null, attempt: 0, runId: null, last: null, count: 0 };
+    state.trace.list.forEach(function (record) {
+      trace.count += 1;
+      trace.attempt = Math.max(trace.attempt, record.attempt);
+      trace.runId = trace.runId || record.run_id;
+      trace.last = record.time;
+      var k = key(record.attempt, record.step_id), step = trace.steps[k];
+      if (!step) {
+        step = trace.steps[k] = { key: k, attempt: record.attempt, id: record.step_id, phase: record.phase || null, provider: record.provider || null,
+                                  snapshots: {}, snapshotOrder: [], finals: [], statuses: [], messages: 0, modelMessages: 0, lastMain: null,
+                                  captured: false, requestedModel: null, requestedEffort: null, observedModel: null, finalMarked: {}, exited: null,
+                                  started: null, sessionId: null, threadId: null, cliVersion: null, harness: {}, harnessVersions: 0, context: null,
+                                  imported: false, observed: null, lastActivity: null, lastRetry: null, lastMainMessage: null };
+        trace.stepOrder.push(k);
+      }
+      if (record.provider && !step.provider) { step.provider = record.provider; }
+      if (!live(record)) {
+        step.imported = true;
+        if (record.observed && (!step.observed || record.observed < step.observed)) { step.observed = record.observed; }
+      }
+      // Activity is evidenced by live records only: a replayed history says nothing about the present.
+      if (live(record) && !(record.kind === 'status' && record.state === 'api_retry')) { step.lastActivity = record.time; }
+      if (record.kind === 'message') {
+        // A text block keeps its identity across updates: the latest version is shown at the place of the first one,
+        // and the page state of the entry (expanded or not) follows that identity, not the record that last carried it.
+        var id = record.message_id ? k + ' ' + finalKey(record) : null, item = id ? trace.index[id] : null;
+        if (item) {
+          item.record = record; item.versions += 1;
+        } else {
+          item = { id: id || record.record_id, first: record, record: record, versions: 1, attempt: record.attempt, step: record.step_id, time: when(record) };
+          if (id) { trace.index[id] = item; }
+          trace.messages.push(item);
+          step.messages += 1;
+          if (record.role === 'claude' || record.role === 'codex') { step.modelMessages += 1; }
+        }
+        if (record.role === 'claude' || record.role === 'codex') {
+          step.captured = true;
+          // The session's observed model is evidenced by its own (main-thread) records only: a subagent's response
+          // names the subagent's model, which stays on that message and on its own usage row.
+          if (record.model && !record.thread) { step.observedModel = record.model; }
+          if (!record.thread && record.role === 'claude') { step.lastMainMessage = record; }
+        }
+        if (!trace.title && (record.message_kind === 'user_prompt' || record.message_kind === 'task_prompt') && record.title) { trace.title = record.title; }
+        if (!trace.userTitle && record.message_kind === 'user_prompt' && record.title) { trace.userTitle = record.title; }
+      } else if (record.kind === 'usage') {
+        if (record.final) {
+          step.finals.push(record);
+        } else if (record.message_id) {
+          // A message id recurs while the CLI streams the same message: the latest snapshot replaces the earlier one.
+          if (!step.snapshots[record.message_id]) { step.snapshotOrder.push(record.message_id); }
+          step.snapshots[record.message_id] = record;
+          if (!record.thread) { step.lastMain = record; }
+        }
+        if (record.model && !record.thread && !step.observedModel) { step.observedModel = record.model; }
+      } else if (record.kind === 'status') {
+        step.statuses.push(record);
+        // A retry is evidence of waiting for the API until any later record of the step shows activity again.
+        if (record.state === 'api_retry') { step.lastRetry = record; }
+        if (record.state === 'capture_started' || record.state === 'cli_started' || record.state === 'import_started') { step.captured = true; }
+        if (record.state === 'cli_started') { step.started = record; if (record.model) { step.requestedModel = record.model; step.requestedEffort = record.effort || null; } }
+        if (record.state === 'capture_started') { step.sessionId = record.session_id || step.sessionId; step.cliVersion = record.cli_version || step.cliVersion; }
+        if (record.state === 'thread_started') { step.threadId = record.thread_id || step.threadId; }
+        if ((record.state === 'capture_started' || record.state === 'thread_started' || record.state === 'turn_started') && record.model) { step.observedModel = record.model; }
+        if (record.state === 'final_marked' && record.message_id) { step.finalMarked[finalKey(record)] = true; }
+        if (record.state === 'cli_exited' || record.state === 'import_finished') { step.exited = record; }
+      } else if (record.kind === 'rate_limit') {
+        if (live(record)) { trace.rate = record; }
+        else if (!trace.rateImported || when(record) > when(trace.rateImported)) { trace.rateImported = record; }
+      } else if (record.kind === 'artifact') {
+        trace.artifacts[record.artifact_id] = record;
+      } else if (record.kind === 'budget') {
+        trace.budget = record;
+      } else if (record.kind === 'harness') {
+        // Later stages (audit, doctor, result) add to the launch record; none of them replaces the selection.
+        step.harness[record.stage] = record;
+        step.harnessVersions += 1;
+        step.captured = true;
+      } else if (record.kind === 'context') {
+        step.context = record;
+      }
+    });
+    return trace;
+  }
+
+  function lastSeen(step, captured) {
+    // Freshness comes from both feeds: a public message in the trace is activity even when the journal is quiet.
+    var latest = step.last;
+    if (captured && captured.lastActivity && captured.lastActivity > latest) { latest = captured.lastActivity; }
+    return latest;
+  }
+  function pendingRetry(step, captured) {
+    // The last api_retry of a running step counts as waiting only while nothing later was observed in either feed.
+    if (!captured || !captured.lastRetry) { return null; }
+    var retry = captured.lastRetry;
+    if (captured.lastActivity && captured.lastActivity > retry.time) { return null; }
+    if (step.lastNative && step.lastNative.time > retry.time) { return null; }
+    return retry;
+  }
+  function retryLabel(retry, moment) {
+    var waited = (moment - Date.parse(retry.time)) / 1000, delay = retry.retry_delay_ms != null ? retry.retry_delay_ms / 1000 : null;
+    var text = 'ожидание повтора API: попытка ' + (retry.attempt_no != null ? retry.attempt_no : '?') + (retry.max_retries != null ? ' из ' + retry.max_retries : '')
+      + (delay != null ? ', через ' + span(delay) : '') + (retry.reason ? ' (' + retry.reason + ')' : '');
+    if (waited > (delay || 0) + STALE_SECONDS) { return { kind: 'stale', label: 'повтор API не подтвержден: тишина ' + span(waited) + ' после ' + text }; }
+    return { kind: 'wait', label: text };
+  }
+
+  function stepState(step, captured, moment) {
+    // One launcher invocation's state from explicit records: result, exit, native turn outcome, retry, or plain freshness.
+    var retry = null, exitCode = step.exit ? step.exit.exit_code : null;
+    if (step.result) {
+      var ready = step.result.status === 'ready';
+      return { kind: ready ? 'done' : step.result.status === 'completed' ? 'warn' : 'bad', active: false, time: step.result.time,
+               label: ready ? 'готово к проверке' : step.result.status === 'completed' ? 'CLI завершил, но не ready' : 'не завершено' };
+    }
+    if (step.exit) {
+      if (step.exit.status !== 'exited') { return { kind: 'bad', active: false, time: step.exit.time, label: step.exit.label }; }
+      if (exitCode != null && exitCode !== 0) {
+        return { kind: 'bad', active: false, time: step.exit.time, label: 'CLI завершился с кодом ' + exitCode + (step.cliResult && step.cliResult.status === 'error' ? ' после ошибки хода' : '') };
+      }
+      if (step.cliResult) {
+        // The CLI finished its turn; whether the work is accepted is the manager's record, never this one.
+        return step.cliResult.status === 'success'
+          ? { kind: 'ok', active: false, time: step.exit.time, label: 'CLI завершил успешно; приемка менеджером не записана' }
+          : { kind: 'bad', active: false, time: step.exit.time, label: 'CLI сообщил ошибку, процесс завершен' };
+      }
+      var sinceExit = (moment - Date.parse(step.exit.time)) / 1000;
+      return sinceExit > STALE_SECONDS
+        ? { kind: 'warn', active: false, time: step.exit.time, label: 'CLI завершен (exit 0), итог helper не записан ' + span(sinceExit) }
+        : { kind: 'pending', active: false, time: step.exit.time, label: 'CLI завершен, итог пишется' };
+    }
+    if (step.cliResult && step.phase === 'review') {
+      return step.cliResult.status === 'success'
+        ? { kind: 'pending', active: true, time: step.cliResult.time, label: 'ход завершен, процесс закрывается', short: 'закрывается ' + step.id }
+        : { kind: 'bad', active: true, time: step.cliResult.time, label: 'ход завершился ошибкой', short: 'ошибка ' + step.id };
+    }
+    if ((retry = pendingRetry(step, captured))) {
+      var waiting = retryLabel(retry, moment);
+      return { kind: waiting.kind, active: true, time: retry.time, label: waiting.label, short: (waiting.kind === 'wait' ? 'ждет API ' : 'повтор API не подтвержден ') + step.id, retry: retry };
+    }
+    var seen = lastSeen(step, captured), age = (moment - Date.parse(seen)) / 1000;
+    return age > STALE_SECONDS
+      ? { kind: 'stale', active: true, time: seen, label: 'тишина ' + span(age) + ': состояние не подтверждено', short: 'тишина ' + span(age) + ' ' + step.id, age: age }
+      : { kind: 'pending', active: true, time: seen, label: 'работает, ' + step.id, short: 'работает ' + step.id, age: age };
+  }
+
+  function stageStates(summary, trace, moment) {
+    // One row per attempt; a phase state comes only from explicit records of that attempt, never from silence.
+    var rows = {}, order = [], launcher = {};
+    function row(attempt) {
+      if (!rows[attempt]) { rows[attempt] = { attempt: attempt, phases: {} }; order.push(attempt); }
+      return rows[attempt];
+    }
+    summary.stepOrder.forEach(function (k) {
+      var step = summary.steps[k];
+      if (!step.run || PHASES.indexOf(step.phase) < 0) { return; }
+      var entry = stepState(step, trace.steps[k], moment);
+      entry.step = step.id;
+      var slot = key(step.attempt, step.phase);
+      (launcher[slot] = launcher[slot] || []).push(entry);
+      row(step.attempt);
+    });
+    // Every unfinished invocation stays visible: a finished one never hides a running one of the same phase.
+    Object.keys(launcher).forEach(function (slot) {
+      var entries = launcher[slot], attempt = Number(slot.split(' ')[0]), phase = slot.split(' ')[1];
+      var active = entries.filter(function (entry) { return entry.active; }), chosen;
+      if (active.length) {
+        chosen = active.reduce(function (best, entry) { return entry.time > best.time ? entry : best; });
+        var kind = active.some(function (entry) { return entry.kind === 'bad'; }) ? 'bad'
+          : active.some(function (entry) { return entry.kind === 'pending'; }) ? 'pending'
+          : active.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait' : 'stale';
+        row(attempt).phases[phase] = { kind: kind, active: true, time: chosen.time, count: active.length,
+                                       label: active.length === 1 ? chosen.label : plural(active.length, 'вызов', 'вызова', 'вызовов') + ': ' + active.map(function (entry) { return entry.short; }).join('; ') };
+      } else {
+        chosen = entries.reduce(function (best, entry) { return entry.time > best.time ? entry : best; });
+        row(attempt).phases[phase] = { kind: chosen.kind, active: false, time: chosen.time, label: chosen.label, count: entries.length };
+      }
+    });
+    function set(attempt, phase, kind, label, time) {
+      var current = row(attempt).phases[phase];
+      if (!current || (!current.active && current.time <= time)) { row(attempt).phases[phase] = { kind: kind, label: label, time: time, active: false }; }
+    }
+    summary.manager.forEach(function (event) {
+      var phase = event.phase, kind = statusClass(event.status), label = event.label.replace(/^[a-z]+: /, '').replace(/ \[.*\]$/, '');
+      if (event.event === 'finding') { label = label + (event.count != null ? ' (' + event.count + ')' : ''); kind = event.status === 'confirmed' ? 'warn' : event.status === 'refuted' ? 'done' : 'warn'; }
+      if (event.event === 'phase' && event.status === 'passed') { kind = 'done'; }
+      if (event.event === 'decision') { kind = event.status === 'complete' ? 'done' : event.status === 'escalate' ? 'bad' : 'warn'; }
+      set(event.attempt, phase, kind, label, event.time);
+    });
+    // Waiting is evidenced by a finished step without a successor, never assumed from quiet.
+    var latest = order.length ? Math.max.apply(null, order) : 0;
+    var next = null;
+    if (latest) {
+      var phases = rows[latest].phases;
+      var running = PHASES.filter(function (phase) { return phases[phase] && (phases[phase].kind === 'pending' || phases[phase].kind === 'stale' || phases[phase].active); });
+      if (!running.length) {
+        var decision = phases.decision;
+        if (decision && decision.kind === 'done') {
+          // A recorded handoff (before or after the decision) closes the loop in the journal; installation is never inferred.
+          if (phases.handoff) {
+            next = { text: 'решение COMPLETE и handoff записаны; установка и активация в журнале не отражаются и решаются пользователем', phase: null };
+          } else {
+            next = { text: 'решение COMPLETE записано; остается handoff --read-only и авторизованная активация', phase: 'handoff' };
+            phases.handoff = { kind: 'wait', label: 'ожидает handoff', time: decision.time };
+          }
+        } else if (decision && decision.kind === 'bad') {
+          next = { text: 'ESCALATE: нужен ответ пользователя, конвейер не продолжается сам', phase: null };
+        } else if (decision && (decision.label.indexOf('RETRY') >= 0)) {
+          next = { text: 'RETRY: менеджер передает отчет исполнителю и запускает попытку ' + (latest + 1), phase: null };
+          row(latest + 1).phases.build = { kind: 'wait', label: 'ожидает запуска исполнителя', time: decision.time };
+        } else if (decision && (decision.label.indexOf('VERIFY') >= 0)) {
+          next = { text: 'VERIFY: менеджер собирает основания без правок кода', phase: 'verify' };
+          if (!phases.verify || phases.verify.time < decision.time) { phases.verify = { kind: 'wait', label: 'ожидает проверки', time: decision.time }; }
+        } else {
+          var chain = ['build', 'tests', 'review', 'triage', 'decision'];
+          var lastDone = -1;
+          chain.forEach(function (phase, index) { if (phases[phase] && phases[phase].kind !== 'wait') { lastDone = index; } });
+          if (lastDone >= 0 && lastDone < chain.length - 1) {
+            var phase = chain[lastDone + 1], done = phases[chain[lastDone]];
+            var hints = { tests: 'менеджер: запустить проверки', review: 'менеджер: запустить независимое ревью', triage: 'менеджер: triage замечаний', decision: 'менеджер: записать решение' };
+            if (done.kind === 'bad' && chain[lastDone] === 'build') {
+              next = { text: 'исполнитель не завершил вызов: менеджер выясняет причину (VERIFY) по result.json', phase: null };
+            } else {
+              phases[phase] = { kind: 'wait', label: 'ожидает менеджера', time: done.time };
+              next = { text: hints[phase] + ' (шаг ' + PHASE_NAMES[chain[lastDone]] + ' записан: ' + done.label + ')', phase: phase };
+            }
+          }
+        }
+      } else {
+        next = { text: 'идет: ' + running.map(function (phase) { return PHASE_NAMES[phase] + ' - ' + phases[phase].label; }).join('; '), phase: running[0] };
+      }
+    }
+    order.sort(function (a, b) { return a - b; });
+    return { rows: rows, order: order, next: next, latest: latest };
   }
 
   function callState(call) {
@@ -296,8 +727,554 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     return ['ожидает результат', 'pending'];
   }
 
+  function renderStages(stages) {
+    var box = $('stages');
+    box.textContent = '';
+    stages.order.forEach(function (attempt) {
+      var line = node('div', 'stage-row');
+      line.appendChild(node('span', 'cycle', 'попытка ' + attempt));
+      PHASES.forEach(function (phase) {
+        var entry = stages.rows[attempt].phases[phase], kind = entry ? entry.kind : 'neutral';
+        var chip = node('span', 'stage s-' + kind + (kind === 'pending' ? ' pulse' : ''));
+        chip.setAttribute('role', 'status');
+        chip.appendChild(node('span', 'name', PHASE_NAMES[phase]));
+        chip.appendChild(node('span', 'state', entry ? entry.label : 'не начат'));
+        line.appendChild(chip);
+      });
+      box.appendChild(line);
+    });
+    $('stages-empty').className = stages.order.length ? 'empty hidden' : 'empty';
+  }
+
+  function addCounters(target, entry, provider, tracked) {
+    // Every counter tracks its own completeness: a known part with an unknown part is a lower bound, not a total.
+    (COUNTERS[provider] || ['input', 'output']).forEach(function (field) {
+      var value = entry[NATIVE[field]];
+      if (value != null) { target[field] = (target[field] || 0) + value; } else if (tracked) { target.partial[field] = true; }
+    });
+  }
+  function deriveInput(usage) {
+    // Claude bills uncached, cache-created and cache-read input separately, so its input_tokens are the uncached part.
+    // Codex reports cached input inside input_tokens: the uncached part is the difference, unknown without the subset.
+    // A total derived from counters of which one is unknown carries the same partial flag as the run totals do.
+    if (usage.provider === 'codex') {
+      usage.totalInput = usage.input;
+      usage.uncached = usage.input != null && usage.cached != null ? usage.input - usage.cached : null;
+      if (usage.partial.input) { usage.partial.totalInput = true; }
+      if (usage.partial.input || usage.partial.cached) { usage.partial.uncached = true; }
+    } else {
+      usage.uncached = usage.input;
+      usage.totalInput = usage.input == null && usage.cacheCreation == null && usage.cacheRead == null ? null
+        : (usage.input || 0) + (usage.cacheCreation || 0) + (usage.cacheRead || 0);
+      if (usage.partial.input) { usage.partial.uncached = true; }
+      if (usage.partial.input || usage.partial.cacheCreation || usage.partial.cacheRead) { usage.partial.totalInput = true; }
+    }
+    return usage;
+  }
+  function modelUsage(usage, name) {
+    // One model's share of an invocation, with the completeness its own counters have: a model entry without its cache
+    // counters gives a lower bound for its input, never an exact total.
+    var row = { provider: usage.provider, input: null, uncached: null, cacheCreation: null, cacheRead: null, cached: null, output: null, reasoning: null,
+                cost: usage.models[name].cost_usd != null ? usage.models[name].cost_usd : null, totalInput: null, partial: {} };
+    addCounters(row, usage.models[name], usage.provider, true);
+    Object.keys(usage.modelPartial[name] || {}).forEach(function (field) { row.partial[field] = true; });
+    return deriveInput(row);
+  }
+
+  function stepUsage(step) {
+    // Terminal usage supersedes interim snapshots; snapshots of distinct message ids are summed while the CLI runs.
+    var usage = { provider: step.provider, status: 'unknown', input: null, uncached: null, cacheCreation: null, cacheRead: null, cached: null,
+                  output: null, reasoning: null, cost: null, totalInput: null, models: null, modelCount: 0, otherModels: null, partial: {}, modelPartial: {},
+                  model: step.observedModel || step.requestedModel || null, snapshots: step.snapshotOrder.length, contextWindows: {} };
+    var final = step.finals.length ? step.finals[step.finals.length - 1] : null;
+    function add(target, entry, tracked) { addCounters(target, entry, step.provider, tracked); }
+    if (final) {
+      usage.status = 'final';
+      var hasTotal = final.input_tokens != null || final.output_tokens != null;
+      if (hasTotal) {
+        add(usage, final, true);
+      } else if (final.models) {
+        usage.status = 'final-models';
+        Object.keys(final.models).forEach(function (name) { add(usage, final.models[name], true); });
+      }
+      // The cost is the CLI's own invocation estimate; per-model estimates are summed only when the total is absent.
+      usage.cost = null;
+      delete usage.partial.cost;
+      if (final.cost_usd != null) {
+        usage.cost = final.cost_usd;
+      } else if (final.models) {
+        Object.keys(final.models).forEach(function (name) {
+          if (final.models[name].cost_usd != null) { usage.cost = (usage.cost || 0) + final.models[name].cost_usd; } else { usage.partial.cost = true; }
+        });
+        if (usage.cost == null) { usage.partial.cost = true; }
+      } else {
+        usage.partial.cost = true;
+      }
+      usage.models = final.models || null;
+      usage.modelCount = final.models ? Object.keys(final.models).length : (final.model ? 1 : 0);
+      if (final.model) { usage.model = final.model; }
+      if (final.models) {
+        Object.keys(final.models).forEach(function (name) {
+          if (final.models[name].context_window != null) { usage.contextWindows[name] = final.models[name].context_window; }
+        });
+      }
+    } else if (step.snapshotOrder.length) {
+      usage.status = 'interim';
+      usage.partial.cost = true;
+      var groups = {}, groupOrder = [];
+      step.snapshotOrder.forEach(function (id) {
+        var entry = step.snapshots[id], name = entry.model || '?';
+        add(usage, entry, true);
+        // Interim snapshots are grouped by the model that produced them; a subagent's model is not the main one.
+        // A group whose snapshot lacked a counter is as partial as the invocation total that includes it.
+        if (!groups[name]) { groups[name] = { partial: {} }; groupOrder.push(name); }
+        add(groups[name], entry, true);
+      });
+      usage.modelCount = groupOrder.length;
+      // The invocation row keeps the session's own model as its label; the per-model rows appear as soon as any snapshot
+      // belongs to another model, so a subagent's consumption is never shown under the main model's name, not even while
+      // the main model has no snapshot of its own yet. A snapshot without a model name is another model's, unless the
+      // session's model is unknown as well.
+      usage.otherModels = groupOrder.filter(function (name) { return name !== (usage.model || '?'); }).length;
+      if (groupOrder.length > 1 || usage.otherModels) {
+        usage.models = {};
+        groupOrder.forEach(function (name) {
+          var group = groups[name];
+          usage.models[name] = { input_tokens: group.input, cache_creation_input_tokens: group.cacheCreation, cache_read_input_tokens: group.cacheRead,
+                                 cached_input_tokens: group.cached, output_tokens: group.output, reasoning_tokens: group.reasoning };
+          usage.modelPartial[name] = group.partial;
+        });
+      }
+    }
+    if (usage.status !== 'unknown') { deriveInput(usage); }
+    return usage;
+  }
+
+  function modelLabel(usage, step) {
+    var name = usage.model || (step.requestedModel ? step.requestedModel + ' (запрошена)' : 'модель не сообщена');
+    // Interim rows count the models other than the session's own; a terminal total counts every model but the main one.
+    var others = usage.otherModels != null ? usage.otherModels : usage.modelCount - 1;
+    if (others > 0) { name += ' (и еще ' + others + ': субагенты)'; }
+    return (usage.provider === 'codex' ? 'Codex ' : usage.provider === 'claude' ? 'Claude ' : '') + name;
+  }
+
+  function conversationItems(summary, trace) {
+    var items = [];
+    trace.messages.forEach(function (item) { items.push({ time: item.time, kind: 'message', id: item.id, record: item.record, versions: item.versions, attempt: item.attempt, step: item.step }); });
+    Object.keys(trace.steps).forEach(function (k) {
+      trace.steps[k].statuses.forEach(function (record) {
+        if (record.state === 'api_retry' || record.state === 'turn_failed' || record.state === 'cli_error' || record.state === 'result_error'
+            || record.state === 'capture_unavailable' || record.state === 'import_started') {
+          items.push({ time: when(record), kind: 'status', record: record, attempt: record.attempt, step: record.step_id });
+        }
+      });
+    });
+    // A launcher step without any capture is shown as unavailable, never reconstructed.
+    summary.stepOrder.forEach(function (k) {
+      var step = summary.steps[k], captured = trace.steps[k];
+      if (!step.run) { return; }
+      if (!captured || !captured.captured) {
+        items.push({ time: step.run.time, kind: 'unavailable', attempt: step.attempt, step: step.id,
+                     text: 'Сообщения шага ' + step.id + ' не захвачены: запуск до включения захвата или захват недоступен. Промпт и ответы этого шага восстановлению не подлежат; см. events.jsonl.' });
+      } else if (captured.modelMessages === 0) {
+        items.push({ time: captured.exited ? captured.exited.time : step.last, kind: 'unavailable', attempt: step.attempt, step: step.id,
+                     text: captured.exited ? 'Шаг ' + step.id + ': публичных сообщений модели в потоке не было.' : 'Шаг ' + step.id + ': ответов модели пока нет.' });
+      }
+    });
+    if (state.ui.activity) {
+      state.events.list.forEach(function (event) {
+        if (event.source === 'native' && (event.event === 'tool_call' || event.event === 'task' || event.event === 'hook')) {
+          items.push({ time: event.time, kind: 'activity', record: event, attempt: event.attempt, step: event.step_id });
+        }
+      });
+    }
+    items.forEach(function (item, index) { item.index = index; });
+    items.sort(function (a, b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : a.index - b.index; });
+    return items;
+  }
+
+  function visible(item) {
+    var ui = state.ui;
+    if (ui.cycle && String(item.attempt) !== ui.cycle) { return false; }
+    if (ui.step && item.step !== ui.step) { return false; }
+    if (item.kind === 'message') {
+      var record = item.record;
+      if (!$('show-' + record.role).checked) { return false; }
+      if (record.thread && !ui.subagents) { return false; }
+    }
+    return true;
+  }
+
+  function artifactLink(id, label, download) {
+    var link = node('a', 'link', label);
+    if (!/^[0-9a-f]{64}$/.test(id)) { return null; }
+    link.setAttribute('href', '/api/artifact?id=' + id + (download ? '&download=1' : ''));
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    return link;
+  }
+
+  function isFinal(record, trace) {
+    var step = trace.steps[key(record.attempt, record.step_id)];
+    return record.message_kind === 'final' || !!(step && record.message_id && step.finalMarked[finalKey(record)]);
+  }
+
+  function messageEntry(item, trace) {
+    var record = item.record, entry = node('article', 'entry role-' + record.role);
+    var head = node('div', 'entry-head');
+    var who = ROLE_NAMES[record.role] || record.role;
+    if (record.thread) { who += ' (субагент)'; }
+    head.appendChild(node('span', 'who who-' + record.role, who));
+    var kindName = KIND_NAMES[record.message_kind] || record.message_kind, final = isFinal(record, trace);
+    head.appendChild(node('span', 'kind', kindName + (record.title && record.message_kind !== 'response' ? ': ' + record.title : '')));
+    if (record.model) { head.appendChild(node('span', 'mono', record.model)); }
+    if (final && record.message_kind !== 'final') { head.appendChild(node('span', 'flag final', 'итоговый ответ')); }
+    if (item.versions > 1) { head.appendChild(node('span', 'flag', 'обновлялось: ' + item.versions + ' версии, показана последняя')); }
+    if (record.truncated) {
+      head.appendChild(node('span', 'flag cut', 'усечено: показано ' + fmt(new TextEncoder().encode(record.text).length) + ' из ' + fmt(record.text_bytes) + ' байт'));
+    }
+    if (record.source === 'import') { head.appendChild(node('span', 'flag', 'импорт старого журнала' + (record.observed ? ', после запуска ' + clock(record.observed) : ', время наблюдения неизвестно'))); }
+    if (record.thread) { head.appendChild(node('span', 'flag mono', 'вызов ' + record.thread)); }
+    var toggle = node('button', null, 'развернуть');
+    toggle.setAttribute('type', 'button');
+    // Expansion is keyed by the entry's stable identity (step, message id and block): an updated version of the same
+    // block arrives as a new record and must not fold an entry the reader has opened.
+    var expanded = state.ui.forceExpanded != null ? state.ui.forceExpanded : !!state.ui.expanded[item.id];
+    state.ui.expanded[item.id] = expanded;
+    var body = node('pre', 'text' + (expanded ? '' : ' collapsed'), record.text);
+    toggle.textContent = expanded ? 'свернуть' : 'развернуть';
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggle.addEventListener('click', function () {
+      var open = !state.ui.expanded[item.id];
+      state.ui.expanded[item.id] = open;
+      body.className = 'text' + (open ? '' : ' collapsed');
+      toggle.textContent = open ? 'свернуть' : 'развернуть';
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    head.appendChild(toggle);
+    if (record.artifact_id && trace.artifacts[record.artifact_id]) {
+      var view = artifactLink(record.artifact_id, 'оригинал', false), save = artifactLink(record.artifact_id, 'скачать', true);
+      if (view) { head.appendChild(view); }
+      if (save) { head.appendChild(save); }
+    } else if (record.truncated) {
+      head.appendChild(node('span', 'flag', 'оригинал не сохранен'));
+    }
+    var moment = record.source === 'import' ? (record.observed ? 'после запуска ' + clock(record.observed) + ' (импорт)' : 'записано ' + clock(record.time)) : clock(record.time);
+    head.appendChild(node('span', 'meta', 'попытка ' + record.attempt + ' · ' + record.step_id + ' · ' + moment));
+    entry.appendChild(head);
+    entry.appendChild(body);
+    return entry;
+  }
+
+  function statusEntry(item) {
+    var record = item.record, entry = node('article', 'entry role-system activity');
+    var label = STATE_NAMES[record.state] || record.state, details = [];
+    if (record.state === 'api_retry') {
+      details.push('попытка ' + (record.attempt_no != null ? record.attempt_no : '?') + (record.max_retries != null ? ' из ' + record.max_retries : ''));
+      if (record.retry_delay_ms != null) { details.push('через ' + span(record.retry_delay_ms / 1000)); }
+      if (record.reason) { details.push(record.reason); }
+    }
+    if (record.state === 'result_error' && record.reason) { details.push(record.reason); }
+    if (record.state === 'import_started' && record.origin) { details.push('источник: ' + record.origin); details.push(record.observed ? 'запуск ' + clock(record.observed) : 'время наблюдения неизвестно'); }
+    entry.appendChild(node('span', 'who who-system', ROLE_NAMES.system + ': '));
+    entry.appendChild(node('span', null, label + (details.length ? ' [' + details.join(', ') + ']' : '')));
+    entry.appendChild(node('span', 'meta', ' · попытка ' + record.attempt + ' · ' + record.step_id + ' · ' + clock(record.time)));
+    return entry;
+  }
+
+  function renderConversation(summary, trace) {
+    var items = conversationItems(summary, trace), shown = 0, box = $('conversation');
+    // The key names every item and its final state: an updated block or a late final marker re-renders, a re-read after a
+    // truncated file replaces the list even when its length is unchanged.
+    var identity = items.map(function (item) {
+      return item.record ? (item.record.record_id || item.record.event_id) + (item.kind === 'message' && isFinal(item.record, trace) ? '*' : '') : item.kind + item.step + item.time;
+    }).join(',');
+    var renderKey = identity + '|' + state.ui.cycle + '|' + state.ui.step + '|' + state.ui.subagents + '|' + state.ui.activity + '|'
+      + $('show-user').checked + $('show-manager').checked + $('show-claude').checked + $('show-codex').checked + '|' + (state.ui.forceExpanded === null ? '' : state.ui.forceExpanded);
+    var counts = { total: 0, shown: 0 };
+    items.forEach(function (item) { if (item.kind === 'message') { counts.total += 1; if (visible(item)) { counts.shown += 1; } } });
+    if (renderKey !== state.ui.renderedKey) {
+      var previousTop = box.scrollTop, wasAtBottom = state.ui.atBottom, previousCount = state.ui.renderedItems || 0;
+      box.textContent = '';
+      var lastCycle = null;
+      items.forEach(function (item) {
+        if (!visible(item)) { return; }
+        if (item.attempt !== lastCycle) {
+          box.appendChild(node('div', 'divider', 'попытка ' + item.attempt));
+          lastCycle = item.attempt;
+        }
+        var entry;
+        if (item.kind === 'message') { entry = messageEntry(item, trace); }
+        else if (item.kind === 'status') { entry = statusEntry(item); }
+        else if (item.kind === 'unavailable') {
+          entry = node('article', 'entry role-system');
+          entry.appendChild(node('span', 'who who-system', 'Монитор: '));
+          entry.appendChild(node('span', 'kind', 'недоступно'));
+          entry.appendChild(node('div', null, item.text));
+        } else {
+          entry = node('article', 'entry activity');
+          entry.appendChild(node('span', null, item.record.label));
+          entry.appendChild(node('span', 'meta', ' · ' + item.record.step_id + ' · ' + clock(item.time)));
+        }
+        box.appendChild(entry);
+        shown += 1;
+      });
+      state.ui.forceExpanded = null;
+      state.ui.renderedKey = renderKey;
+      var grew = shown > previousCount;
+      state.ui.renderedItems = shown;
+      // Auto-follow moves the view only when it was already at the end; a reader of earlier history keeps their place.
+      if ($('follow').checked && (wasAtBottom || !previousCount)) {
+        box.scrollTop = box.scrollHeight;
+        state.ui.unread = 0;
+      } else {
+        box.scrollTop = previousTop;
+        if (grew) { state.ui.unread += shown - previousCount; }
+      }
+    }
+    $('jump-latest').textContent = state.ui.unread ? 'к последнему (новых: ' + state.ui.unread + ')' : 'к последнему';
+    text('conversation-count', counts.shown === counts.total ? 'сообщений: ' + counts.total : 'показано ' + counts.shown + ' из ' + counts.total);
+    $('conversation-empty').className = state.ui.renderedItems ? 'empty hidden' : 'empty';
+  }
+
+  function refreshFilters(summary, trace) {
+    var cycles = {}, steps = {};
+    state.events.list.forEach(function (event) { cycles[event.attempt] = true; steps[event.step_id] = true; });
+    state.trace.list.forEach(function (record) { cycles[record.attempt] = true; steps[record.step_id] = true; });
+    var cycleList = Object.keys(cycles).sort(function (a, b) { return a - b; }), stepList = Object.keys(steps).sort();
+    fillSelect('filter-cycle', cycleList, 'cycleOptions', state.ui.cycle);
+    fillSelect('filter-step', stepList, 'stepOptions', state.ui.step);
+  }
+  function fillSelect(id, values, memo, current) {
+    var signature = values.join('|');
+    if (state.ui[memo] === signature) { return; }
+    state.ui[memo] = signature;
+    var select = $(id);
+    select.textContent = '';
+    var all = node('option', null, 'все');
+    all.setAttribute('value', ''); all.value = '';
+    select.appendChild(all);
+    values.forEach(function (value) {
+      var option = node('option', null, value);
+      option.setAttribute('value', value); option.value = value;
+      select.appendChild(option);
+    });
+    select.value = current;
+  }
+
+  function invocationKeys(summary, trace) {
+    var keys = Object.keys(trace.steps).filter(function (k) { var step = trace.steps[k]; return step.provider && (step.captured || step.finals.length || step.snapshotOrder.length); });
+    summary.stepOrder.forEach(function (k) { if (keys.indexOf(k) < 0 && summary.steps[k].run) { keys.push(k); } });
+    keys.sort(function (a, b) { var sa = trace.steps[a] || summary.steps[a], sb = trace.steps[b] || summary.steps[b]; return sa.attempt - sb.attempt || (sa.id < sb.id ? -1 : sa.id > sb.id ? 1 : 0); });
+    return keys;
+  }
+
+  function renderUsage(summary, trace) {
+    // Totals start unknown and only known counters are added; a counter some counted step did not report is a lower bound.
+    var body = $('usage-rows'), total = { uncached: null, cacheCreation: null, cacheRead: null, cached: null, output: null, reasoning: null, cost: null,
+                                          totalInput: null, partial: {}, known: 0, interim: 0, unknown: 0 };
+    body.textContent = '';
+    var rows = 0;
+    invocationKeys(summary, trace).forEach(function (k) {
+      var step = trace.steps[k], launcher = summary.steps[k];
+      if (!step) {
+        if (launcher && launcher.run) { addUsageRow(body, launcher.attempt, launcher.id, launcher.run.model || '?', 'неизвестно (захвата нет)', null); total.unknown += 1; rows += 1; }
+        return;
+      }
+      if (!step.snapshotOrder.length && !step.finals.length && !step.captured) { return; }
+      var usage = stepUsage(step);
+      var statusLabel = usage.status === 'final' ? 'итог' : usage.status === 'final-models' ? 'итог (сумма по моделям)' : usage.status === 'interim'
+        ? 'промежуточно: ' + usage.snapshots + ' снимков, выход не менее' : 'неизвестно';
+      if (usage.status !== 'unknown' && tokenPartial(usage.partial)) { statusLabel += ', часть счетчиков не сообщена'; }
+      addUsageRow(body, step.attempt, step.id, modelLabel(usage, step), statusLabel, usage);
+      rows += 1;
+      if (usage.models && Object.keys(usage.models).length) {
+        Object.keys(usage.models).forEach(function (name) {
+          // Per-model rows come from Claude's modelUsage (or grouped interim snapshots), where inputTokens is the uncached part;
+          // their derived totals carry the same completeness labels as the invocation row.
+          var row = modelUsage(usage, name);
+          addUsageRow(body, '', '', '└ ' + name, 'по модели' + (usage.status === 'interim' ? ', промежуточно' : '') + (tokenPartial(row.partial) ? ', часть счетчиков не сообщена' : ''), row, true);
+        });
+      }
+      if (usage.status === 'unknown') { total.unknown += 1; return; }
+      if (usage.status === 'interim') { total.interim += 1; } else { total.known += 1; }
+      TOTAL_FIELDS.forEach(function (field) {
+        if (usage[field] != null) { total[field] = (total[field] || 0) + usage[field]; }
+        if (usage.partial[field]) { total.partial[field] = true; }
+      });
+    });
+    $('usage-empty').className = rows ? 'empty hidden' : 'empty';
+    return total;
+  }
+  function addUsageRow(body, attempt, step, model, status, usage, modelRow) {
+    var row = document.createElement('tr');
+    if (modelRow) { row.className = 'model-row'; }
+    cell(row, attempt); cell(row, step, 'mono'); cell(row, model, 'mono'); cell(row, status);
+    // A value derived from counters of which one is unknown is a lower bound and says so in its cell.
+    ['totalInput', 'uncached', 'cacheCreation', 'cacheRead', 'cached', 'output', 'reasoning'].forEach(function (field) {
+      cell(row, usage && usage[field] != null ? (usage.partial && usage.partial[field] ? 'не менее ' : '') + fmt(usage[field]) : 'неизвестно', 'num');
+    });
+    cell(row, usage && usage.cost != null ? money(usage.cost) : 'неизвестно', 'num');
+    body.appendChild(row);
+  }
+  function amount(total, field, format) {
+    if (total[field] == null) { return 'неизвестно'; }
+    return (total.partial[field] ? 'не менее ' : '') + (format || fmt)(total[field]);
+  }
+  function tokenPartial(partial) { return Object.keys(partial).some(function (field) { return field !== 'cost'; }); }
+
+  function contextOf(step) {
+    // Per session: capacity matched to the model of the last main-session request; occupancy only as that request's input side.
+    var usage = stepUsage(step), last = step.lastMain, out = { step: step, usage: usage, last: last, occupancy: null, capacity: null, capacityModel: null,
+                                                               capacitySource: null, percent: null, catalog: step.context };
+    if (last && last.input_tokens != null && last.cache_creation_input_tokens != null && last.cache_read_input_tokens != null) {
+      out.occupancy = last.input_tokens + last.cache_creation_input_tokens + last.cache_read_input_tokens;
+    }
+    var model = last ? (last.model || null) : null;
+    if (model && usage.contextWindows[model] != null) { out.capacity = usage.contextWindows[model]; out.capacityModel = model; out.capacitySource = 'model_usage'; }
+    else if (!last && step.observedModel && usage.contextWindows[step.observedModel] != null) { out.capacity = usage.contextWindows[step.observedModel]; out.capacityModel = step.observedModel; out.capacitySource = 'model_usage'; }
+    if (out.capacity == null && step.context && step.context.capacity != null) {
+      out.capacity = step.context.capacity; out.capacityModel = step.context.model || null; out.capacitySource = step.context.capacity_source || 'catalog';
+    }
+    if (out.occupancy != null && out.capacity) { out.percent = Math.round(100 * out.occupancy / out.capacity); }
+    return out;
+  }
+  function capacityLabel(context) {
+    if (context.capacity == null) { return null; }
+    var label = 'емкость окна ' + (context.capacityModel || '?') + ': ' + fmt(context.capacity);
+    if (context.capacitySource === 'catalog') {
+      var catalog = context.catalog || {};
+      label += ' (каталог моделей CLI' + (catalog.client_version ? ' ' + catalog.client_version : '') + (catalog.fetched_at ? ' от ' + shortClock(Date.parse(catalog.fetched_at)) : '')
+        + (catalog.effective_percent != null ? ', эффективно ' + catalog.effective_percent + ' %' : '') + (catalog.capacity_max != null ? ', максимум ' + fmt(catalog.capacity_max) : '') + '; справочное значение, не наблюдение сессии)';
+    } else {
+      label += ' (по итогу CLI, modelUsage)';
+    }
+    return label;
+  }
+
+  function harnessLines(step, captured, trace) {
+    var lines = [], harness = captured ? captured.harness : {}, selected = harness.selected, audit = harness.audit, doctor = harness.doctor, result = harness.result;
+    var provider = captured ? captured.provider : null;
+    if (provider === 'codex') {
+      lines.push(['Обвязка Claude для Codex не выбирается: ревьюер запускается со своим профилем CLI.', 'muted']);
+      return lines;
+    }
+    if (!selected) {
+      lines.push([captured && captured.imported ? 'Запись о выборе обвязки отсутствует: старый запуск без захвата или без invocation.json; ничего не додумано.'
+                  : 'Запись о выборе обвязки отсутствует: запуск до включения захвата или захват недоступен.', 'muted']);
+    } else {
+      var listOf = function (values) { return values && values.length ? values.join(', ') : 'нет'; };
+      lines.push(['Выбор менеджера: скиллы: ' + listOf(selected.skills) + '; агенты: ' + listOf(selected.agents) + '; MCP: ' + listOf(selected.mcp_servers)
+        + (selected.read_only != null ? (selected.read_only ? '; режим read-only' : '') : '') + (selected.tools ? '; инструменты CLI: ' + selected.tools.join(', ') : '')
+        + (selected.observed ? '; наблюдение ' + clock(selected.observed) : selected.source === 'import' ? '; время наблюдения неизвестно (импорт)' : '; записано ' + clock(selected.time))]);
+      if (selected.injected && selected.injected.length) {
+        lines.push(['Внедрено в системный промпт текстом: ' + selected.injected.map(function (entry) { return entry.skill + (entry.sha256 ? ' (sha256 ' + entry.sha256.slice(0, 12) + ')' : ''); }).join(', ')
+          + (selected.instructions_sha256 ? '; инструкции sha256 ' + selected.instructions_sha256.slice(0, 12) : '') + '. Внедренный текст не доказывает соблюдение скилла.']);
+        selected.injected.forEach(function (entry) { if (entry.origin) { lines.push(['источник ' + entry.skill + ': ' + entry.origin, 'muted mono']); } });
+      } else {
+        lines.push(['Внедрено в системный промпт: ничего (скиллы не выбраны).']);
+      }
+      if (selected.agent_sources && selected.agent_sources.length) {
+        lines.push(['Определения агентов: ' + selected.agent_sources.map(function (entry) { return entry.agent + (entry.sha256 ? ' (sha256 ' + entry.sha256.slice(0, 12) + ')' : '') + (entry.origin ? ', ' + entry.origin : ''); }).join('; ')]);
+      }
+    }
+    var components = step ? step.components : null;
+    if (components) {
+      var describe = function (kind, label) { var names = Object.keys(components[kind]); return label + ': ' + (names.length ? names.map(function (name) { return name + ' x' + components[kind][name]; }).join(', ') : 'нет'); };
+      lines.push(['Наблюдаемые вызовы компонентов (журнал CLI): ' + describe('skills', 'Skill') + '; ' + describe('agents', 'Agent') + '; ' + describe('mcp_servers', 'MCP')
+        + '. Отсутствие вызовов Skill нормально: скиллы поданы текстом.']);
+    } else if (captured && captured.imported) {
+      lines.push(['Наблюдаемые вызовы по журналу: старый журнал не импортируется; см. сверку ниже.', 'muted']);
+    }
+    if (audit) {
+      var counts = audit.counts || {}, catalog = audit.catalog;
+      lines.push(['Сверка обвязки (audit): ' + (audit.status || 'статус неизвестен') + '; вызовов всего ' + fmt(counts.calls) + ' (встроенных ' + fmt(counts.builtin) + ', Skill ' + fmt(counts.skills) + ', агентов ' + fmt(counts.agents) + ', MCP ' + fmt(counts.mcp_servers) + ')'
+        + '; неожиданных ' + fmt(counts.unexpected) + (audit.unexpected_calls && audit.unexpected_calls.length ? ' (' + audit.unexpected_calls.map(function (call) { return call.name + (call.component ? ':' + call.component : ''); }).join(', ') + ')' : '')
+        + '; отсутствующих агентов ' + fmt(counts.missing_agents) + (audit.missing_agents && audit.missing_agents.length ? ' (' + audit.missing_agents.join(', ') + ')' : '')
+        + '; ошибок разбора ' + fmt(audit.parse_errors) + '; hook-событий ' + fmt(audit.hook_events)
+        + (audit.skill_calls && audit.skill_calls.length ? '; вызваны скиллы: ' + audit.skill_calls.join(', ') : '')
+        + (audit.mcp_called && audit.mcp_called.length ? '; вызваны MCP: ' + audit.mcp_called.join(', ') : '') + (audit.mcp_unused && audit.mcp_unused.length ? '; MCP без вызовов: ' + audit.mcp_unused.join(', ') : '')
+        + (audit.observed ? '; наблюдение ' + clock(audit.observed) : audit.source === 'import' ? '; время неизвестно (импорт)' : '; записано ' + clock(audit.time))]);
+      if (catalog) { lines.push(['Каталог сессии CLI (доступно, не вызвано): инструментов ' + fmt(catalog.tools) + ', скиллов ' + fmt(catalog.skills) + ', агентов ' + fmt(catalog.agents) + ', MCP ' + fmt(catalog.mcp_servers) + '.', 'muted']); }
+      if (audit.calls && audit.calls.length) {
+        lines.push(['Вызовы компонентов по сверке: ' + audit.calls.map(function (call) { return call.name + (call.component ? ' ' + call.component : '') + (call.result_status ? ' [' + call.result_status + (call.task_status ? ', ' + call.task_status : '') + ']' : ''); }).join('; ')]);
+      }
+    } else {
+      lines.push([selected ? (step && !step.exit && !step.result ? 'Сверка обвязки (audit): будет записана после выхода CLI.' : 'Сверка обвязки (audit): записи нет.') : 'Сверка обвязки (audit): записи нет.', 'muted']);
+    }
+    if (doctor) {
+      lines.push(['claude doctor: ' + (doctor.status || 'статус неизвестен') + (doctor.exit_code != null ? ', exit ' + doctor.exit_code : '') + (doctor.timed_out ? ', таймаут' : '') + (doctor.interrupted ? ', прервано' : '')
+        + (doctor.duration_seconds != null ? ', ' + doctor.duration_seconds.toFixed(1) + ' с' : '') + (doctor.started_at ? ', ' + clock(doctor.started_at) + (doctor.finished_at ? ' - ' + clock(doctor.finished_at) : '') : '') + '; вывод doctor на странице не показывается.']);
+    } else {
+      lines.push([selected && step && !step.exit && !step.result ? 'claude doctor: будет записан после выхода CLI.' : 'claude doctor: записи нет.', 'muted']);
+    }
+    if (result) {
+      lines.push(['Итог helper: ' + (result.completed ? 'completed' : 'не completed') + ', ' + (result.ready_for_review ? 'ready_for_review' : 'не ready_for_review') + ', модель ' + (result.model_matches == null ? 'не проверена' : result.model_matches ? 'совпала' : 'не совпала')
+        + (result.harness_status ? ', обвязка ' + result.harness_status : '') + (result.doctor_status ? ', doctor ' + result.doctor_status : '') + (result.exit_code != null ? ', exit ' + result.exit_code : '') + '; это не доказательство корректности задачи.']);
+    }
+    return lines;
+  }
+
+  function contextLines(step, captured, trace, moment) {
+    var lines = [];
+    if (!captured) { lines.push(['Сессия не захвачена: идентификатор, емкость и занятость контекста неизвестны.', 'muted']); return lines; }
+    var context = contextOf(captured), provider = captured.provider;
+    var identity = provider === 'codex' ? (captured.threadId ? 'поток Codex ' + captured.threadId : 'идентификатор потока Codex не наблюдался')
+      : (captured.sessionId ? 'сессия Claude ' + captured.sessionId : 'идентификатор сессии Claude не наблюдался');
+    lines.push([identity + (captured.cliVersion ? ', CLI ' + captured.cliVersion : '') + '; модель: ' + (captured.observedModel ? captured.observedModel + ' (наблюдалась)' : captured.requestedModel ? captured.requestedModel + ' (запрошена, в потоке не сообщена)' : 'неизвестна')]);
+    lines.push([capacityLabel(context) || (provider === 'codex' ? 'емкость окна: неизвестна (каталог моделей не прочитан, поток exec --json ее не сообщает)' : 'емкость окна: неизвестна до итога CLI (modelUsage)')]);
+    if (provider === 'codex') {
+      lines.push(['последний запрос и занятость: exec --json сообщает только суммарный расход хода, не размер контекста; занято сейчас и свободно: неизвестно']);
+    } else if (context.last) {
+      lines.push([(context.occupancy != null ? 'последний запрос основной сессии: ~' + fmt(context.occupancy) + ' токенов (вход + кеш сообщения ' + (context.last.message_id || '?') + ', ' + (captured.imported ? (context.last.observed ? 'после запуска ' + clock(context.last.observed) : 'время неизвестно') + ', импорт' : clock(context.last.time)) + ')'
+        + (context.percent != null ? ' ≈ ' + context.percent + ' % емкости' : '') : 'последний запрос: размер неизвестен (usage без входа)')
+        + '; это не текущая занятость с учетом ответа и результатов инструментов и не сумма по ходам; занято сейчас и свободно: неизвестно']);
+    } else {
+      lines.push(['последний запрос: usage сообщений еще не наблюдалось; занято сейчас и свободно: неизвестно', 'muted']);
+    }
+    if (captured.imported) { lines.push(['историческая запись (импорт): ' + (captured.observed ? 'запуск ' + clock(captured.observed) : 'время наблюдения неизвестно') + '; текущую сессию не описывает', 'muted']); }
+    return lines;
+  }
+
+  function renderInvocations(summary, trace, moment) {
+    var box = $('invocations'), keys = invocationKeys(summary, trace), count = 0;
+    box.textContent = '';
+    keys.forEach(function (k) {
+      var captured = trace.steps[k], step = summary.steps[k];
+      var attempt = (captured || step).attempt, id = (captured || step).id, provider = captured ? captured.provider : null;
+      var stateOf = step && step.run ? stepState(step, captured, moment) : captured && captured.exited ? { kind: captured.imported ? 'neutral' : 'ok', label: captured.imported ? 'импорт старого журнала' : 'CLI завершен', active: false }
+        : captured && captured.started ? { kind: 'pending', label: 'запись CLI без журнала', active: false } : { kind: 'neutral', label: 'без журнала', active: false };
+      var details = node('details', 'invocation');
+      var opened = state.ui.opened[k];
+      if (opened === true || (opened == null && stateOf.active)) { details.setAttribute('open', ''); }
+      details.addEventListener('toggle', function () { state.ui.opened[k] = !!details.open; });
+      var summaryLine = node('summary');
+      var model = (provider === 'codex' ? 'Codex ' : provider === 'claude' ? 'Claude ' : '') + ((step && step.run && step.run.model) || (captured && (captured.observedModel || captured.requestedModel)) || 'модель ?')
+        + ((step && step.run && step.run.effort) ? ' / ' + step.run.effort : captured && captured.requestedEffort ? ' / ' + captured.requestedEffort : '');
+      var selected = captured && captured.harness.selected, audit = captured && captured.harness.audit, doctor = captured && captured.harness.doctor;
+      var harnessShort = provider === 'codex' ? 'обвязка: не применяется' : selected
+        ? 'обвязка: ' + plural((selected.skills || []).length, 'скилл', 'скилла', 'скиллов') + ', агентов ' + ((selected.agents || []).length || 'нет') + ', MCP ' + ((selected.mcp_servers || []).length || 'нет')
+          + (audit ? ', audit ' + (audit.status || '?') : '') + (doctor ? ', doctor ' + (doctor.status || '?') : '')
+        : 'обвязка: записи нет';
+      var context = captured ? contextOf(captured) : null;
+      var contextShort = !captured ? 'контекст: не захвачен' : 'контекст: ' + (context.capacity != null ? 'емкость ' + fmt(context.capacity) + (context.capacitySource === 'catalog' ? ' (каталог)' : '') : 'емкость неизвестна')
+        + (provider === 'claude' && context.occupancy != null ? ', последний запрос ~' + fmt(context.occupancy) + (context.percent != null ? ' (' + context.percent + ' %)' : '') : '') + ', занято: неизвестно';
+      summaryLine.appendChild(node('span', null, 'попытка ' + attempt + ' · ' + id + ' · ' + model + ' · '));
+      summaryLine.appendChild(pill(stateOf.label, stateOf.kind));
+      summaryLine.appendChild(node('span', 'kind', ' · ' + harnessShort + ' · ' + contextShort + (captured && captured.imported ? ' · импорт' : '')));
+      details.appendChild(summaryLine);
+      details.appendChild(node('h3', null, 'Обвязка'));
+      harnessLines(step, captured, trace).forEach(function (line) { details.appendChild(node('div', 'line ' + (line[1] || ''), line[0])); });
+      details.appendChild(node('h3', null, 'Контекст сессии'));
+      contextLines(step, captured, trace, moment).forEach(function (line) { details.appendChild(node('div', 'line ' + (line[1] || ''), line[0])); });
+      box.appendChild(details);
+      count += 1;
+    });
+    $('invocations-empty').className = count ? 'empty hidden' : 'empty';
+  }
+
   function render() {
-    var summary = summarize(), current = summary.current, moment = now();
+    var summary = summarize(), trace = summarizeTrace(), current = summary.current, moment = now();
     var connection = $('connection');
     if (state.connected) {
       connection.className = 'pill pill-ok'; connection.textContent = 'связь с сервером есть';
@@ -308,33 +1285,58 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     var notice = $('notice');
     if (!state.connected && state.failures) {
       notice.className = 'notice bad';
-      notice.textContent = 'Сервер прогресса не отвечает: данные ниже могли устареть. Страница продолжает попытки подключения.';
-    } else if (state.journal === false) {
+      notice.textContent = 'Сервер прогресса не отвечает: данные ниже могли устареть, состояния этапов не подтверждены. Страница продолжает попытки подключения.';
+    } else if (state.events.journal === false && state.trace.journal === false) {
       notice.className = 'notice warn';
       notice.textContent = 'Журнал progress.jsonl еще не создан: дождитесь запуска helper или проверьте --progress-dir.';
     } else {
       notice.className = 'notice hidden';
     }
-    text('run', 'run: ' + (summary.runId || '-'));
-    text('attempt', 'попытка: ' + (summary.attempt || '-'));
-    text('records', 'записей: ' + state.events.length + (state.invalid ? ', поврежденных строк: ' + state.invalid : ''));
+    var runId = summary.runId || trace.runId, attempts = Math.max(summary.attempt, trace.attempt);
+    text('title', trace.userTitle || trace.title || (runId ? 'Задача ' + runId : 'Монитор конвейера'));
+    text('run', 'run: ' + (runId || '-'));
+    text('attempt', 'попытка: ' + (attempts || '-') + (attempts > 1 ? ' (циклов: ' + attempts + ')' : ''));
+    text('records', 'записей: ' + state.events.list.length + ', трассировка: ' + state.trace.list.length
+      + (state.events.invalid + state.trace.invalid ? ', поврежденных строк: ' + (state.events.invalid + state.trace.invalid) : ''));
+    var lastTime = [summary.last, trace.last].filter(Boolean).sort().pop();
+    text('updated', 'обновлено: ' + (lastTime ? clock(lastTime) + ' (' + span(ageOf(lastTime)) + ' назад)' : '-'));
 
+    var stages = stageStates(summary, trace, moment);
+    renderStages(stages);
+    // A launcher step is active until its exit or result is recorded; a result without an exit line still means it finished.
+    var active = summary.stepOrder.map(function (k) { return summary.steps[k]; }).filter(function (step) { return step.run && !step.exit && !step.result; });
     var stage = summary.stage;
-    if (!stage) {
-      text('stage', state.events.length ? 'только наблюдаемые вызовы' : 'нет данных');
-      text('stage-detail', state.events.length ? 'событий этапа еще не было' : 'событий еще нет');
+    if (active.length) {
+      // Unfinished invocations are the current state; a manager record written later about another phase does not hide them.
+      var states = active.map(function (step) { return stepState(step, trace.steps[step.key], moment); });
+      var phaseNames = [];
+      active.forEach(function (step) { if (phaseNames.indexOf(PHASE_NAMES[step.phase]) < 0) { phaseNames.push(PHASE_NAMES[step.phase]); } });
+      text('stage', phaseNames.join(' + ') + ' · ' + (active.length === 1 ? active[0].id : plural(active.length, 'вызов', 'вызова', 'вызовов')) + ' · попытка ' + Math.max.apply(null, active.map(function (step) { return step.attempt; })));
+      var detail = states.map(function (entry, index) {
+        var step = active[index];
+        if (entry.retry) { return step.id + ': исполнитель ждет API: ' + entry.label + ' (запись ' + clock(entry.retry.time) + ')'; }
+        if (entry.age == null) { return step.id + ': ' + entry.label; }
+        return step.id + ': ' + (entry.kind === 'stale' ? 'тишина ' + span(entry.age) + ', состояние не подтверждено' : 'исполнитель работает, последняя активность ' + span(entry.age) + ' назад');
+      }).join('; ');
+      var stageOwner = stage ? summary.steps[key(stage.attempt, stage.step_id)] : null;
+      if (stage && !(stage.event === 'run' && stageOwner && !stageOwner.exit && !stageOwner.result)) {
+        detail += '; последняя запись журнала: ' + stage.label + ', ' + clock(stage.time);
+      }
+      if (states.some(function (entry) { return entry.kind === 'stale'; }) && !states.some(function (entry) { return entry.kind === 'pending' || entry.kind === 'wait'; })) { detail += '; тишина не означает завершения'; }
+      text('stage-detail', detail);
+      setCard('card-stage', states.some(function (entry) { return entry.kind === 'pending'; }) ? 'pending' : states.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait' : states.some(function (entry) { return entry.kind === 'bad'; }) ? 'bad' : 'stale');
+    } else if (!stage) {
+      text('stage', state.events.list.length ? 'только наблюдаемые вызовы' : 'нет данных');
+      text('stage-detail', state.events.list.length ? 'событий этапа еще не было' : 'событий еще нет');
       setCard('card-stage', 'neutral');
     } else {
-      var running = stage.event === 'run', own = summary.steps[stage.attempt + ' ' + stage.step_id];
-      text('stage', stage.phase + ' · ' + stage.step_id);
-      var detail = stage.label + ', ' + clock(stage.time);
-      if (running) {
-        detail = 'исполнитель работает; ' + (own && own.lastNative ? 'последнее наблюдение: ' + own.lastNative.label
-                 + ', ' + span((moment - Date.parse(own.lastNative.time)) / 1000) + ' назад' : 'из потока CLI еще ничего не наблюдалось');
-      }
-      text('stage-detail', detail);
-      setCard('card-stage', running ? 'pending' : statusClass(stage.status));
+      var own = summary.steps[key(stage.attempt, stage.step_id)];
+      text('stage', PHASE_NAMES[stage.phase] + ' · ' + stage.step_id + ' · попытка ' + stage.attempt);
+      var finished = stage.event === 'run' || stage.event === 'cli_exit' || stage.event === 'result' ? (own ? stepState(own, trace.steps[own.key], moment) : null) : null;
+      text('stage-detail', finished ? finished.label + ', ' + clock(finished.time) : stage.label + ', ' + clock(stage.time));
+      setCard('card-stage', finished ? finished.kind : statusClass(stage.status));
     }
+    text('next-action', 'следующий шаг: ' + (stages.next ? stages.next.text : (summary.decision ? 'см. решение' : 'неизвестен, ждать записей helper или менеджера')));
 
     var decision = summary.decision;
     if (decision) {
@@ -349,38 +1351,130 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
 
     if (current) {
       text('model', (current.run.model || '?') + ' / ' + (current.run.effort || '?'));
+      var captured = trace.steps[current.key];
       var observed = current.init ? 'наблюдаемая модель CLI: ' + (current.init.model || '?')
+                   : captured && captured.observedModel ? 'наблюдаемая модель: ' + captured.observedModel
                    : (current.exit ? 'модель CLI в этом шаге не наблюдалась' : 'инициализация CLI еще не наблюдалась');
       text('model-detail', 'шаг ' + current.id + ', попытка ' + current.attempt + '; ' + observed);
-      setCard('card-model', current.init ? (current.init.model === current.run.model ? 'ok' : 'warn') : (current.exit ? 'warn' : 'pending'));
+      var observedModel = current.init ? current.init.model : captured ? captured.observedModel : null;
+      setCard('card-model', observedModel ? (observedModel === current.run.model ? 'ok' : 'warn') : (current.exit ? 'warn' : 'pending'));
     } else {
       text('model', '-');
       text('model-detail', 'запуск исполнителя не зафиксирован');
       setCard('card-model', 'neutral');
     }
+    var models = $('models');
+    models.textContent = '';
+    if (active.length) {
+      active.forEach(function (step) {
+        var captured = trace.steps[step.key], provider = captured && captured.provider === 'codex' ? 'Codex' : 'Claude';
+        var entry = stepState(step, captured, moment);
+        var line = provider + ' ' + (step.run.model || '?') + ' / ' + (step.run.effort || '?') + ' (' + PHASE_NAMES[step.phase] + ', ' + step.id + ', попытка ' + step.attempt + '): '
+          + (entry.retry ? retryLabel(entry.retry, moment).label : entry.kind === 'stale' ? 'тишина ' + span(entry.age) + ', состояние не подтверждено'
+             : entry.age != null ? 'работает, последняя активность ' + span(entry.age) + ' назад' : entry.label);
+        var seen = step.init ? step.init.model : captured ? captured.observedModel : null;
+        line += seen ? '; в потоке: ' + seen : '; модель в потоке не сообщена';
+        var selected = captured && captured.harness.selected;
+        if (selected) {
+          var chosen = { skills: selected.skills || [], agents: selected.agents || [], mcp: selected.mcp_servers || [] };
+          line += '; обвязка: ' + plural(chosen.skills.length, 'скилл', 'скилла', 'скиллов') + (chosen.agents.length ? ', агентов ' + chosen.agents.length : '') + (chosen.mcp.length ? ', MCP ' + chosen.mcp.length : '');
+        }
+        models.appendChild(node('div', null, line));
+      });
+      if (active.length > 1) { models.appendChild(node('div', null, 'параллельных вызовов: ' + active.length)); }
+    } else {
+      models.appendChild(node('div', null, 'активных вызовов LLM нет'));
+    }
+
+    var totals = renderUsage(summary, trace);
+    if (totals.known + totals.interim) {
+      var anyPartial = tokenPartial(totals.partial);
+      var partial = totals.interim ? ' (промежуточно' + (totals.unknown ? ', ' + totals.unknown + ' шагов без данных' : '') + ')'
+        : (totals.unknown ? ' (без ' + totals.unknown + ' шагов: неизвестно)' : anyPartial ? ' (итог, часть счетчиков неизвестна)' : ' (итог)');
+      text('usage', 'вход ' + amount(totals, 'totalInput') + ' · выход ' + amount(totals, 'output') + partial);
+      text('usage-detail', 'вход без кеша ' + amount(totals, 'uncached') + ', создание кеша ' + amount(totals, 'cacheCreation') + ', чтение кеша ' + amount(totals, 'cacheRead')
+        + (totals.cached != null ? ', из кеша (Codex, входит во вход) ' + amount(totals, 'cached') : '') + '; рассуждения в составе выхода: ' + amount(totals, 'reasoning'));
+      text('usage-cost', totals.cost != null ? 'оценка стоимости CLI: ' + amount(totals, 'cost', money) + ' (расчет клиента, не списание с подписки' + (totals.partial.cost ? '; не все вызовы сообщают стоимость' : '') + ')' : 'оценка стоимости: неизвестна');
+      setCard('card-usage', totals.interim ? 'pending' : 'ok');
+    } else {
+      text('usage', 'неизвестно');
+      text('usage-detail', totals.unknown ? 'использование не захвачено для ' + totals.unknown + ' шагов' : 'данных об использовании пока нет');
+      text('usage-cost', '');
+      setCard('card-usage', 'neutral');
+    }
+
+    // The card summarizes the newest live Claude session; every session keeps its own block in the invocations panel.
+    var contextStep = null, historical = null;
+    trace.stepOrder.forEach(function (k) {
+      var step = trace.steps[k];
+      if (step.provider !== 'claude' || !step.lastMain) { return; }
+      if (!step.imported) { if (!contextStep || step.lastMain.time > contextStep.lastMain.time) { contextStep = step; } }
+      else if (!historical || when(step.lastMain) > when(historical.lastMain)) { historical = step; }
+    });
+    var shownStep = contextStep || historical;
+    if (shownStep) {
+      var context = contextOf(shownStep), last = context.last;
+      var provenance = shownStep.imported ? 'импорт, ' + (shownStep.observed ? 'после запуска ' + clock(shownStep.observed) : 'время наблюдения неизвестно') : clock(last.time);
+      text('context', context.occupancy != null ? 'контекст последнего запроса: ~' + fmt(context.occupancy) + ' токенов' : 'контекст последнего запроса: неизвестен (usage без входа)');
+      text('context-detail', 'по usage последнего сообщения основной сессии (' + shownStep.id + ', ' + provenance + '); это не сумма по ходам и не текущая занятость. '
+        + (context.capacity != null ? 'Емкость окна ' + context.capacityModel + ': ' + fmt(context.capacity) + (context.percent != null ? ' (' + context.percent + ' % занято на последнем запросе)' : '') : 'емкость окна в потоке не сообщается до итога')
+        + '; занято сейчас и свободно: неизвестно; по сессиям см. раздел "Вызовы LLM"');
+      setCard('card-context', context.percent != null && context.percent > 85 ? 'warn' : shownStep.imported ? 'neutral' : 'ok');
+    } else {
+      text('context', 'контекст: неизвестен');
+      text('context-detail', 'headless-поток не сообщает занятость контекста; появится с первым usage сообщения');
+      setCard('card-context', 'neutral');
+    }
+    var rate = trace.rate || trace.rateImported;
+    if (rate) {
+      var parts = [];
+      ['five_hour', 'seven_day'].forEach(function (name) {
+        var window = rate.windows[name];
+        if (!window) { return; }
+        parts.push((name === 'five_hour' ? '5 ч' : '7 дн') + ': ' + (window.utilization != null ? Math.round(window.utilization * 100) + ' % использовано' : 'использование неизвестно')
+          + (window.resets_at ? ', сброс ' + shortClock(window.resets_at * 1000) : ''));
+      });
+      var rateProvenance = trace.rate ? 'по событию CLI ' + clock(rate.time) : 'импорт старого журнала, ' + (rate.observed ? 'после запуска ' + clock(rate.observed) : 'время наблюдения неизвестно');
+      text('limits', 'лимиты аккаунта (' + (rate.provider || '?') + ', ' + rateProvenance + '): статус ' + (rate.status || 'не сообщен') + '; ' + parts.join('; '));
+    } else {
+      text('limits', 'лимиты аккаунта: событий rate_limit в потоке не было; ничего не выдумано');
+    }
+    if (trace.budget) {
+      var budgetParts = [];
+      if (trace.budget.tokens != null) {
+        var spent = totals.known + totals.interim ? (totals.totalInput || 0) + (totals.output || 0) : null;
+        budgetParts.push('лимит токенов ' + fmt(trace.budget.tokens) + (spent != null ? ', известный расход ' + fmt(spent) + ', остаток по известной части ' + fmt(trace.budget.tokens - spent) : ', расход неизвестен'));
+      }
+      if (trace.budget.usd != null) {
+        budgetParts.push('лимит ' + money(trace.budget.usd) + (totals.cost != null ? ', оценка расхода ' + money(totals.cost) : ', оценка расхода неизвестна'));
+      }
+      text('budget', 'бюджет (задан менеджером ' + clock(trace.budget.time) + '): ' + budgetParts.join('; ') + (trace.budget.note ? ' - ' + trace.budget.note : ''));
+    } else {
+      text('budget', 'бюджет токенов не задан (по умолчанию); остаток не вычисляется');
+    }
 
     if (summary.first) {
-      var finished = decision && (decision.status === 'complete' || decision.status === 'escalate');
-      var end = finished ? Date.parse(summary.last) : moment;
-      text('elapsed', span((end - Date.parse(summary.first)) / 1000) + (finished ? ' (итог)' : ''));
-      var age = (moment - Date.parse(summary.last)) / 1000;
-      var quiet = age > 60 && !finished;
+      var finishedRun = decision && (decision.status === 'complete' || decision.status === 'escalate');
+      var end = finishedRun ? Date.parse(summary.last) : moment;
+      text('elapsed', span((end - Date.parse(summary.first)) / 1000) + (finishedRun ? ' (итог)' : ''));
+      var age = ageOf(summary.last);
+      var quiet = age > 60 && !finishedRun;
       text('last-age', (quiet ? 'тишина: ' : 'последнее событие: ') + span(age) + ' назад');
-      setCard('card-time', quiet ? 'warn' : (finished ? 'neutral' : 'ok'));
+      setCard('card-time', quiet ? 'warn' : (finishedRun ? 'neutral' : 'ok'));
     } else {
       text('elapsed', '-'); text('last-age', '-'); setCard('card-time', 'neutral');
     }
 
     var earlier = summary.failedObservers.filter(function (step) { return step !== current; }).map(function (step) { return step.id; });
     var tail = earlier.length ? '; ранее отказ журнала: ' + earlier.join(', ') : '';
-    if (state.journal === false) {
+    if (state.events.journal === false) {
       text('journal', 'не найден'); text('journal-detail', 'progress.jsonl отсутствует в каталоге'); setCard('card-journal', 'warn');
     } else if (current && current.observer && current.observer.status === 'failed') {
       text('journal', 'UNVERIFIED');
       text('journal-detail', 'шаг ' + current.id + ': наблюдатель или запись журнала отказали; см. result.json' + tail);
       setCard('card-journal', 'bad');
-    } else if (state.invalid) {
-      text('journal', 'поврежденные строки: ' + state.invalid); text('journal-detail', 'строки пропущены, события не додуманы' + tail); setCard('card-journal', 'warn');
+    } else if (state.events.invalid) {
+      text('journal', 'поврежденные строки: ' + state.events.invalid); text('journal-detail', 'строки пропущены, события не додуманы' + tail); setCard('card-journal', 'warn');
     } else if (current && current.observer) {
       text('journal', 'наблюдатель остановлен');
       text('journal-detail', 'шаг ' + current.id + ': нативных событий: ' + (current.observer.count == null ? '?' : current.observer.count) + tail);
@@ -390,13 +1484,20 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
       text('journal-detail', 'шаг ' + current.id + ': progress.jsonl читается постранично' + tail);
       setCard('card-journal', earlier.length ? 'warn' : 'pending');
     } else {
-      text('journal', 'записей: ' + state.events.length); text('journal-detail', 'запуск исполнителя не зафиксирован' + tail); setCard('card-journal', earlier.length ? 'warn' : 'neutral');
+      text('journal', 'записей: ' + state.events.list.length); text('journal-detail', 'запуск исполнителя не зафиксирован' + tail); setCard('card-journal', earlier.length ? 'warn' : 'neutral');
+    }
+    if (state.trace.journal === false) {
+      text('trace', 'trace.jsonl отсутствует'); text('trace-detail', 'богатая трассировка не велась: сообщения и usage недоступны'); setCard('card-trace', 'neutral');
+    } else if (state.trace.invalid) {
+      text('trace', 'поврежденные строки: ' + state.trace.invalid); text('trace-detail', 'записей: ' + state.trace.list.length + '; строки пропущены, текст не додуман'); setCard('card-trace', 'warn');
+    } else {
+      text('trace', 'записей: ' + state.trace.list.length); text('trace-detail', 'сообщений: ' + trace.messages.length + ', артефактов: ' + Object.keys(trace.artifacts).length + '; формат trace/1'); setCard('card-trace', state.trace.list.length ? 'ok' : 'neutral');
     }
 
     var steps = $('steps');
     steps.textContent = '';
-    summary.stepOrder.forEach(function (key) {
-      var step = summary.steps[key], row = document.createElement('tr');
+    summary.stepOrder.forEach(function (k) {
+      var step = summary.steps[k], row = document.createElement('tr');
       cell(row, step.attempt);
       cell(row, step.id, 'mono');
       var sources = cell(row);
@@ -447,17 +1548,42 @@ footer code { background: var(--panel); border: 1px solid var(--line); border-ra
     tools.textContent = '';
     var names = Object.keys(summary.tools).sort();
     names.forEach(function (name) {
-      var chip = document.createElement('span');
-      chip.className = 'chip';
-      chip.textContent = name + ' x' + summary.tools[name].calls + (summary.tools[name].errors ? ', ошибок: ' + summary.tools[name].errors : '');
+      var chip = node('span', 'chip', name + ' x' + summary.tools[name].calls + (summary.tools[name].errors ? ', ошибок: ' + summary.tools[name].errors : ''));
       tools.appendChild(chip);
     });
     $('tools-empty').className = names.length ? 'empty hidden' : 'empty';
-    $('events-empty').className = state.events.length ? 'empty hidden' : 'empty';
-    text('tail', 'tail -f ' + (state.log || 'progress.log'));
+    $('events-empty').className = state.events.list.length ? 'empty hidden' : 'empty';
+    text('tail', 'tail -f ' + (state.events.log || 'progress.log'));
+
+    renderInvocations(summary, trace, moment);
+    refreshFilters(summary, trace);
+    renderConversation(summary, trace);
+    text('status-text', 'Состояние: ' + $('stage').textContent + '. ' + $('stage-detail').textContent + '. ' + $('next-action').textContent
+      + '. Токены: ' + $('usage').textContent + '. Связь: ' + connection.textContent + '.');
   }
 
-  setInterval(function () { if (state.events.length) { render(); } }, 1000);
+  function bind() {
+    var box = $('conversation');
+    box.addEventListener('scroll', function () {
+      state.ui.atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+      if (state.ui.atBottom) { state.ui.unread = 0; $('jump-latest').textContent = 'к последнему'; }
+    });
+    $('jump-latest').addEventListener('click', function () {
+      box.scrollTop = box.scrollHeight;
+      state.ui.atBottom = true; state.ui.unread = 0;
+      $('jump-latest').textContent = 'к последнему';
+    });
+    $('expand-all').addEventListener('click', function () { state.ui.forceExpanded = true; state.ui.renderedKey = ''; render(); });
+    $('collapse-all').addEventListener('click', function () { state.ui.forceExpanded = false; state.ui.renderedKey = ''; render(); });
+    $('filter-cycle').addEventListener('change', function () { state.ui.cycle = $('filter-cycle').value || ''; render(); });
+    $('filter-step').addEventListener('change', function () { state.ui.step = $('filter-step').value || ''; render(); });
+    ['show-user', 'show-manager', 'show-claude', 'show-codex'].forEach(function (id) { $(id).addEventListener('change', render); });
+    $('show-subagents').addEventListener('change', function () { state.ui.subagents = $('show-subagents').checked; render(); });
+    $('show-activity').addEventListener('change', function () { state.ui.activity = $('show-activity').checked; render(); });
+  }
+
+  bind();
+  setInterval(function () { if (state.events.list.length || state.trace.list.length) { render(); } }, 1000);
   poll();
 })();
 </script>

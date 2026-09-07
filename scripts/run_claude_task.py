@@ -16,6 +16,7 @@ import threading
 from claude_doctor import run_doctor, stop_group
 from harness_run_audit import audit_run
 from run_progress import ConsoleEcho, NativeObserver, ProgressJournal, identifier, stop_observer
+from run_trace import ClaudeTrace, TraceStore, harness_audit, harness_doctor, harness_result, harness_selected, title_of
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -170,6 +171,18 @@ def run(args):
         # The warning takes the same queued console path as the records: a stalled stderr reader
         # can drop it, counted in console_dropped, but can never hold the launch before the CLI starts.
         console.write("progress UNVERIFIED: " + journal.error + "\n")
+    # The rich trace is a second, separate capture: the exact task prompt now, the public response
+    # blocks and usage while the CLI runs. Its failure is reported as trace_status, never as a task result.
+    trace_identity = {"run_id": journal.run_id, "attempt": journal.attempt, "step_id": journal.step_id,
+                      "source": "launcher", "tool": "run_claude_task.py", "phase": phase, "provider": "claude"}
+    try:
+        trace = TraceStore.open(progress_dir, **trace_identity)
+    except (OSError, ValueError) as error:
+        trace = TraceStore.unavailable(progress_dir, error, **trace_identity)
+        console.write("trace UNVERIFIED: " + trace.error + "\n")
+    trace.record("status", state="cli_started", model=identifier(args.model), effort=identifier(args.effort))
+    trace.message("manager", "task_prompt", prompt, original=prompt.encode("utf-8"), origin=str(prompt_file),
+                  title=title_of(prompt))
     (out / "instructions.md").write_text(instructions)
     (out / "prompt.md").write_text(prompt)
     (out / "selection.json").write_text(json.dumps(selection, ensure_ascii=False, indent=2) + "\n")
@@ -206,14 +219,21 @@ def run(args):
               "mcp_config_sha256": digest(mcp_bytes),
               "prompt_source": str(prompt_file), "prompt_sha256": digest(prompt.encode()),
               "read_only_tools": args.read_only, "timeout_seconds": args.timeout,
-              "max_budget_usd": args.max_budget_usd,
+              "max_budget_usd": args.max_budget_usd, "trace": trace.status(),
               "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     (out / "invocation.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
+    # The selected and injected harness is recorded before the CLI starts, so the running invocation already
+    # shows it; the audit, doctor and result records follow after the exit and never replace this one.
+    trace.record("harness", **harness_selected(selection, sources, agent_sources, instructions_sha256=record["instructions_sha256"],
+                                               mcp_config_sha256=record["mcp_config_sha256"], read_only=args.read_only,
+                                               tools=tools.split(","), origin=str(out / "invocation.json")))
     env = os.environ.copy()
     env.pop("CLAUDE_CODE_EFFORT_LEVEL", None)
     timed_out, interrupted, launch_error, exit_code, cleanup_errors = False, False, None, None, []
     # The observer tails the raw stream in a daemon thread; its failure is a progress status, not a task failure.
-    observer = NativeObserver(out / "events.jsonl", journal)
+    # The trace sink sees the same parsed events and keeps public text and usage; it latches its own errors.
+    capture = ClaudeTrace(trace)
+    observer = NativeObserver(out / "events.jsonl", journal, sinks=(capture.on_event,))
     stop = threading.Event()
     watcher = threading.Thread(target=observer.follow, args=(stop,), name="progress-observer", daemon=True)
     progress = None
@@ -267,16 +287,27 @@ def run(args):
     # Readiness is the helper's own outcome; COMPLETE is only ever an explicit manager decision.
     journal.record("result", "ready" if summary["ready_for_review"] else
                    "completed" if summary["completed"] else "incomplete")
+    trace.record("harness", **harness_doctor(doctor, origin=str(out / "doctor.json")))
+    trace.record("harness", **harness_audit(audit, origin=str(out / "harness-audit.json")))
+    trace.record("harness", **harness_result(summary, origin=str(out / "result.json")))
+    trace.record("status", state="cli_exited", exit_code=exit_code, count=capture.messages,
+                 reason="timeout" if timed_out else "interrupted" if interrupted else
+                 "launch_error" if launch_error else None)
     # Bounded: the console gets one wait for its queued lines; what it did not accept is counted, not awaited.
     progress.update(error=progress["error"] or journal.error, records=journal.records,
                     console_dropped=console.close())
     progress["status"] = "UNVERIFIED" if progress["error"] else "RECORDED"
+    trace_state = trace.status()
+    trace_state.update(error=trace_state["error"] or capture.error, public_messages=capture.messages,
+                       usage_snapshots=len(capture.usage), terminal_usage=capture.result_seen)
+    trace_state["status"] = "UNVERIFIED" if trace_state["error"] else "RECORDED"
     summary.update(progress_status=progress["status"], progress_error=progress["error"],
-                   progress_dir=progress["directory"], progress_observer=progress)
+                   progress_dir=progress["directory"], progress_observer=progress,
+                   trace_status=trace_state["status"], trace_error=trace_state["error"], trace=trace_state)
     (out / "result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({key: summary[key] for key in
                       ("completed", "ready_for_review", "doctor_status", "harness_status", "progress_status",
-                       "exit_code", "timed_out", "interrupted", "observed_main_models")}), flush=True)
+                       "trace_status", "exit_code", "timed_out", "interrupted", "observed_main_models")}), flush=True)
     return 0 if summary["ready_for_review"] else 1
 
 

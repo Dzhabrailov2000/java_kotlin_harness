@@ -25,7 +25,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 LAUNCHER, PROGRESS = SCRIPTS / "run_claude_task.py", SCRIPTS / "run_progress.py"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 run_progress = importlib.import_module("run_progress")
+run_trace = importlib.import_module("run_trace")
+from test_run_trace import MODEL as TRACE_MODEL, PUBLIC, claude_stream, codex_stream  # noqa: E402 - native-shaped fixtures shared with the trace tests
 # The page script is executed under node against a stub DOM; no browser or framework is involved.
 NODE = shutil.which("node")
 
@@ -75,37 +78,103 @@ FAKE_CLI = textwrap.dedent("""\
     sys.exit(scenario.get("exit_code", 0))
     """)
 AGENT_DEFINITION = "---\nname: local-reader\ndescription: Reader.\ntools: Read\nmodel: inherit\n---\nRead the input.\n"
-# Runs the page's own script: document, fetch and timers are stubbed, the API response comes from stdin,
-# and the rendered tables and cards are printed as JSON once the poll has settled.
+# Runs the page's own script against a stub DOM: document, fetch and timers are stubbed. Stdin carries
+# rounds of real API responses (events and trace pages) with optional user actions after each round;
+# every poll timer is fired by the driver, and the rendered state is printed as JSON at the end.
+# Any HTML injection path (innerHTML, outerHTML, insertAdjacentHTML) throws, so it cannot pass unnoticed.
 PAGE_HARNESS = textwrap.dedent("""\
     'use strict';
     const fs = require('fs'), vm = require('vm');
-    const page = JSON.parse(fs.readFileSync(0, 'utf8'));
-    function Stub(tag) { this.tagName = tag; this.children = []; this.nodeText = ''; this.className = ''; this.checked = true; this.scrollTop = 0; this.scrollHeight = 0; }
+    const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+    const created = {};
+    function Stub(tag) { this.tagName = tag; this.children = []; this.nodeText = ''; this.className = ''; this.checked = false; this.value = ''; this.scrollTop = 0; this.scrollHeight = 0; this.clientHeight = 0; this.attributes = {}; this.handlers = {}; created[tag] = (created[tag] || 0) + 1; }
     function textNode(value) { const node = new Stub('#text'); node.nodeText = value; return node; }
     Object.defineProperty(Stub.prototype, 'textContent', {
       get() { return this.tagName === '#text' ? this.nodeText : this.children.map(function (child) { return child.textContent; }).join(''); },
       set(value) { if (this.tagName === '#text') { this.nodeText = String(value); } else { this.children = String(value) === '' ? [] : [textNode(String(value))]; } }
     });
+    ['innerHTML', 'outerHTML'].forEach(function (name) {
+      Object.defineProperty(Stub.prototype, name, { get() { throw new Error(name + ' is forbidden'); }, set() { throw new Error(name + ' is forbidden'); } });
+    });
+    Stub.prototype.insertAdjacentHTML = function () { throw new Error('insertAdjacentHTML is forbidden'); };
     Stub.prototype.appendChild = function (child) { this.children.push(child); return child; };
+    Stub.prototype.setAttribute = function (name, value) { this.attributes[name] = String(value); };
+    Stub.prototype.getAttribute = function (name) { return this.attributes[name] == null ? null : this.attributes[name]; };
+    Stub.prototype.addEventListener = function (name, handler) { (this.handlers[name] = this.handlers[name] || []).push(handler); };
+    Stub.prototype.fire = function (name) { (this.handlers[name] || []).forEach(function (handler) { handler({ target: this }); }, this); };
+    const CHECKED = { follow: true, 'follow-events': true, 'show-user': true, 'show-manager': true, 'show-claude': true, 'show-codex': true };
     const elements = {};
     globalThis.document = {
-      getElementById(id) { return elements[id] || (elements[id] = new Stub('div')); },
+      getElementById(id) { if (!elements[id]) { elements[id] = new Stub('div'); elements[id].checked = !!CHECKED[id]; } return elements[id]; },
       createElement(tag) { return new Stub(tag); },
       createTextNode: textNode
     };
-    globalThis.fetch = function () { return Promise.resolve({ ok: true, json: function () { return Promise.resolve(page); } }); };
+    let round = 0, timers = [];
+    globalThis.fetch = function (url) {
+      const current = input.rounds[Math.min(round, input.rounds.length - 1)];
+      const feed = String(url).indexOf('/api/trace') === 0 ? 'trace' : 'events';
+      const page = current[feed] || { events: [], cursor: 0, discard: false, invalid_lines: 0, more: false, journal: false, reset: false, now: '2026-09-06T10:00:00.000Z' };
+      if (input.fail && input.fail[feed]) { return Promise.resolve({ ok: false, status: 500 }); }
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve(page); } });
+    };
     globalThis.setInterval = function () { return 0; };
-    globalThis.setTimeout = function () { return 0; };
+    globalThis.setTimeout = function (fn) { timers.push(fn); return timers.length; };
     globalThis.clearTimeout = function () {};
     vm.runInThisContext(fs.readFileSync(process.argv[2], 'utf8'));
-    setImmediate(function () {
+    function settle() { return new Promise(function (resolve) { let n = 0; (function tick() { if (++n > 20) { return resolve(); } setImmediate(tick); })(); }); }
+    function walk(node, out) { out.push(node); (node.children || []).forEach(function (child) { walk(child, out); }); return out; }
+    function entries() { return document.getElementById('conversation').children; }
+    function act(action) {
+      const name = action[0], target = document.getElementById(action[1]);
+      if (name === 'click') { target.fire('click'); }
+      else if (name === 'check') { target.checked = !!action[2]; target.fire('change'); }
+      else if (name === 'value') { target.value = action[2]; target.fire('change'); }
+      else if (name === 'scroll') { const box = document.getElementById('conversation'); box.scrollTop = action[1]; box.scrollHeight = action[2]; box.clientHeight = action[3]; box.fire('scroll'); }
+      else if (name === 'layout') { const box = document.getElementById('conversation'); box.scrollHeight = action[1]; box.clientHeight = action[2]; }
+      else if (name === 'entry-toggle') {
+        const articles = entries().filter(function (node) { return node.tagName === 'article'; });
+        const button = walk(articles[action[1]], []).filter(function (node) { return node.tagName === 'button'; })[0];
+        button.fire('click');
+      }
+    }
+    (async function () {
+      await settle();
+      for (let index = 0; index < input.rounds.length; index++) {
+        if (index > 0) { round = index; const due = timers.splice(0); due.forEach(function (fn) { fn(); }); await settle(); }
+        (input.rounds[index].actions || []).forEach(act);
+        await settle();
+      }
       const rows = function (id) { return document.getElementById(id).children.map(function (row) { return row.children.map(function (cell) { return cell.textContent; }); }); };
       const cards = {};
-      ['stage', 'stage-detail', 'model', 'model-detail', 'journal', 'journal-detail', 'decision', 'records'].forEach(function (id) { cards[id] = document.getElementById(id).textContent; });
-      process.stdout.write(JSON.stringify({ steps: rows('steps'), agents: rows('agents'), events: rows('events').length,
-        tools: document.getElementById('tools').children.map(function (chip) { return chip.textContent; }), cards: cards }));
-    });
+      ['title', 'run', 'attempt', 'records', 'updated', 'stage', 'stage-detail', 'next-action', 'model', 'model-detail', 'models', 'usage', 'usage-detail', 'usage-cost',
+       'context', 'context-detail', 'limits', 'budget', 'journal', 'journal-detail', 'trace', 'trace-detail', 'decision', 'decision-detail', 'connection', 'notice', 'status-text',
+       'conversation-count', 'jump-latest'].forEach(function (id) { cards[id] = document.getElementById(id).textContent; });
+      const cardClass = {};
+      ['card-stage', 'card-model', 'card-usage', 'card-context', 'card-decision', 'card-journal', 'card-trace', 'notice'].forEach(function (id) { cardClass[id] = document.getElementById(id).className; });
+      const stages = document.getElementById('stages').children.map(function (row) {
+        return row.children.filter(function (chip) { return chip.className.indexOf('stage ') === 0; }).map(function (chip) { return [chip.children[0].textContent, chip.children[1].textContent, chip.className]; });
+      });
+      const conversation = entries().map(function (node) {
+        const all = walk(node, []);
+        const pre = all.filter(function (item) { return item.tagName === 'pre'; })[0];
+        return { tag: node.tagName, className: node.className, text: node.textContent,
+                 who: all.filter(function (item) { item.className = item.className || ''; return item.className.indexOf('who') === 0; }).map(function (item) { return item.textContent; }).join(''),
+                 kind: all.filter(function (item) { return item.className === 'kind'; }).map(function (item) { return item.textContent; }).join(''),
+                 flags: all.filter(function (item) { return item.className.indexOf('flag') === 0; }).map(function (item) { return item.textContent; }),
+                 body: pre ? pre.textContent : null, bodyClass: pre ? pre.className : null,
+                 links: all.filter(function (item) { return item.tagName === 'a'; }).map(function (item) { return item.attributes.href; }),
+                 buttons: all.filter(function (item) { return item.tagName === 'button'; }).map(function (item) { return item.textContent; }) };
+      });
+      const options = function (id) { return document.getElementById(id).children.map(function (option) { return option.value; }); };
+      const invocations = document.getElementById('invocations').children.map(function (block) {
+        return { tag: block.tagName, open: block.attributes.open != null, summary: block.children[0].textContent,
+                 lines: block.children.filter(function (child) { return child.className.indexOf('line') === 0; }).map(function (child) { return child.textContent; }) };
+      });
+      process.stdout.write(JSON.stringify({ steps: rows('steps'), agents: rows('agents'), events: rows('events').length, usage: rows('usage-rows'),
+        tools: document.getElementById('tools').children.map(function (chip) { return chip.textContent; }), cards: cards, cardClass: cardClass, stages: stages,
+        conversation: conversation, filters: { cycle: options('filter-cycle'), step: options('filter-step') }, created: created,
+        invocations: invocations, scrollTop: document.getElementById('conversation').scrollTop }));
+    })().catch(function (error) { process.stderr.write(String(error && error.stack || error)); process.exit(2); });
     """)
 
 
@@ -895,26 +964,367 @@ class PageViewTest(unittest.TestCase):
                 stream.write(json.dumps(event).encode("utf-8") + b"\n")
         observer.poll()
 
-    def view(self):
-        """Serve the journal through the real API and run the page script on that exact response."""
+    def api(self, path):
+        """One real API response of a server over the current progress directory."""
         server = run_progress.ProgressServer(self.progress, 0)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
         thread.start()
         try:
             connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=10)
             try:
-                connection.request("GET", "/api/events?cursor=0&limit=2000")
-                body = connection.getresponse().read()
+                connection.request("GET", path)
+                return json.loads(connection.getresponse().read())
             finally:
                 connection.close()
         finally:
             server.shutdown()
             server.server_close()
             thread.join(5)
-        process = subprocess.run([NODE, str(self.harness), str(self.script)], input=body.decode("utf-8"),
+
+    def snapshot(self, cursors=(0, 0), actions=()):
+        """One poll round of real API pages after the given cursors, plus the user actions to run afterwards."""
+        events = self.api("/api/events?cursor=%d&limit=2000" % cursors[0])
+        trace = self.api("/api/trace?cursor=%d&limit=2000" % cursors[1])
+        return {"events": events, "trace": trace, "actions": list(actions)}
+
+    def view(self, rounds=None, actions=(), fail=None):
+        """Run the page script on real API responses; the default is one round over the current files."""
+        rounds = rounds or [self.snapshot(actions=actions)]
+        process = subprocess.run([NODE, str(self.harness), str(self.script)], input=json.dumps({"rounds": rounds, "fail": fail}),
                                  capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        return json.loads(process.stdout)
+        view = json.loads(process.stdout)
+        self.assertNotIn("script", view["created"], "no script element may ever be created from data")
+        return view
+
+    def trace_store(self, step_id, attempt=1, **overrides):
+        options = {"run_id": "progress", "attempt": attempt, "step_id": step_id, "source": "launcher", "tool": "test", "provider": "claude"}
+        options.update(overrides)
+        return run_trace.TraceStore.open(self.progress, **options)
+
+    @staticmethod
+    def articles(view):
+        return [entry for entry in view["conversation"] if entry["tag"] == "article"]
+
+    @staticmethod
+    def dividers(view):
+        return [entry["text"] for entry in view["conversation"] if entry["className"] == "divider"]
+
+    def write_journal(self, *records):
+        self.progress.mkdir(parents=True, exist_ok=True)
+        (self.progress / "progress.jsonl").write_bytes(b"".join(record_line(**record) for record in records))
+
+    @staticmethod
+    def stamp(offset_seconds):
+        moment = time.time() - offset_seconds
+        return time.strftime("%Y-%m-%dT%H:%M:%S.", time.gmtime(moment)) + "%03dZ" % int((moment % 1) * 1000)
+
+    def test_conversation_shows_exact_texts_safely_with_filters_and_expansion(self):
+        # Records of the two files are merged by their millisecond timestamps: writes across files are spaced apart
+        # so that the intended order is the recorded one.
+        tick = lambda: time.sleep(0.003)
+        journal, observer = self.step()
+        self.feed(observer, {"type": "system", "subtype": "init", "model": MODEL})
+        tick()
+        manager = self.trace_store("user-prompt", source="manager", provider=None)
+        manager.message("user", "user_prompt", "Мониторинг: <b>задача</b>\nПокажи разговор.", original=b"Monitoring: <b>task</b>\n",
+                        origin="/run/user.md", title="Мониторинг: <b>задача</b>")
+        tick()
+        legacy, _ = self.step()  # a launcher step without any trace capture
+        tick()
+        store = self.trace_store("builder")
+        store.record("status", state="capture_started", model=MODEL)
+        prompt = store.message("manager", "task_prompt", PUBLIC["prompt"], original=PUBLIC["prompt"].encode("utf-8"),
+                               origin="/run/task-1.md", title=run_trace.title_of(PUBLIC["prompt"]))
+        store.message("claude", "response", PUBLIC["text"], model=MODEL, message_id="msg_01")
+        store.message("claude", "response", PUBLIC["sub"], model=MODEL, message_id="msg_sub", thread="toolu_9")
+        store.record("status", state="final_marked", message_id="msg_01")
+        tick()
+        journal.record("cli_exit", "exited", exit_code=0)
+        journal.record("result", "ready")
+        run_progress.ProgressJournal.open(self.progress, source="manager", phase="decision", first=("decision", "retry", {}))
+        tick()
+        second = self.trace_store("review-1", attempt=2, provider="codex", phase="review")
+        second.message("codex", "review", PUBLIC["review"], model="gpt-6-astra", message_id="item_2")
+        feedback = self.trace_store("triage", attempt=2, source="manager", provider=None)
+        feedback.message("manager", "feedback", "CONFIRMED: F1 </pre><script>x</script>", original=b"CONFIRMED: F1 </pre><script>x</script>")
+
+        view = self.view()
+        articles = self.articles(view)
+        self.assertEqual([entry["who"] for entry in articles],
+                         ["Пользователь", "Монитор: ", "Менеджер", "Claude", "Codex", "Менеджер"])
+        self.assertEqual(self.dividers(view), ["попытка 1", "попытка 2"])
+        user, unavailable, task, claude, codex, triage = articles
+        self.assertEqual(user["body"], "Мониторинг: <b>задача</b>\nПокажи разговор.")
+        self.assertEqual(task["body"], PUBLIC["prompt"], "the text is rendered exactly, as text")
+        self.assertEqual(task["kind"], "промпт задачи: Задача с <script>alert('prompt')</script>")
+        self.assertEqual(task["links"], ["/api/artifact?id=" + prompt["artifact_id"], "/api/artifact?id=" + prompt["artifact_id"] + "&download=1"])
+        self.assertEqual((claude["body"], claude["flags"], claude["bodyClass"]), (PUBLIC["text"], ["итоговый ответ"], "text collapsed"))
+        self.assertEqual(claude["buttons"], ["развернуть"])
+        self.assertEqual((codex["body"], codex["kind"]), (PUBLIC["review"], "ревью"))
+        self.assertEqual(triage["kind"], "замечания и решения по ревью")
+        self.assertIn("Сообщения шага builder-2 не захвачены", unavailable["text"])
+        self.assertEqual(view["cards"]["title"], "Мониторинг: <b>задача</b>")
+        self.assertEqual(view["cards"]["conversation-count"], "показано 5 из 6", "the subagent message is hidden by default and counted")
+        self.assertEqual((view["filters"]["cycle"], view["filters"]["step"]), (["", "1", "2"], ["", "builder", "builder-2", "decision", "review-1", "triage", "user-prompt"]))
+        self.assertNotIn("script", view["created"])
+        self.assertNotIn("img", view["created"])
+        self.assertEqual(view["cards"]["decision"], "RETRY")
+
+        with_subagents = self.view(actions=[["check", "show-subagents", True]])
+        self.assertEqual([entry["who"] for entry in self.articles(with_subagents)][3:5], ["Claude", "Claude (субагент)"])
+        self.assertIn("вызов toolu_9", self.articles(with_subagents)[4]["flags"])
+        self.assertEqual(with_subagents["cards"]["conversation-count"], "сообщений: 6")
+
+        second_cycle = self.view(actions=[["value", "filter-cycle", "2"]])
+        self.assertEqual([entry["who"] for entry in self.articles(second_cycle)], ["Codex", "Менеджер"])
+        self.assertEqual(self.dividers(second_cycle), ["попытка 2"])
+        self.assertEqual(second_cycle["cards"]["conversation-count"], "показано 2 из 6")
+
+        no_claude = self.view(actions=[["check", "show-claude", False], ["value", "filter-step", "builder"]])
+        self.assertEqual([entry["who"] for entry in self.articles(no_claude)], ["Менеджер"])
+
+        expanded = self.view(actions=[["entry-toggle", 2]])
+        self.assertEqual([entry["bodyClass"] for entry in self.articles(expanded) if entry["body"] is not None],
+                         ["text collapsed", "text", "text collapsed", "text collapsed", "text collapsed"])
+        self.assertEqual(self.articles(expanded)[2]["buttons"], ["свернуть"])
+        everything = self.view(actions=[["click", "expand-all"]])
+        self.assertEqual({entry["bodyClass"] for entry in self.articles(everything) if entry["body"] is not None}, {"text"})
+        folded = self.view(actions=[["click", "expand-all"], ["click", "collapse-all"]])
+        self.assertEqual({entry["bodyClass"] for entry in self.articles(folded) if entry["body"] is not None}, {"text collapsed"})
+
+    def test_usage_dedupes_snapshots_and_reconciles_the_terminal_total(self):
+        journal, observer = self.step()
+        self.feed(observer, {"type": "system", "subtype": "init", "model": MODEL})
+        store = self.trace_store("builder")
+        capture = run_trace.ClaudeTrace(store)
+        for event in claude_stream(with_result=False):
+            capture.on_event(event)
+        interim = self.view()
+        self.assertEqual(interim["cards"]["usage"], "вход 59 439 · выход 63 (промежуточно)")
+        self.assertEqual(interim["cards"]["usage-detail"], "вход без кеша 534, создание кеша 25 276, чтение кеша 33 629; рассуждения в составе выхода: неизвестно")
+        self.assertEqual(interim["cards"]["usage-cost"], "оценка стоимости: неизвестна")
+        self.assertEqual(interim["cardClass"]["card-usage"], "card state-pending")
+        # Interim snapshots are grouped by the model that produced them: the subagent's 500/40 are not the main model's.
+        # A snapshot never reports reasoning tokens, so every interim row, per model as much as per invocation, says so.
+        self.assertEqual(interim["usage"], [
+            ["1", "builder", "Claude " + TRACE_MODEL + " (и еще 1: субагенты)", "промежуточно: 3 снимков, выход не менее, часть счетчиков не сообщена", "59 439", "534", "25 276", "33 629", "неизвестно", "63", "неизвестно", "неизвестно"],
+            ["", "", "└ " + TRACE_MODEL, "по модели, промежуточно, часть счетчиков не сообщена", "58 939", "34", "25 276", "33 629", "неизвестно", "23", "неизвестно", "неизвестно"],
+            ["", "", "└ claude-trace-sub-model", "по модели, промежуточно, часть счетчиков не сообщена", "500", "500", "0", "0", "неизвестно", "40", "неизвестно", "неизвестно"]])
+        self.assertEqual(interim["cards"]["context"], "контекст последнего запроса: ~30 317 токенов")
+        self.assertIn("не сумма по ходам", interim["cards"]["context-detail"])
+        self.assertIn("емкость окна в потоке не сообщается", interim["cards"]["context-detail"])
+        self.assertIn("5 ч: 32 % использовано", interim["cards"]["limits"])
+        self.assertIn("7 дн: 18 % использовано", interim["cards"]["limits"])
+        self.assertEqual(interim["cards"]["budget"], "бюджет токенов не задан (по умолчанию); остаток не вычисляется")
+        # The terminal result reconciles the invocation: its totals replace the snapshots and are not added to them.
+        capture.on_event(claude_stream()[-1])
+        journal.record("cli_exit", "exited", exit_code=0)
+        final = self.view()
+        self.assertEqual(final["cards"]["usage"], "вход 59 439 · выход 300 (итог)")
+        self.assertEqual(final["cards"]["usage-detail"], "вход без кеша 534, создание кеша 25 276, чтение кеша 33 629; рассуждения в составе выхода: 120")
+        self.assertEqual(final["cards"]["usage-cost"], "оценка стоимости CLI: $0.4300 (расчет клиента, не списание с подписки)")
+        self.assertEqual(final["cardClass"]["card-usage"], "card state-ok")
+        self.assertEqual(final["usage"], [
+            ["1", "builder", "Claude " + TRACE_MODEL + " (и еще 1: субагенты)", "итог", "59 439", "534", "25 276", "33 629", "неизвестно", "300", "120", "$0.4300"],
+            ["", "", "└ " + TRACE_MODEL, "по модели", "58 939", "34", "25 276", "33 629", "неизвестно", "260", "110", "$0.4100"],
+            ["", "", "└ claude-trace-sub-model", "по модели", "500", "500", "0", "0", "неизвестно", "40", "10", "$0.0200"]])
+        # The capacity belongs to the model of the last main-session request (1 000 000), never to the subagent's window.
+        self.assertIn("Емкость окна " + TRACE_MODEL + ": 1 000 000 (3 % занято на последнем запросе)", final["cards"]["context-detail"])
+        self.assertNotIn("200 000", final["cards"]["context-detail"])
+        self.assertIn("занято сейчас и свободно: неизвестно", final["cards"]["context-detail"])
+        # A Codex review step: cached input stays a subset of input; a step without capture stays unknown; a budget makes a remainder.
+        codex = run_trace.CodexTrace(self.trace_store("review-1", provider="codex", phase="review"))
+        for event in codex_stream():
+            codex.on_event(event)
+        legacy, _ = self.step()
+        self.trace_store("budget", source="manager", provider=None).record("budget", tokens=100000, note="тест")
+        mixed = self.view()
+        self.assertEqual(mixed["cards"]["usage"], "вход 84 202 · выход 422 (без 1 шагов: неизвестно)")
+        # Uncached input adds Claude's input_tokens (534) to the Codex difference input minus cached (24 763 - 24 448 = 315).
+        self.assertEqual(mixed["cards"]["usage-detail"], "вход без кеша 849, создание кеша 25 276, чтение кеша 33 629, из кеша (Codex, входит во вход) 24 448; "
+                                                         "рассуждения в составе выхода: 120")
+        self.assertEqual([row for row in mixed["usage"] if row[1] in ("review-1", "builder-2")], [
+            ["1", "builder-2", MODEL, "неизвестно (захвата нет)", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно"],
+            ["1", "review-1", "Codex модель не сообщена", "итог", "24 763", "315", "неизвестно", "неизвестно", "24 448", "122", "0", "неизвестно"]])
+        # A Codex turn that reports no cached subset keeps its uncached part unknown rather than equal to its input.
+        partial = run_trace.CodexTrace(self.trace_store("review-2", provider="codex", phase="review"))
+        partial.on_event({"type": "turn.completed", "usage": {"input_tokens": 1000, "output_tokens": 10}})
+        self.assertEqual([row[4:6] + row[8:10] for row in self.view()["usage"] if row[1] == "review-2"], [["1 000", "неизвестно", "неизвестно", "10"]])
+        self.assertIn("лимит токенов 100 000, известный расход 84 624, остаток по известной части 15 376", mixed["cards"]["budget"])
+        self.assertIn("тест", mixed["cards"]["budget"])
+
+    def test_stage_states_show_waiting_stale_failed_and_the_next_action(self):
+        def record(offset, **fields):
+            base = {"time": self.stamp(offset), "event_id": uuid_hex(), "run_id": "progress"}
+            base.update(fields)
+            return base
+        launcher = {"source": "launcher", "phase": "build", "step_id": "builder"}
+        self.write_journal(record(600, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(590, source="native", phase="build", step_id="builder", event="init", status="observed", model=MODEL),
+                           record(500, event="cli_exit", status="exited", exit_code=0, **launcher),
+                           record(490, event="result", status="ready", **launcher))
+        view = self.view()
+        self.assertEqual(view["stages"], [[["сборка", "готово к проверке", "stage s-done"], ["проверки", "ожидает менеджера", "stage s-wait"],
+                                           ["ревью", "не начат", "stage s-neutral"], ["triage", "не начат", "stage s-neutral"],
+                                           ["verify", "не начат", "stage s-neutral"], ["решение", "не начат", "stage s-neutral"],
+                                           ["handoff", "не начат", "stage s-neutral"]]])
+        self.assertEqual(view["cards"]["next-action"], "следующий шаг: менеджер: запустить проверки (шаг сборка записан: готово к проверке)")
+        self.assertEqual(view["cards"]["models"], "активных вызовов LLM нет")
+        manager = {"source": "manager", "attempt": 1}
+        self.write_journal(record(600, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(500, event="cli_exit", status="exited", exit_code=0, **launcher),
+                           record(490, event="result", status="ready", **launcher),
+                           record(400, phase="tests", step_id="tests", event="phase", status="passed", count=40, **manager),
+                           record(300, phase="review", step_id="review", event="phase", status="failed", model="gpt-6-astra", effort="ultra", **manager),
+                           record(200, phase="triage", step_id="triage", event="finding", status="confirmed", count=3, **manager),
+                           record(100, phase="decision", step_id="decision", event="decision", status="retry", **manager))
+        retry = self.view()
+        self.assertEqual([chip[1:] for chip in retry["stages"][0]][:6], [
+            ["готово к проверке", "stage s-done"], ["этап PASS", "stage s-done"], ["этап FAIL", "stage s-bad"],
+            ["замечания CONFIRMED (3)", "stage s-warn"], ["не начат", "stage s-neutral"], ["решение менеджера: RETRY", "stage s-warn"]])
+        self.assertEqual(retry["stages"][1][0], ["сборка", "ожидает запуска исполнителя", "stage s-wait"])
+        self.assertEqual(retry["cards"]["next-action"], "следующий шаг: RETRY: менеджер передает отчет исполнителю и запускает попытку 2")
+        self.assertEqual(retry["cards"]["decision"], "RETRY")
+        # Attempt 2: one launcher quiet for ten minutes and a parallel one seen five seconds ago; silence is not completion.
+        stale = {"source": "launcher", "phase": "build", "step_id": "builder", "attempt": 2}
+        fresh = {"source": "launcher", "phase": "build", "step_id": "builder-2", "attempt": 2}
+        self.write_journal(record(2000, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(1900, event="result", status="ready", **launcher),
+                           record(1800, phase="decision", step_id="decision", event="decision", status="retry", **manager),
+                           record(700, event="run", status="started", model=MODEL, effort="max", **stale),
+                           record(650, source="native", phase="build", step_id="builder", attempt=2, event="tool_call", status="observed", tool="Read", call_id="c1"),
+                           record(20, event="run", status="started", model=MODEL, effort="max", **fresh),
+                           record(5, source="native", phase="build", step_id="builder-2", attempt=2, event="init", status="observed", model=MODEL))
+        parallel = self.view()
+        self.assertEqual(parallel["stages"][1][0][2], "stage s-pending pulse", "the fresher launcher of the same phase wins the chip")
+        self.assertIn("работает", parallel["stages"][1][0][1])
+        lines = parallel["cards"]["models"]
+        self.assertIn("Claude " + MODEL + " / max (сборка, builder, попытка 2): тишина 10 мин", lines)
+        self.assertIn("Claude " + MODEL + " / max (сборка, builder-2, попытка 2): работает", lines)
+        self.assertIn("параллельных вызовов: 2", lines)
+        self.assertIn("идет: сборка", parallel["cards"]["next-action"])
+        self.assertEqual(parallel["cards"]["attempt"], "попытка: 2 (циклов: 2)")
+        only_stale = self.write_journal(record(700, event="run", status="started", model=MODEL, effort="max", **stale),
+                                        record(650, source="native", phase="build", step_id="builder", attempt=2, event="tool_call", status="observed", tool="Read", call_id="c1"))
+        quiet = self.view()
+        self.assertEqual(quiet["stages"][0][0][2], "stage s-stale")
+        self.assertIn("тишина 10 мин 50 с: состояние не подтверждено", quiet["stages"][0][0][1])
+        self.assertEqual(quiet["cardClass"]["card-stage"], "card state-stale")
+        self.assertIn("тишина не означает завершения", quiet["cards"]["stage-detail"])
+        self.write_journal(record(600, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(500, event="cli_exit", status="timeout", exit_code=-15, **launcher),
+                           record(490, event="result", status="incomplete", **launcher))
+        failed = self.view()
+        self.assertEqual(failed["stages"][0][0], ["сборка", "не завершено", "stage s-bad"])
+        self.assertIn("VERIFY", failed["cards"]["next-action"])
+        self.write_journal(record(600, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(490, event="result", status="ready", **launcher),
+                           record(100, phase="decision", step_id="decision", event="decision", status="complete", **manager))
+        complete = self.view()
+        self.assertEqual(complete["stages"][0][6], ["handoff", "ожидает handoff", "stage s-wait"])
+        self.assertIn("COMPLETE записано; остается handoff", complete["cards"]["next-action"])
+        self.assertEqual(complete["cards"]["decision"], "COMPLETE")
+        # A recorded handoff, before or after the decision, closes the loop; installation is never inferred from it.
+        handoff = {"source": "launcher", "phase": "handoff", "step_id": "handoff"}
+        self.write_journal(record(600, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(490, event="result", status="ready", **launcher),
+                           record(300, event="run", status="started", model=MODEL, effort="max", **handoff),
+                           record(200, event="cli_exit", status="exited", exit_code=0, **handoff),
+                           record(190, event="result", status="ready", **handoff),
+                           record(100, phase="decision", step_id="decision", event="decision", status="complete", **manager))
+        closed = self.view()
+        self.assertEqual(closed["stages"][0][6], ["handoff", "готово к проверке", "stage s-done"])
+        self.assertEqual(closed["cards"]["next-action"], "следующий шаг: решение COMPLETE и handoff записаны; установка и активация в журнале не отражаются и решаются пользователем")
+
+    def test_api_retry_is_an_evidenced_wait_that_recovers_with_later_activity(self):
+        def record(offset, **fields):
+            base = {"time": self.stamp(offset), "event_id": uuid_hex(), "run_id": "progress"}
+            base.update(fields)
+            return base
+        launcher = {"source": "launcher", "phase": "build", "step_id": "builder"}
+        native = {"source": "native", "phase": "build", "step_id": "builder"}
+        self.write_journal(record(300, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(290, event="init", status="observed", model=MODEL, **native),
+                           record(60, event="tool_call", status="observed", tool="Read", call_id="c1", **native))
+        store = self.trace_store("builder")
+        store.record("status", state="capture_started", model=MODEL)
+        store.record("status", state="api_retry", attempt_no=2, max_retries=10, retry_delay_ms=5000, reason="rate_limit")
+        waiting = self.view()
+        self.assertEqual(waiting["stages"][0][0], ["сборка", "ожидание повтора API: попытка 2 из 10, через 5 с (rate_limit)", "stage s-wait"])
+        self.assertIn("исполнитель ждет API: ожидание повтора API: попытка 2 из 10", waiting["cards"]["stage-detail"])
+        self.assertEqual(waiting["cardClass"]["card-stage"], "card state-wait")
+        self.assertIn("(сборка, builder, попытка 1): ожидание повтора API: попытка 2 из 10", waiting["cards"]["models"])
+        self.assertIn("идет: сборка - ожидание повтора API", waiting["cards"]["next-action"])
+        retry_entries = [entry for entry in self.articles(waiting) if "ожидание повторного запроса к API" in entry["text"]]
+        self.assertEqual(len(retry_entries), 1)
+        self.assertIn("попытка 2 из 10, через 5 с, rate_limit", retry_entries[0]["text"])
+        # Later activity in either feed ends the wait: a native tool call in the journal, or a usage snapshot in the trace.
+        time.sleep(0.003)
+        with (self.progress / "progress.jsonl").open("ab") as stream:
+            stream.write(record_line(**record(0, event="tool_call", status="observed", tool="Edit", call_id="c2", **native)))
+        recovered = self.view()
+        self.assertEqual(recovered["stages"][0][0][1:], ["работает, builder", "stage s-pending pulse"])
+        self.assertIn("исполнитель работает", recovered["cards"]["stage-detail"])
+        store.record("status", state="api_retry", attempt_no=3, max_retries=10, retry_delay_ms=8000)
+        self.assertEqual(self.view()["stages"][0][0][1], "ожидание повтора API: попытка 3 из 10, через 8 с")
+        time.sleep(0.003)
+        store.record("usage", provider="claude", scope="message", final=False, message_id="msg_1", model=MODEL, input_tokens=5, output_tokens=1)
+        self.assertEqual(self.view()["stages"][0][0][1], "работает, builder")
+        # A retry with nothing after it for longer than its delay plus the stale window is not a confirmed wait any more.
+        self.write_journal(record(900, event="run", status="started", model=MODEL, effort="max", **launcher),
+                           record(890, event="init", status="observed", model=MODEL, **native))
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        old = {"schema": 1, "capture": "trace/1", "record_id": uuid_hex(), "time": self.stamp(800), "run_id": "progress", "attempt": 1,
+               "step_id": "builder", "source": "native", "kind": "status", "state": "api_retry", "attempt_no": 1, "max_retries": 3,
+               "retry_delay_ms": 30000, "provider": "claude", "tool": "test", "tool_version": "1.0"}
+        (self.progress / "trace.jsonl").write_bytes(json.dumps(old).encode("utf-8") + b"\n")
+        stale = self.view()
+        self.assertEqual(stale["stages"][0][0][2], "stage s-stale")
+        self.assertTrue(stale["stages"][0][0][1].startswith("повтор API не подтвержден: тишина 13 мин"), stale["stages"][0][0][1])
+        self.assertEqual(stale["cardClass"]["card-stage"], "card state-stale")
+
+    def test_auto_follow_keeps_the_reading_position_and_counts_new_messages(self):
+        journal, observer = self.step()
+        store = self.trace_store("builder")
+        for index in range(3):
+            store.message("claude", "response", "Сообщение %d\n" % index + "строка\n" * 30, model=MODEL, message_id="m%d" % index)
+        first = self.snapshot(actions=[["scroll", 0, 1000, 300]])
+        cursors = (first["events"]["cursor"], first["trace"]["cursor"])
+        store.message("claude", "response", "Новое сообщение", model=MODEL, message_id="m9")
+        second = self.snapshot(cursors)
+        self.assertEqual([record["text"] for record in second["trace"]["events"]], ["Новое сообщение"])
+        reading = self.view(rounds=[first, second])
+        self.assertEqual((reading["scrollTop"], reading["cards"]["jump-latest"]), (0, "к последнему (новых: 1)"))
+        self.assertEqual(len(self.articles(reading)), 4)
+        following = self.view(rounds=[dict(first, actions=[["scroll", 700, 1000, 300]]), second])
+        self.assertEqual((following["scrollTop"], following["cards"]["jump-latest"]), (1000, "к последнему"))
+        unfollowed = self.view(rounds=[dict(first, actions=[["scroll", 700, 1000, 300], ["check", "follow", False]]), second])
+        self.assertEqual(unfollowed["scrollTop"], 700)
+        jumped = self.view(rounds=[first, dict(second, actions=[["click", "jump-latest"]])])
+        self.assertEqual((jumped["scrollTop"], jumped["cards"]["jump-latest"]), (1000, "к последнему"))
+        # A truncated trace file is re-read from the start: nothing is shown twice and nothing already shown survives.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        store.message("claude", "response", "После усечения", model=MODEL, message_id="m10")
+        third = self.snapshot(cursors)
+        self.assertTrue(third["trace"]["reset"])
+        after_reset = self.view(rounds=[first, third, self.snapshot()])
+        self.assertEqual([entry["body"] for entry in self.articles(after_reset)], ["После усечения"])
+
+    def test_connection_loss_is_visible_and_never_confirms_a_state(self):
+        journal, observer = self.step()
+        self.feed(observer, {"type": "system", "subtype": "init", "model": MODEL})
+        view = self.view(fail={"events": True})
+        self.assertEqual(view["cardClass"]["notice"], "notice bad")
+        self.assertIn("состояния этапов не подтверждены", view["cards"]["notice"])
+        self.assertEqual(view["cards"]["connection"], "нет связи, повтор через 2 с")
+        self.assertEqual(view["cards"]["stage"], "нет данных")
+        self.assertIn("Связь: нет связи", view["cards"]["status-text"])
+        absent = self.view(rounds=[{"events": {"events": [], "cursor": 0, "discard": False, "invalid_lines": 0, "more": False, "journal": False, "reset": False, "now": "2026-09-06T10:00:00.000Z"},
+                                    "trace": {"events": [], "cursor": 0, "discard": False, "invalid_lines": 0, "more": False, "journal": False, "reset": False, "now": "2026-09-06T10:00:00.000Z"}}])
+        self.assertEqual(absent["cardClass"]["notice"], "notice warn")
+        self.assertEqual(absent["cards"]["trace"], "trace.jsonl отсутствует")
+        self.assertEqual(absent["cards"]["usage"], "неизвестно")
 
     def test_reused_native_ids_in_another_step_are_separate_calls(self):
         agent = {"type": "tool_use", "id": "call-1", "name": "Agent",
@@ -970,6 +1380,371 @@ class PageViewTest(unittest.TestCase):
         self.assertEqual((view["events"], view["tools"], view["steps"][0][-1]), (3, ["Agent x1"], "1"))
         self.assertEqual([(row[0], row[1], row[2], row[5]) for row in view["agents"]],
                          [("#1 builder", "call-1", "Agent (local-reader)", "запрошен в фоне, результата нет")])
+        # The harness panel names the component from the reconciled call, not from the provisional record that lacked it.
+        self.assertIn("Наблюдаемые вызовы компонентов (журнал CLI): Skill: нет; Agent: local-reader x1; MCP: нет. Отсутствие вызовов Skill нормально: скиллы поданы текстом.",
+                      view["invocations"][0]["lines"])
+
+    def journal_line(self, offset, **fields):
+        base = {"time": self.stamp(offset), "event_id": uuid_hex(), "run_id": "progress"}
+        base.update(fields)
+        return base
+
+    def test_unfinished_invocations_stay_current_and_fresh_from_both_feeds(self):
+        # Two reviewers run; the manager records a tests PASS afterwards; their only fresh activity is in the trace.
+        review_a, review_b = {"phase": "review", "step_id": "review-a"}, {"phase": "review", "step_id": "review-b"}
+        self.write_journal(self.journal_line(300, **review_a), self.journal_line(290, **review_b),
+                           self.journal_line(30, source="manager", phase="tests", step_id="tests", event="phase", status="passed", count=117))
+        for step in ("review-a", "review-b"):
+            self.trace_store(step, provider="codex", phase="review").message("codex", "review", "Свежее сообщение " + step, message_id="item_1")
+        view = self.view()
+        self.assertEqual(view["cards"]["stage"], "ревью · 2 вызова · попытка 1")
+        self.assertIn("review-a: исполнитель работает, последняя активность 0 с назад; review-b: исполнитель работает, последняя активность 0 с назад", view["cards"]["stage-detail"])
+        self.assertIn("последняя запись журнала: tests: этап PASS", view["cards"]["stage-detail"])
+        self.assertEqual(view["cardClass"]["card-stage"], "card state-pending")
+        lines = view["cards"]["models"]
+        self.assertIn("(ревью, review-a, попытка 1): работает, последняя активность 0 с назад", lines)
+        self.assertIn("(ревью, review-b, попытка 1): работает, последняя активность 0 с назад", lines)
+        self.assertNotIn("тишина", lines, "public messages in the trace are activity even when the journal is quiet")
+        self.assertEqual([chip[1:] for chip in view["stages"][0]][1:3], [["этап PASS", "stage s-done"], ["2 вызова: работает review-a; работает review-b", "stage s-pending pulse"]])
+        self.assertIn("идет: ревью - 2 вызова", view["cards"]["next-action"])
+        # A finished invocation never hides a running one of the same phase.
+        self.write_journal(self.journal_line(200, step_id="build-a"), self.journal_line(190, step_id="build-b"),
+                           self.journal_line(20, step_id="build-b", event="cli_exit", status="exited", exit_code=0),
+                           self.journal_line(10, step_id="build-b", event="result", status="ready"))
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        parallel = self.view()
+        self.assertEqual(parallel["stages"][0][0], ["сборка", "тишина 3 мин 20 с: состояние не подтверждено", "stage s-stale"])
+        self.assertEqual(parallel["cards"]["stage"], "сборка · build-a · попытка 1")
+        self.assertIn("build-a: тишина 3 мин 20 с, состояние не подтверждено; последняя запись журнала: helper: ready_for_review", parallel["cards"]["stage-detail"])
+        self.assertIn("тишина не означает завершения", parallel["cards"]["stage-detail"])
+        self.assertIn("идет: сборка", parallel["cards"]["next-action"])
+        self.assertNotIn("готово к проверке", parallel["cards"]["next-action"])
+
+    def test_finished_cli_is_distinct_from_manager_acceptance(self):
+        review = {"phase": "review", "step_id": "review-1"}
+        cases = [
+            ("success exit 0", "success", 0, ["CLI завершил успешно; приемка менеджером не записана", "stage s-ok"], "менеджер: triage замечаний"),
+            ("error exit 1", "error", 1, ["CLI завершился с кодом 1 после ошибки хода", "stage s-bad"], "менеджер: triage замечаний"),
+            ("success but exit 2", "success", 2, ["CLI завершился с кодом 2", "stage s-bad"], "менеджер: triage замечаний"),
+            ("error exit 0", "error", 0, ["CLI сообщил ошибку, процесс завершен", "stage s-bad"], "менеджер: triage замечаний"),
+        ]
+        for label, outcome, code, chip, hint in cases:
+            with self.subTest(case=label):
+                self.write_journal(self.journal_line(100, **review), self.journal_line(50, source="native", event="cli_result", status=outcome, **review),
+                                   self.journal_line(40, event="cli_exit", status="exited", exit_code=code, **review))
+                view = self.view()
+                self.assertEqual(view["stages"][0][2][1:], chip)
+                self.assertIn(hint, view["cards"]["next-action"])
+                self.assertEqual(view["cards"]["models"], "активных вызовов LLM нет")
+                self.assertEqual(view["cards"]["decision"], "не принято")
+                self.assertEqual(view["cardClass"]["card-stage"], "card state-" + chip[1].split("-")[1])
+        # An exit without any native outcome is pending briefly and becomes a warning, never a success.
+        self.write_journal(self.journal_line(100, **review), self.journal_line(5, event="cli_exit", status="exited", exit_code=0, **review))
+        self.assertEqual(self.view()["stages"][0][2][1:], ["CLI завершен, итог пишется", "stage s-pending pulse"])
+        self.write_journal(self.journal_line(400, **review), self.journal_line(300, event="cli_exit", status="exited", exit_code=0, **review))
+        late = self.view()["stages"][0][2]
+        self.assertTrue(late[1].startswith("CLI завершен (exit 0), итог helper не записан 5 мин"), late)
+        self.assertEqual(late[2], "stage s-warn")
+        # The manager's own review verdict, recorded later, is the phase state once the CLI has finished.
+        self.write_journal(self.journal_line(100, **review), self.journal_line(50, source="native", event="cli_result", status="success", **review),
+                           self.journal_line(40, event="cli_exit", status="exited", exit_code=0, **review),
+                           self.journal_line(10, source="manager", phase="review", step_id="review", event="phase", status="failed"))
+        self.assertEqual(self.view()["stages"][0][2][1:], ["этап FAIL", "stage s-bad"])
+
+    def test_partial_counters_are_lower_bounds_and_missing_input_keeps_context_unknown(self):
+        self.write_journal(self.journal_line(100, phase="review", step_id="review-a"), self.journal_line(90, phase="review", step_id="review-b"))
+        self.trace_store("review-a", provider="codex", phase="review").record("usage", scope="turn", final=True, input_tokens=100)
+        self.trace_store("review-b", provider="codex", phase="review").record("usage", scope="turn", final=True, input_tokens=200, output_tokens=50, cached_input_tokens=0)
+        view = self.view()
+        self.assertEqual(view["cards"]["usage"], "вход 300 · выход не менее 50 (итог, часть счетчиков неизвестна)")
+        self.assertEqual(view["cards"]["usage-detail"], "вход без кеша не менее 200, создание кеша неизвестно, чтение кеша неизвестно, из кеша (Codex, входит во вход) не менее 0; "
+                                                        "рассуждения в составе выхода: неизвестно")
+        self.assertEqual(view["cards"]["usage-cost"], "оценка стоимости: неизвестна")
+        self.assertEqual([row[3] for row in view["usage"]], ["итог, часть счетчиков не сообщена"] * 2)
+        # A snapshot without its input side gives no occupancy: unknown, never zero.
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        self.trace_store("build-1").record("usage", scope="message", final=False, message_id="msg_1", model=MODEL, output_tokens=12)
+        context = self.view()
+        self.assertEqual(context["cards"]["context"], "контекст последнего запроса: неизвестен (usage без входа)")
+        self.assertIn("емкость окна в потоке не сообщается", context["cards"]["context-detail"])
+
+    def test_message_updates_project_onto_one_entry_and_late_final_markers_refresh(self):
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        capture = run_trace.ClaudeTrace(self.trace_store("build-1"))
+        usage = {"input_tokens": 5, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 2}
+        for text in ("Hello", "Hello world"):
+            capture.on_event({"type": "assistant", "message": {"id": "msg_1", "model": MODEL, "content": [{"type": "text", "text": text}], "usage": usage}})
+        capture.on_event({"type": "assistant", "message": {"id": "msg_1", "model": MODEL, "content": [{"type": "text", "text": "Second block"}], "usage": usage}})
+        capture.on_event({"type": "result", "subtype": "success", "is_error": False, "result": "Second block", "usage": usage})
+        view = self.view()
+        self.assertEqual([(entry["body"], entry["flags"]) for entry in self.articles(view)],
+                         [("Hello world", ["обновлялось: 2 версии, показана последняя"]), ("Second block", ["итоговый ответ"])])
+        self.assertEqual(view["cards"]["conversation-count"], "сообщений: 2")
+        # A final marker that arrives in a later poll refreshes the already rendered entry.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        store = self.trace_store("build-1")
+        store.message("claude", "response", "Ответ", model=MODEL, message_id="msg_9")
+        first = self.snapshot()
+        store.record("status", state="final_marked", message_id="msg_9")
+        second = self.snapshot((first["events"]["cursor"], first["trace"]["cursor"]))
+        self.assertEqual([entry["flags"] for entry in self.articles(self.view(rounds=[first, second]))], [["итоговый ответ"]])
+        # Two elements of one native content array are two entries even when the second starts with the first.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        pair = run_trace.ClaudeTrace(self.trace_store("build-1"))
+        pair.on_event({"type": "assistant", "message": {"id": "msg_pair", "model": MODEL, "content": [{"type": "text", "text": "Hello"}, {"type": "text", "text": "Hello world"}],
+                                                        "usage": usage}})
+        distinct = self.view()
+        self.assertEqual([(entry["body"], entry["flags"]) for entry in self.articles(distinct)], [("Hello", []), ("Hello world", [])])
+        self.assertEqual(distinct["cards"]["conversation-count"], "сообщений: 2")
+        # Two equal texts at two positions of one array are two entries as well, also after the CLI replays the array.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        same = run_trace.ClaudeTrace(self.trace_store("build-1"))
+        for _ in range(2):
+            same.on_event({"type": "assistant", "message": {"id": "same-array", "model": MODEL, "content": [{"type": "text", "text": "Hello"}, {"type": "text", "text": "Hello"}],
+                                                            "usage": usage}})
+        twice = self.view()
+        self.assertEqual([(entry["body"], entry["flags"]) for entry in self.articles(twice)], [("Hello", []), ("Hello", [])])
+        self.assertEqual(twice["cards"]["conversation-count"], "сообщений: 2")
+
+    def test_expanded_entry_stays_expanded_when_its_block_is_updated(self):
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        store = self.trace_store("build-1")
+        store.message("claude", "response", "Hello", model=MODEL, message_id="msg_1", block=0)
+        first = self.snapshot(actions=[["entry-toggle", 0]])
+        # The same block arrives grown, under a new record id, together with another message.
+        store.message("claude", "response", "Hello world", model=MODEL, message_id="msg_1", block=0)
+        store.message("claude", "response", "Another", model=MODEL, message_id="msg_2", block=0)
+        second = self.snapshot((first["events"]["cursor"], first["trace"]["cursor"]))
+        view = self.view(rounds=[first, second])
+        self.assertEqual([(entry["body"], entry["bodyClass"], entry["buttons"], entry["flags"]) for entry in self.articles(view)],
+                         [("Hello world", "text", ["свернуть"], ["обновлялось: 2 версии, показана последняя"]), ("Another", "text collapsed", ["развернуть"], [])])
+        # The updated entry folds again on the same identity.
+        third = self.snapshot((second["events"]["cursor"], second["trace"]["cursor"]), actions=[["entry-toggle", 0]])
+        folded = self.view(rounds=[first, second, third])
+        self.assertEqual([(entry["body"], entry["bodyClass"]) for entry in self.articles(folded)], [("Hello world", "text collapsed"), ("Another", "text collapsed")])
+
+    def test_child_thread_responses_keep_the_main_session_model(self):
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        capture = run_trace.ClaudeTrace(self.trace_store("build-1"))
+        usage = {"input_tokens": 5, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 2}
+        capture.on_event({"type": "system", "subtype": "init", "model": "main-model", "session_id": "main-session", "claude_code_version": "1.0.0"})
+        capture.on_event({"type": "assistant", "message": {"id": "msg_main", "model": "main-model", "content": [{"type": "text", "text": "Main answer"}], "usage": usage}})
+        capture.on_event({"type": "assistant", "message": {"id": "msg_child", "model": "child-model", "content": [{"type": "text", "text": "Child answer"}],
+                                                           "usage": dict(usage, input_tokens=50)}, "parent_tool_use_id": "call-child"})
+        view = self.view(actions=[["check", "show-subagents", True]])
+        block = [block for block in view["invocations"] if "build-1" in block["summary"]][0]
+        self.assertIn("сессия Claude main-session, CLI 1.0.0; модель: main-model (наблюдалась)", block["lines"])
+        self.assertIn("· Claude main-model · ", block["summary"])
+        self.assertTrue(any(line.startswith("последний запрос основной сессии: ~5 токенов (вход + кеш сообщения msg_main, ") for line in block["lines"]), block["lines"])
+        self.assertEqual([row[2] for row in view["usage"]], ["Claude main-model (и еще 1: субагенты)", "└ main-model", "└ child-model"])
+        self.assertTrue(view["cards"]["model-detail"].endswith("наблюдаемая модель: main-model"), view["cards"]["model-detail"])
+        self.assertIn("в потоке: main-model", view["cards"]["models"])
+        child = [entry for entry in self.articles(view) if entry["body"] == "Child answer"][0]
+        self.assertEqual(child["who"], "Claude (субагент)")
+        self.assertIn("child-model", child["text"], "the child's model stays on the child's message")
+        self.assertIn("вызов call-child", child["flags"])
+        # A child snapshot that arrives before any main-session record does not name the session either, and its
+        # consumption is the child model's row, not the unknown main model's.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        self.trace_store("build-1").record("usage", scope="message", final=False, message_id="msg_c", model="child-model", thread="call-child",
+                                           input_tokens=1, cache_creation_input_tokens=0, cache_read_input_tokens=0, output_tokens=1)
+        early_view = self.view()
+        early = [block for block in early_view["invocations"] if "build-1" in block["summary"]][0]
+        self.assertIn("идентификатор сессии Claude не наблюдался; модель: неизвестна", early["lines"])
+        self.assertIn("последний запрос: usage сообщений еще не наблюдалось; занято сейчас и свободно: неизвестно", early["lines"])
+        self.assertEqual([row[2] for row in early_view["usage"]], ["Claude модель не сообщена (и еще 1: субагенты)", "└ child-model"])
+        self.assertEqual(early_view["usage"][1][4:10], ["1", "1", "0", "0", "неизвестно", "1"])
+
+    def test_a_sole_subagent_snapshot_is_attributed_to_its_model_while_the_session_keeps_its_own(self):
+        # The main session identifies itself as one model; its only usage snapshot so far belongs to a subagent of another.
+        self.write_journal(self.journal_line(100, step_id="child-first"))
+        capture = run_trace.ClaudeTrace(self.trace_store("child-first"))
+        capture.on_event({"type": "system", "subtype": "init", "model": "synthetic-main", "session_id": "synthetic-session", "claude_code_version": "1.0.0"})
+        child = {"type": "assistant", "message": {"id": "child-1", "model": "synthetic-child", "content": [{"type": "text", "text": "Child text"}],
+                                                  "usage": {"input_tokens": 100, "cache_creation_input_tokens": 20, "cache_read_input_tokens": 30, "output_tokens": 5}},
+                 "parent_tool_use_id": "call-1"}
+        capture.on_event(child)
+        child_row = ["", "", "└ synthetic-child", "по модели, промежуточно, часть счетчиков не сообщена", "150", "100", "20", "30", "неизвестно", "5", "неизвестно", "неизвестно"]
+        head = ["1", "child-first", "Claude synthetic-main (и еще 1: субагенты)", "промежуточно: 1 снимков, выход не менее, часть счетчиков не сообщена"]
+        for _ in range(2):
+            view = self.view(actions=[["check", "show-subagents", True]])
+            self.assertEqual(view["usage"], [head + ["150", "100", "20", "30", "неизвестно", "5", "неизвестно", "неизвестно"], child_row])
+            block = [entry for entry in view["invocations"] if "child-first" in entry["summary"]][0]
+            self.assertIn("· Claude synthetic-main · ", block["summary"], "the invocation keeps the session's own model")
+            self.assertIn("сессия Claude synthetic-session, CLI 1.0.0; модель: synthetic-main (наблюдалась)", block["lines"])
+            self.assertIn("последний запрос: usage сообщений еще не наблюдалось; занято сейчас и свободно: неизвестно", block["lines"])
+            self.assertTrue(view["cards"]["model-detail"].endswith("наблюдаемая модель: synthetic-main"), view["cards"]["model-detail"])
+            self.assertEqual([entry["who"] for entry in self.articles(view) if entry["body"] == "Child text"], ["Claude (субагент)"])
+            # The CLI replays the child's array: nothing changes.
+            capture.on_event(child)
+        # The main session's own snapshot then takes its own row beside the child's, and the invocation total is their sum.
+        capture.on_event({"type": "assistant", "message": {"id": "main-1", "model": "synthetic-main", "content": [{"type": "text", "text": "Main text"}],
+                                                           "usage": {"input_tokens": 5, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 1}}})
+        rows = self.view()["usage"]
+        self.assertEqual(rows[0][2:6], ["Claude synthetic-main (и еще 1: субагенты)", "промежуточно: 2 снимков, выход не менее, часть счетчиков не сообщена", "155", "105"])
+        self.assertEqual(rows[1], child_row)
+        self.assertEqual(rows[2], ["", "", "└ synthetic-main", "по модели, промежуточно, часть счетчиков не сообщена", "5", "5", "0", "0", "неизвестно", "1", "неизвестно", "неизвестно"])
+        # Snapshots of the session's own model alone need no per-model row and no subagent count.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        own = run_trace.ClaudeTrace(self.trace_store("child-first"))
+        own.on_event({"type": "system", "subtype": "init", "model": "synthetic-main", "session_id": "synthetic-session"})
+        own.on_event({"type": "assistant", "message": {"id": "main-1", "model": "synthetic-main", "content": [{"type": "text", "text": "Main text"}],
+                                                       "usage": {"input_tokens": 5, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 1}}})
+        self.assertEqual([row[2] for row in self.view()["usage"]], ["Claude synthetic-main"])
+
+    def test_per_model_rows_carry_the_completeness_of_their_own_counters(self):
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        store = self.trace_store("build-1")
+        store.record("usage", scope="invocation", final=True, input_tokens=10, cache_creation_input_tokens=1000, cache_read_input_tokens=0, output_tokens=5,
+                     models={MODEL: {"input_tokens": 10, "output_tokens": 5}})
+        rows = self.view()["usage"]
+        self.assertEqual(rows[0][3:5], ["итог, часть счетчиков не сообщена", "1 010"])
+        # The model entry lacks its cache counters: its total input is a lower bound, labelled like the invocation's.
+        self.assertEqual(rows[1], ["", "", "└ " + MODEL, "по модели, часть счетчиков не сообщена", "не менее 10", "10", "неизвестно", "неизвестно", "неизвестно", "5", "неизвестно", "неизвестно"])
+        # Interim: a main snapshot without cache counters beside a complete subagent snapshot.
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        store = self.trace_store("build-1")
+        store.record("usage", scope="message", final=False, message_id="msg_1", model=MODEL, input_tokens=10, output_tokens=5)
+        store.record("usage", scope="message", final=False, message_id="msg_sub", model="claude-sub", thread="call-1",
+                     input_tokens=7, cache_creation_input_tokens=1, cache_read_input_tokens=2, output_tokens=3)
+        rows = self.view()["usage"]
+        self.assertEqual(rows[0][3:8], ["промежуточно: 2 снимков, выход не менее, часть счетчиков не сообщена", "не менее 20", "17", "не менее 1", "не менее 2"])
+        self.assertEqual(rows[1][2:8], ["└ " + MODEL, "по модели, промежуточно, часть счетчиков не сообщена", "не менее 10", "10", "неизвестно", "неизвестно"])
+        self.assertEqual(rows[2][2:8], ["└ claude-sub", "по модели, промежуточно, часть счетчиков не сообщена", "10", "7", "1", "2"])
+
+    def test_imports_keep_observation_time_apart_from_capture_time(self):
+        self.write_journal(self.journal_line(100, step_id="build-1"))
+        old = self.directory / "old"
+        old.mkdir()
+        events = old / "events.jsonl"
+        with events.open("w", encoding="utf-8") as stream:
+            for event in claude_stream():
+                stream.write(json.dumps(event, ensure_ascii=False) + "\n")
+        subprocess.run([sys.executable, "-B", str(SCRIPTS / "run_trace.py"), "import-claude", "--progress-dir", str(self.progress), "--events", str(events),
+                        "--attempt", "1", "--step-id", "build-old"], check=True, capture_output=True, timeout=60)
+        view = self.view()
+        self.assertTrue(view["cards"]["limits"].startswith("лимиты аккаунта (claude, импорт старого журнала, время наблюдения неизвестно): статус allowed; 5 ч: 32 %"), view["cards"]["limits"])
+        self.assertIn("(build-old, импорт, время наблюдения неизвестно)", view["cards"]["context-detail"])
+        self.assertEqual(view["cardClass"]["card-context"], "card state-neutral")
+        imported = [entry for entry in self.articles(view) if entry["who"] == "Claude"]
+        self.assertTrue(all("импорт старого журнала, время наблюдения неизвестно" in entry["flags"] for entry in imported), imported)
+        self.assertTrue(all("записано " in entry["text"] for entry in imported), "the meta shows the capture time as such, not as an observation")
+        # A live observation, however small, is the current one; the historical import never supersedes it.
+        live = self.trace_store("build-1")
+        live.record("rate_limit", status="rejected", window="five_hour", windows={"five_hour": {"utilization": 0.9}})
+        live.record("usage", scope="message", final=False, message_id="msg_live", model=MODEL, input_tokens=10, cache_creation_input_tokens=0, cache_read_input_tokens=0, output_tokens=1)
+        current = self.view()
+        self.assertTrue(current["cards"]["limits"].startswith("лимиты аккаунта (claude, по событию CLI "), current["cards"]["limits"])
+        self.assertIn("статус rejected; 5 ч: 90 % использовано", current["cards"]["limits"])
+        self.assertEqual(current["cards"]["context"], "контекст последнего запроса: ~10 токенов")
+        self.assertIn("(build-1, ", current["cards"]["context-detail"])
+        # An import with a known observation time is placed at that time, before a later-written live message.
+        historical = self.trace_store("build-hist", source="import")
+        historical.message("claude", "response", "Историческое сообщение", model=MODEL, message_id="msg_h", observed="2026-01-01T09:00:00.000Z")
+        historical.record("status", state="import_started", origin="/old/events.jsonl", observed="2026-01-01T09:00:00.000Z")
+        live.message("claude", "response", "Живое сообщение", model=MODEL, message_id="msg_l")
+        ordered = self.view(actions=[["value", "filter-step", ""]])
+        bodies = [entry["body"] for entry in self.articles(ordered) if entry["body"] in ("Историческое сообщение", "Живое сообщение")]
+        self.assertEqual(bodies, ["Историческое сообщение", "Живое сообщение"])
+        flagged = [entry for entry in self.articles(ordered) if entry["body"] == "Историческое сообщение"][0]
+        self.assertTrue(any(flag.startswith("импорт старого журнала, после запуска ") for flag in flagged["flags"]), flagged["flags"])
+        self.assertIn("(импорт)", flagged["text"], "the entry meta shows the observation time, marked as an import")
+
+    def test_invocation_blocks_show_harness_and_context_per_session(self):
+        launcher = {"phase": "build", "step_id": "build-1"}
+        native = {"source": "native", "phase": "build", "step_id": "build-1"}
+        self.write_journal(self.journal_line(300, model=MODEL, effort="max", **launcher),
+                           self.journal_line(290, event="init", status="observed", model=MODEL, **native),
+                           self.journal_line(280, event="tool_call", status="observed", tool="Skill", component="lead-with-outcome", call_id="c1", **native),
+                           self.journal_line(270, event="tool_call", status="observed", tool="Read", call_id="c2", **native),
+                           self.journal_line(260, phase="review", step_id="review-1", model="gpt-review-test", effort="ultra"),
+                           self.journal_line(250, phase="build", step_id="build-legacy", model=MODEL, effort="max"))
+        store = self.trace_store("build-1")
+        store.record("status", state="cli_started", model=MODEL, effort="max")
+        store.record("harness", **run_trace.harness_selected({"skills": ["scope-fence", "evidence-before-claim"], "agents": [], "mcp_servers": []},
+                                                            [{"skill": "scope-fence", "path": "/harness/skills/scope-fence/SKILL.md", "sha256": "a" * 64},
+                                                             {"skill": "evidence-before-claim", "path": "/harness/skills/evidence-before-claim/SKILL.md", "sha256": "b" * 64}],
+                                                            [], instructions_sha256="c" * 64, read_only=False, tools=["Read", "Skill"]))
+        store.record("status", state="capture_started", model=MODEL, cli_version="2.1.263", session_id="sess-page-1")
+        store.record("usage", scope="message", final=False, message_id="msg_1", model=MODEL, input_tokens=100, cache_creation_input_tokens=900, cache_read_input_tokens=29000, output_tokens=5)
+        running = self.view()
+        blocks = running["invocations"]
+        self.assertEqual([block["tag"] for block in blocks], ["details"] * 3)
+        self.assertEqual([block["open"] for block in blocks], [True, True, True], "active invocations start expanded")
+        first = blocks[0]
+        self.assertIn("попытка 1 · build-1 · Claude " + MODEL + " / max · работает, build-1 · обвязка: 2 скилла, агентов нет, MCP нет · контекст: емкость неизвестна, последний запрос ~30 000, занято: неизвестно", first["summary"])
+        self.assertIn("Выбор менеджера: скиллы: scope-fence, evidence-before-claim; агенты: нет; MCP: нет; инструменты CLI: Read, Skill; записано ", first["lines"][0])
+        self.assertTrue(first["lines"][1].startswith("Внедрено в системный промпт текстом: scope-fence (sha256 aaaaaaaaaaaa), evidence-before-claim (sha256 bbbbbbbbbbbb); инструкции sha256 cccccccccccc. Внедренный текст не доказывает соблюдение скилла."))
+        self.assertIn("источник scope-fence: /harness/skills/scope-fence/SKILL.md", first["lines"])
+        self.assertIn("Наблюдаемые вызовы компонентов (журнал CLI): Skill: lead-with-outcome x1; Agent: нет; MCP: нет. Отсутствие вызовов Skill нормально: скиллы поданы текстом.", first["lines"])
+        self.assertIn("Сверка обвязки (audit): будет записана после выхода CLI.", first["lines"])
+        self.assertIn("claude doctor: будет записан после выхода CLI.", first["lines"])
+        self.assertIn("сессия Claude sess-page-1, CLI 2.1.263; модель: " + MODEL + " (наблюдалась)", first["lines"])
+        self.assertIn("емкость окна: неизвестна до итога CLI (modelUsage)", first["lines"])
+        self.assertTrue(any(line.startswith("последний запрос основной сессии: ~30 000 токенов (вход + кеш сообщения msg_1, ") and "занято сейчас и свободно: неизвестно" in line for line in first["lines"]), first["lines"])
+        self.assertIn("обвязка: 2 скилла", running["cards"]["models"])
+        self.assertIn("обвязка: записи нет · контекст: не захвачен", blocks[1]["summary"])
+        self.assertIn("Запись о выборе обвязки отсутствует: запуск до включения захвата или захват недоступен.", blocks[1]["lines"])
+        self.assertIn("Сессия не захвачена: идентификатор, емкость и занятость контекста неизвестны.", blocks[1]["lines"])
+        # The Codex reviewer: no harness applies; capacity comes from the catalog and is labelled as such.
+        codex = self.trace_store("review-1", provider="codex", phase="review")
+        codex.record("status", state="cli_started", model="gpt-review-test", effort="ultra")
+        codex.record("context", model="gpt-review-test", capacity=272000, capacity_source="catalog", effective_percent=95, capacity_max=872000,
+                     fetched_at="2026-09-06T22:18:02.405Z", client_version="0.153.4", origin="/home/.codex/models_cache.json")
+        codex.record("status", state="thread_started", thread_id="thr_page")
+        codex.record("usage", scope="turn", final=True, input_tokens=24763, cached_input_tokens=24448, output_tokens=122, reasoning_tokens=0)
+        review = [block for block in self.view()["invocations"] if "review-1" in block["summary"]][0]
+        self.assertIn("Codex gpt-review-test / ultra · работает, review-1 · обвязка: не применяется · контекст: емкость 272 000 (каталог), занято: неизвестно", review["summary"])
+        self.assertIn("Обвязка Claude для Codex не выбирается: ревьюер запускается со своим профилем CLI.", review["lines"])
+        self.assertIn("поток Codex thr_page; модель: gpt-review-test (запрошена, в потоке не сообщена)", review["lines"])
+        self.assertTrue(any(line.startswith("емкость окна gpt-review-test: 272 000 (каталог моделей CLI 0.153.4 от ") and "эффективно 95 %, максимум 872 000; справочное значение, не наблюдение сессии)" in line for line in review["lines"]), review["lines"])
+        self.assertIn("последний запрос и занятость: exec --json сообщает только суммарный расход хода, не размер контекста; занято сейчас и свободно: неизвестно", review["lines"])
+        # After the exit: audit, doctor and result join the selection without replacing it; the capacity comes from the model's own window.
+        store.record("usage", scope="invocation", final=True, input_tokens=100, cache_creation_input_tokens=900, cache_read_input_tokens=29000, output_tokens=40, reasoning_tokens=5, cost_usd=0.2,
+                     models={MODEL: {"input_tokens": 100, "cache_creation_input_tokens": 900, "cache_read_input_tokens": 29000, "output_tokens": 40, "context_window": 1000000, "cost_usd": 0.2}})
+        store.record("harness", **run_trace.harness_doctor({"status": "RECORDED", "exit_code": 0, "timed_out": False, "interrupted": False, "started_at": "2026-09-06T10:00:00Z",
+                                                            "finished_at": "2026-09-06T10:00:01Z", "duration_seconds": 0.9}))
+        store.record("harness", **run_trace.harness_audit({"status": "UNVERIFIED", "calls": [
+            {"name": "Skill", "kind": "skills", "component": "lead-with-outcome", "result_status": "TOOL_RETURNED", "background_requested": False},
+            {"name": "Read", "kind": "builtin", "component": None, "result_status": "TOOL_RETURNED"},
+            {"name": "mcp__other__lookup", "kind": "mcp_servers", "component": "other", "result_status": "ERROR"}],
+            "missing_agents": ["local-reader"], "unexpected_calls": [{"name": "mcp__other__lookup", "kind": "mcp_servers", "component": "other"}],
+            "parse_errors": [{"line": 3, "reason": "invalid_json"}], "hook_events": [{}, {}],
+            "init_catalog": [{"parent_tool_use_id": None, "tools": ["Read"], "skills": ["a", "b", "c"], "agents": ["local-reader"], "mcp_servers": []}],
+            "mcp_servers": {"called": ["other"], "unused": ["docs"]}}))
+        store.record("harness", **run_trace.harness_result({"completed": True, "ready_for_review": False, "model_matches": True, "harness_status": "UNVERIFIED", "doctor_status": "RECORDED", "exit_code": 0}))
+        with (self.progress / "progress.jsonl").open("ab") as stream:
+            stream.write(record_line(**self.journal_line(0, event="cli_exit", status="exited", exit_code=0, **launcher)))
+            stream.write(record_line(**self.journal_line(0, event="result", status="completed", **launcher)))
+        done = [block for block in self.view()["invocations"] if "build-1" in block["summary"]][0]
+        self.assertFalse(done["open"], "a finished invocation is collapsed by default")
+        self.assertIn("· CLI завершил, но не ready · обвязка: 2 скилла, агентов нет, MCP нет, audit UNVERIFIED, doctor RECORDED · контекст: емкость 1 000 000, последний запрос ~30 000 (3 %), занято: неизвестно", done["summary"])
+        self.assertTrue(any(line.startswith("Сверка обвязки (audit): UNVERIFIED; вызовов всего 3 (встроенных 1, Skill 1, агентов 0, MCP 1); неожиданных 1 (mcp__other__lookup:other); "
+                                            "отсутствующих агентов 1 (local-reader); ошибок разбора 1; hook-событий 2; вызваны скиллы: lead-with-outcome; вызваны MCP: other; MCP без вызовов: docs") for line in done["lines"]), done["lines"])
+        self.assertIn("Каталог сессии CLI (доступно, не вызвано): инструментов 1, скиллов 3, агентов 1, MCP 0.", done["lines"])
+        self.assertIn("Вызовы компонентов по сверке: Skill lead-with-outcome [TOOL_RETURNED]; mcp__other__lookup other [ERROR]", done["lines"])
+        self.assertTrue(any(line.startswith("claude doctor: RECORDED, exit 0, 0.9 с, ") and "вывод doctor на странице не показывается" in line for line in done["lines"]), done["lines"])
+        self.assertIn("Итог helper: completed, не ready_for_review, модель совпала, обвязка UNVERIFIED, doctor RECORDED, exit 0; это не доказательство корректности задачи.", done["lines"])
+        self.assertIn("емкость окна " + MODEL + ": 1 000 000 (по итогу CLI, modelUsage)", done["lines"])
+        self.assertTrue(any("≈ 3 % емкости" in line for line in done["lines"]), done["lines"])
+        self.assertTrue(any(line.startswith("Выбор менеджера: скиллы: scope-fence, evidence-before-claim") for line in done["lines"]), "the selection recorded at launch is still shown")
+        # An imported invocation: an empty selection is none, a missing invocation.json is an absent record, both with their provenance.
+        imported = self.trace_store("build-old", attempt=1, source="import")
+        imported.record("status", state="cli_started", model=MODEL, effort="max", observed="2026-09-05T09:00:00.000Z")
+        imported.record("harness", observed="2026-09-05T09:00:00.000Z", **run_trace.harness_selected({"skills": [], "agents": [], "mcp_servers": []}, [], []))
+        bare = self.trace_store("build-bare", attempt=1, source="import")
+        bare.record("status", state="import_started", origin="/old/events.jsonl")
+        bare.message("claude", "response", "Старый ответ", model=MODEL, message_id="m1")
+        blocks = {block["summary"].split(" · ")[1]: block for block in self.view()["invocations"]}
+        self.assertIn("обвязка: 0 скиллов, агентов нет, MCP нет · контекст: емкость неизвестна, занято: неизвестно · импорт", blocks["build-old"]["summary"])
+        self.assertTrue(any(line.startswith("Выбор менеджера: скиллы: нет; агенты: нет; MCP: нет; наблюдение ") for line in blocks["build-old"]["lines"]), blocks["build-old"]["lines"])
+        self.assertIn("Запись о выборе обвязки отсутствует: старый запуск без захвата или без invocation.json; ничего не додумано.", blocks["build-bare"]["lines"])
+        self.assertIn("историческая запись (импорт): время наблюдения неизвестно; текущую сессию не описывает", blocks["build-bare"]["lines"])
+
+
+def uuid_hex():
+    return os.urandom(8).hex()
 
 
 class LauncherFixture(unittest.TestCase):
@@ -1468,8 +2243,10 @@ class LauncherIntegrationTest(LauncherFixture):
         self.assertEqual(json.loads(stdout.splitlines()[-1])["progress_status"], "UNVERIFIED")
         self.assertTrue((output / "doctor.json").exists())
         self.assertTrue((output / "harness-audit.json").exists())
-        # The warning was offered to the console; the full pipe never accepted it, so it is counted, not awaited.
-        self.assertEqual((result["progress_observer"]["records"], result["progress_observer"]["console_dropped"]), (0, 1))
+        # Both warnings (journal and trace unavailable) were offered to the console; the full pipe never accepted
+        # them, so they are counted, not awaited.
+        self.assertEqual((result["progress_observer"]["records"], result["progress_observer"]["console_dropped"]), (0, 2))
+        self.assertEqual(result["trace_status"], "UNVERIFIED")
         os.set_blocking(reader, False)
         drained = b""
         while True:
@@ -1526,6 +2303,103 @@ class LauncherIntegrationTest(LauncherFixture):
         stdout, stderr = server.communicate(timeout=10)
         self.assertEqual(server.returncode, 0, stdout + stderr)
         self.assertIn("tail -f " + str(progress.resolve() / "progress.log"), stderr)
+
+    def test_trace_captures_the_task_prompt_and_public_text_only(self):
+        usage = {"input_tokens": 12, "cache_creation_input_tokens": 300, "cache_read_input_tokens": 4000, "output_tokens": 9}
+        events = [
+            {"type": "system", "subtype": "init", "model": MODEL, "claude_code_version": "9.9.9", "cwd": SENTINELS["path"],
+             "session_id": SENTINELS["session"], "apiKeySource": SENTINELS["credential"], "env": {"HOME": SENTINELS["env"]}},
+            {"type": "assistant", "message": {"id": "msg_1", "model": MODEL, "content": [{"type": "thinking", "thinking": SENTINELS["thinking"]}], "usage": usage}},
+            {"type": "assistant", "message": {"id": "msg_1", "model": MODEL, "content": [
+                {"type": "tool_use", "id": "call-1", "name": "Bash", "input": {"command": "cat " + SENTINELS["path"], "description": SENTINELS["tool_input"]}}], "usage": usage}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "call-1", "is_error": False, "content": SENTINELS["tool_result"]}]},
+             "tool_use_result": {"stdout": SENTINELS["tool_stdout"], "stderr": SENTINELS["tool_stderr"]}},
+            {"type": "rate_limit_event", "rate_limit_info": {"status": "allowed", "rateLimitType": "five_hour",
+                                                             "unifiedWindows": {"five_hour": {"utilization": 0.5, "resetsAt": 1788738600}}}},
+            {"type": "assistant", "message": {"id": "msg_2", "model": MODEL, "content": [{"type": "text", "text": SENTINELS["text"] + " " + SENTINELS["cyrillic"]}],
+                                              "usage": dict(usage, output_tokens=40)}},
+            {"type": "result", "subtype": "success", "is_error": False, "result": SENTINELS["text"] + " " + SENTINELS["cyrillic"],
+             "permission_denials": [], "duration_ms": 2500, "num_turns": 2, "session_id": SENTINELS["session"], "total_cost_usd": 0.05,
+             "usage": {"input_tokens": 24, "cache_creation_input_tokens": 300, "cache_read_input_tokens": 8000, "output_tokens": 49},
+             "modelUsage": {MODEL: {"inputTokens": 24, "outputTokens": 49, "cacheReadInputTokens": 8000, "cacheCreationInputTokens": 300,
+                                    "costUSD": 0.05, "contextWindow": 200000, "maxOutputTokens": 32000}},
+             "errors": [SENTINELS["api_error"]]},
+        ]
+        progress = self.directory / "traced"
+        process, output = self.invoke(events, extra=("--progress-dir", str(progress)))
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        result = read_json(output / "result.json")
+        self.assertEqual((result["ready_for_review"], result["trace_status"], result["trace_error"]), (True, "RECORDED", None))
+        self.assertEqual((result["trace"]["public_messages"], result["trace"]["usage_snapshots"], result["trace"]["terminal_usage"], result["trace"]["capture"]),
+                         (1, 2, True, "trace/1"))
+        self.assertEqual(json.loads(process.stdout.splitlines()[-1])["trace_status"], "RECORDED")
+        self.assertEqual(read_json(output / "invocation.json")["trace"]["status"], "RECORDED")
+        records = list(run_trace.iterate_trace(progress / "trace.jsonl"))
+        self.assertEqual([(record["kind"], record.get("state") or record.get("role") or record.get("scope") or record.get("stage")) for record in records], [
+            ("status", "cli_started"), ("artifact", None), ("message", "manager"), ("harness", "selected"), ("status", "capture_started"), ("usage", "message"),
+            ("rate_limit", None), ("message", "claude"), ("usage", "message"), ("usage", "invocation"), ("status", "final_marked"),
+            ("harness", "doctor"), ("harness", "audit"), ("harness", "result"), ("status", "cli_exited")])
+        self.assertTrue(all((record["run_id"], record["attempt"], record["step_id"], record["phase"]) == ("traced", 1, output.name, "build")
+                            for record in records))
+        prompt_record = records[2]
+        self.assertEqual((prompt_record["text"], prompt_record["origin"], prompt_record["source"], prompt_record["message_kind"]),
+                         (self.prompt.read_text(encoding="utf-8"), str(self.prompt.resolve()), "launcher", "task_prompt"))
+        self.assertEqual((progress / "artifacts" / (prompt_record["artifact_id"] + ".txt")).read_bytes(), (output / "prompt.md").read_bytes())
+        self.assertEqual((records[0]["model"], records[0]["effort"], records[0]["tool"], records[4]["cli_version"]), (MODEL, "max", "run_claude_task.py", "9.9.9"))
+        # The harness the manager selected is recorded before the CLI starts; observed calls, doctor and result follow the exit.
+        selected, doctor, audit, verdict = records[3], records[11], records[12], records[13]
+        self.assertEqual((selected["source"], selected["skills"], selected["agents"], selected["mcp_servers"], selected["read_only"], selected["origin"]),
+                         ("launcher", ["scope-fence", "evidence-before-claim"], [], [], False, str(output.resolve() / "invocation.json")))
+        self.assertEqual(selected["tools"], ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "Skill"])
+        self.assertEqual([(entry["skill"], entry["sha256"], entry["origin"]) for entry in selected["injected"]],
+                         [(source["skill"], source["sha256"], source["path"]) for source in read_json(output / "invocation.json")["harness_sources"]])
+        self.assertEqual(selected["instructions_sha256"], read_json(output / "invocation.json")["instructions_sha256"])
+        self.assertEqual((doctor["status"], doctor["exit_code"], doctor["timed_out"], doctor["origin"]), ("RECORDED", 0, False, str(output.resolve() / "doctor.json")))
+        self.assertRegex(doctor["started_at"], r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z")
+        self.assertEqual((audit["status"], audit["counts"], audit["calls"], audit["missing_agents"], audit["unexpected_calls"], audit["parse_errors"], audit["skill_calls"]),
+                         ("RECORDED", {"calls": 1, "builtin": 1, "skills": 0, "agents": 0, "mcp_servers": 0, "unexpected": 0, "missing_agents": 0}, [], [], [], 0, []))
+        self.assertEqual((verdict["completed"], verdict["ready_for_review"], verdict["model_matches"], verdict["harness_status"], verdict["doctor_status"]),
+                         (True, True, True, "RECORDED", "RECORDED"))
+        self.assertEqual(records[4]["session_id"], SENTINELS["session"], "the session identity is recorded for the context view")
+        self.assertEqual(records[4]["source"], "native")
+        self.assertEqual((records[7]["text"], records[7]["message_id"], records[7]["block"]), (SENTINELS["text"] + " " + SENTINELS["cyrillic"], "msg_2", 0))
+        self.assertEqual((records[9]["input_tokens"], records[9]["cache_read_input_tokens"], records[9]["output_tokens"], records[9]["cost_usd"],
+                          records[9]["models"][MODEL]["context_window"]), (24, 8000, 49, 0.05, 200000))
+        self.assertEqual((records[14]["exit_code"], records[14]["count"]), (0, 1))
+        trace_text = (progress / "trace.jsonl").read_text(encoding="utf-8")
+        for name in ("prompt", "text", "cyrillic", "session"):
+            self.assertIn(SENTINELS[name], trace_text, name)
+        for name, sentinel in SENTINELS.items():
+            if name not in ("prompt", "text", "cyrillic", "session"):
+                self.assertNotIn(sentinel, trace_text, name)
+        self.assertNotIn("Installation diagnostics", trace_text, "doctor output never enters the trace")
+        self.assertNotIn((output / "instructions.md").read_text(encoding="utf-8")[:200], trace_text, "injected instruction text never enters the trace")
+        # The journal, log, console and event API keep their metadata-only contract next to the rich trace.
+        for name, text in (("progress.jsonl", (progress / "progress.jsonl").read_text(encoding="utf-8")),
+                           ("progress.log", (progress / "progress.log").read_text(encoding="utf-8")),
+                           ("stderr", process.stderr), ("stdout", process.stdout)):
+            assert_no_sentinel(self, text, name)
+        server, thread = self.serve(progress)
+        try:
+            assert_no_sentinel(self, self.get(server, "/api/events?cursor=0&limit=2000")[2].decode("utf-8"), "event api")
+            trace_api = json.loads(self.get(server, "/api/trace?cursor=0&limit=2000")[2])
+            self.assertEqual([record["kind"] for record in trace_api["events"]], [record["kind"] for record in records])
+            status, headers, body = self.get(server, "/api/artifact?id=" + prompt_record["artifact_id"])
+            self.assertEqual((status, body, headers["Content-Type"]), (200, (output / "prompt.md").read_bytes(), "text/plain; charset=utf-8"))
+            self.assertEqual(self.get(server, "/artifacts/" + prompt_record["artifact_id"] + ".txt")[0], 404)
+        finally:
+            self.stop(server, thread)
+        # An unavailable trace store is reported separately and changes neither completion nor readiness.
+        blocker = self.directory / "trace-blocker"
+        blocker.write_text("keep\n", encoding="utf-8")
+        process, output = self.invoke(events, extra=("--progress-dir", str(blocker)))
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        result = read_json(output / "result.json")
+        self.assertEqual((result["completed"], result["ready_for_review"], result["progress_status"], result["trace_status"]),
+                         (True, True, "UNVERIFIED", "UNVERIFIED"))
+        self.assertRegex(result["trace_error"], r"^(FileExistsError|NotADirectoryError): ")
+        self.assertEqual(result["trace"]["public_messages"], 0)
+        self.assertEqual(blocker.read_text(encoding="utf-8"), "keep\n")
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ progress.jsonl is the authoritative append-only journal of validated records.
 progress.log is its readable projection for tail -f, never a second source.
 Native CLI stdout stays in events.jsonl; the observer tails that file and
 records metadata only: no prompts, arguments, results, text or paths.
+Public prompts, answers and usage live in the separate trace.jsonl kept by
+run_trace.py; the server pages both and serves registered artifacts only.
 """
 
 import argparse
@@ -231,12 +233,13 @@ def open_plain(path):
     return os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb")
 
 
-def read_events(path, cursor=0, limit=DEFAULT_LIMIT, discard=False):
+def read_events(path, cursor=0, limit=DEFAULT_LIMIT, discard=False, validate=validate_event, max_line=MAX_LINE_BYTES):
     """Page validated records after a byte cursor; nothing partial, invalid or oversized becomes an event.
 
     A short unfinished trailing line is left for its writer. An oversized physical line is dropped
     up to its newline, across pages when needed: the returned discard flag travels with the cursor,
-    so a later suffix of the same line is never read as a record of its own.
+    so a later suffix of the same line is never read as a record of its own. The trace uses the
+    same reader with its own validator and line bound.
     """
     page = {"cursor": cursor, "discard": discard, "events": [], "invalid_lines": 0, "more": False,
             "journal": True, "reset": False}
@@ -269,9 +272,9 @@ def read_events(path, cursor=0, limit=DEFAULT_LIMIT, discard=False):
                     if not line.strip():
                         continue
                     try:
-                        if len(line) > MAX_LINE_BYTES:
+                        if len(line) > max_line:
                             raise ValueError("oversized line")
-                        page["events"].append(validate_event(json.loads(line.decode("utf-8"))))
+                        page["events"].append(validate(json.loads(line.decode("utf-8"))))
                     except MALFORMED:
                         page["invalid_lines"] += 1
                 if stopped:
@@ -279,7 +282,7 @@ def read_events(path, cursor=0, limit=DEFAULT_LIMIT, discard=False):
                 if page["discard"]:
                     page["cursor"] += len(pending)
                     pending = b""
-                elif len(pending) > MAX_LINE_BYTES:
+                elif len(pending) > max_line:
                     page["cursor"] += len(pending)
                     page["invalid_lines"] += 1
                     page["discard"], pending = True, b""
@@ -560,33 +563,56 @@ class ConsoleEcho:
 
 
 def _append(path, data, header=b""):
-    """Append whole lines to a plain file; a partial last line left by a crash is closed first."""
-    descriptor = os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o644)
+    """Append whole lines to a plain file, all of them or none; a partial last line left by a crash is closed first.
+
+    The file is reached through a descriptor of its directory and checked on every append, not
+    only when the store was opened: a directory swapped for a link, or a file replaced by a link
+    or a hard link to something else, is refused before a byte is written.
+
+    Every caller holds the file's lock, so nothing else appends between the write and its undo:
+    when the write fails part way (a full disk, an I/O error) or is interrupted part way (Ctrl-C,
+    an exit request) the file is truncated back to its size before the call and the failure or
+    interrupt goes on. A batch published this way lands whole or leaves no prefix behind; only a
+    process killed outright between the write and its undo can leave one.
+    """
+    path = Path(path)
+    directory = os.open(str(path.parent), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
-        size = os.fstat(descriptor).st_size
+        descriptor = os.open(path.name, os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o644, dir_fd=directory)
+    finally:
+        os.close(directory)
+    try:
+        info = os.fstat(descriptor)
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise ValueError("Progress path must be a plain single-link file: " + str(path))
+        size = info.st_size
         if size == 0:
             data = header + data
         elif data and os.pread(descriptor, 1, size - 1) != b"\n":
             data = b"\n" + data
-        if data:
-            os.write(descriptor, data)
+        try:
+            while data:
+                data = data[os.write(descriptor, data):]
+        except BaseException as error:  # noqa: BLE001 - an interrupt is undone like a failed write, then re-raised
+            try:
+                os.ftruncate(descriptor, size)
+            except OSError as undo:
+                raise OSError("%s: %s; the partial write could not be undone: %s" % (type(error).__name__, error, undo)) from error
+            raise
     finally:
         os.close(descriptor)
 
 
-class NativeObserver:
-    """Tail events.jsonl while it is written; each record carries identifiers and status only."""
+class LineTailer:
+    """Tail a JSONL file while it is written; subclasses handle each parsed object."""
 
-    def __init__(self, path, journal):
-        self.path, self.journal = Path(path), journal
+    def __init__(self, path):
+        self.path = Path(path)
         self.offset, self.pending, self.pending_size, self.discarding = 0, [], 0, False
-        self.calls, self.results, self.tasks, self.task_links, self.hooks = {}, {}, {}, {}, {}
-        self.init_models, self.result_seen = set(), False
         self.events, self.invalid_lines, self.oversized_lines, self.error = 0, 0, 0, None
 
-    def note(self, event, status, **fields):
-        """Every observed record carries native provenance, whatever the journal's own source is."""
-        return self.journal.record(event, status, source="native", **fields)
+    def handle(self, event):
+        raise NotImplementedError
 
     def follow(self, stop, interval=POLL_INTERVAL):
         """Run in a thread; failures are stored so the launcher never inherits them."""
@@ -653,6 +679,36 @@ class NativeObserver:
             self.invalid_lines += 1
             return
         self.events += 1
+        self.handle(event)
+
+
+class NativeObserver(LineTailer):
+    """Tail Claude's events.jsonl; each journal record carries identifiers and status only.
+
+    Sinks receive every parsed event after the journal record: the rich trace is one of them.
+    A sink reports its own failures; it can neither raise into the observer nor delay it beyond
+    its own work, so a failed trace never turns the progress journal UNVERIFIED.
+    """
+
+    def __init__(self, path, journal, sinks=()):
+        super().__init__(path)
+        self.journal, self.sinks = journal, tuple(sinks)
+        self.calls, self.results, self.tasks, self.task_links, self.hooks = {}, {}, {}, {}, {}
+        self.init_models, self.result_seen = set(), False
+
+    def note(self, event, status, **fields):
+        """Every observed record carries native provenance, whatever the journal's own source is."""
+        return self.journal.record(event, status, source="native", **fields)
+
+    def handle(self, event):
+        self.observe(event)
+        for sink in self.sinks:
+            try:
+                sink(event)
+            except Exception:  # noqa: BLE001 - a sink keeps its own error; the journal is not its business
+                pass
+
+    def observe(self, event):
         kind, subtype = event["type"], event.get("subtype")
         parent = identifier(event.get("parent_tool_use_id"))
         if kind == "system":
@@ -821,9 +877,11 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
         if parsed.path == "/":
             return self.send(200, self.server.page, "text/html; charset=utf-8",
                              (("Content-Security-Policy", self.server.csp),))
-        if parsed.path != "/api/events":
-            return self.send(404, b"not found\n", "text/plain; charset=utf-8")
         query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+        if parsed.path == "/api/artifact":
+            return self.artifact(query)
+        if parsed.path not in ("/api/events", "/api/trace"):
+            return self.send(404, b"not found\n", "text/plain; charset=utf-8")
         try:
             cursor = int(query.get("cursor", ["0"])[0])
             limit = int(query.get("limit", [str(DEFAULT_LIMIT)])[0])
@@ -832,11 +890,32 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
                 raise ValueError
         except ValueError:
             return self.send(400, b"invalid cursor, limit or discard\n", "text/plain; charset=utf-8")
-        page = read_events(self.server.journal, cursor, limit, discard == "1")
-        for record in page["events"]:
-            record["label"] = describe(record)
-        page.update(now=utc_now(), log=str(self.server.log))
+        if parsed.path == "/api/trace":
+            page = self.server.trace_module.read_trace(self.server.trace, cursor, limit, discard == "1")
+            page.update(now=utc_now(), capture=self.server.trace_module.CAPTURE)
+        else:
+            page = read_events(self.server.journal, cursor, limit, discard == "1")
+            for record in page["events"]:
+                record["label"] = describe(record)
+            page.update(now=utc_now(), log=str(self.server.log))
         self.send(200, json.dumps(page, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
+
+    def artifact(self, query):
+        """Serve one registered artifact as inert text; nothing outside the artifact store is reachable."""
+        artifact_id = query.get("id", [""])[0]
+        if not re.fullmatch(r"[0-9a-f]{64}", artifact_id) or query.get("download", ["0"])[0] not in ("0", "1"):
+            return self.send(400, b"invalid artifact id\n", "text/plain; charset=utf-8")
+        try:
+            record, data = self.server.trace_module.load_artifact(self.server.directory, artifact_id)
+        except LookupError:
+            return self.send(404, b"artifact is not registered\n", "text/plain; charset=utf-8")
+        except (OSError, ValueError):
+            return self.send(409, b"artifact is unavailable or changed since registration\n", "text/plain; charset=utf-8")
+        disposition = "attachment" if query.get("download", ["0"])[0] == "1" else "inline"
+        self.send(200, data, "text/plain; charset=utf-8", (
+            ("Content-Disposition", '%s; filename="%s.txt"' % (disposition, artifact_id[:16])),
+            ("Content-Security-Policy", "default-src 'none'; sandbox"),
+            ("X-Artifact-Sha256", record["sha256"])))
 
 
 class ProgressServer(http.server.ThreadingHTTPServer):
@@ -844,7 +923,11 @@ class ProgressServer(http.server.ThreadingHTTPServer):
 
     def __init__(self, directory, port=0):
         directory = Path(directory).resolve()
+        self.directory = directory
         self.journal, self.log = directory / JOURNAL, directory / LOG
+        # The trace module builds on this one, so it is bound here rather than imported at module level.
+        import run_trace
+        self.trace_module, self.trace = run_trace, directory / run_trace.TRACE
         self.page = PAGE.read_bytes()
         self.csp = csp_for(self.page.decode("utf-8"))
         super().__init__(("127.0.0.1", port), ProgressHandler)
