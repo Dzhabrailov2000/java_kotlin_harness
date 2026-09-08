@@ -14,7 +14,8 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("doctor_runner", ROOT / "scripts" / "claude_doctor.py")
+sys.path.insert(0, str(ROOT / "scripts"))
+SPEC = importlib.util.spec_from_file_location("doctor_runner", ROOT / "claude" / "scripts" / "claude_doctor.py")
 doctor_runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(doctor_runner)
 

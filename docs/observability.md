@@ -1,7 +1,7 @@
 # Progress journal, trace and monitor
 
 The technical reference for the records a run leaves behind. The operational order of the manager is
-in [the manager workflow](../skills/self-correct/references/claude-codex.md); this document only
+in [the manager workflow](../shared/skills/dev-pipeline/references/claude-codex.md); this document only
 says which fields exist, which command writes them and what they do not prove.
 
 Nothing here is acceptance. The journal describes the course of the work, the trace describes the
@@ -11,7 +11,11 @@ conversation and the token usage, and both stay separate from the receipts of
 ## Pipeline progress journal
 
 Every launcher call of one task shares a `--progress-dir` outside the workspace (for example
-`/path/to/run/progress`); without it the journal lives in the `--output-dir` of that call. On RETRY,
+`/path/to/run/progress`); without it the journal lives in the `--output-dir` of that call. The two
+launchers that write here are the implementer's and the reviewer's. The manager dispatch
+(`codex/scripts/run_codex_manager.py`) happens before a run directory exists and writes no journal
+records: it keeps its own `invocation.json`, `instructions.md`, `prompt.md`, raw stream and
+`result.json`, and the manager itself opens the journal of the task from inside that context. On RETRY,
 pass `--attempt N` to the launcher and to `emit`; by default the latest attempt in the journal is
 used. The default `--step-id` of a launcher is the name of the output directory (a duplicate in the
 same attempt gets the suffix `-2`), and for `emit` it is the name of the stage. The launcher prints
@@ -48,16 +52,59 @@ run. A bare record and a detour through another phase or event
 nothing is written to the journal. The receipt id goes into the record as the field `evidence` and
 is visible in the journal line. Older journals written before this rule are still read and displayed.
 
+One progress directory holds one run. A call that opens one checks that first: the run already
+recorded there owns it, so a launcher, a capture or an `emit` that names another `run_id` is refused
+before it writes anything, and the same refusal covers `trace.jsonl` beside it. The owner is read
+from both files, so a directory that holds only an imported trace cannot acquire the journal of a
+second run, and a call that names no run continues the one already there instead of taking the
+directory's name. Completing an import that a kill left unfinished keeps the attempt and the step of
+its prefix, but an explicitly different `--run-id` is refused there too rather than silently
+replaced. That is an observation failure and never a verdict, so the call goes on unobserved with
+`progress_status: UNVERIFIED`, the command keeps its own result and the sealed receipt is untouched.
+Readers isolate the selected run the same way: the office and the page each choose one run for both
+feeds before folding, so a journal of one run and a trace of another never meet in one session, and
+both say out loud that records of another run are lying in the directory.
+
+That check runs when a call opens the directory, and the first use of an empty one is the gap it
+leaves: until a record lands there is nothing to own the place. Two standalone trace publishers that
+name different runs and open a still-empty directory before either of them publishes both go on to
+append, each under its own `run_id`; that covers `scripts/run_trace.py register` and `budget`, which
+append at once, and an import, which publishes its buffered batch later. In the other order the
+refusal above holds: once the first record is in, the second call is refused at open and the trace
+keeps its bytes. The launchers do not reach that window on their normal path, because each reserves
+the journal with its first record before it opens the trace, and the capture of a check receipt
+establishes the owner the same way as it opens its journal; a second call therefore finds an owner
+already there. Nothing is relabelled or lost when the window is hit: the records keep their actual
+identities, the raw history stays whole, and the readers above show one run and name the excluded
+one instead of folding it into the stages of the shown run. The directory still ends up holding two
+runs, which is a monitoring defect and the reason for the rule at the top: give every run its own
+directory. Publication does not read the owner again under its own lock, so this is a limitation of
+the current code and not something it prevents; there is no reservation of an empty directory across
+the two files, and neither how often the window is hit nor how every other pair of concurrent
+writers to them interleaves has been measured. Two neighbouring guarantees are separate from this
+window and hold as described below: an import lands whole or not at all, and a repeated import of
+the same file is refused rather than written twice.
+
+The Codex review runner records what the reviewer actually runs, not only how its turn ended: an
+item the stream reports as started becomes a native `tool_call`, its completion a `tool_result`
+(`error` when the stream reports a failure or a non-zero exit code), under the item's own id and
+with the item type as the tool name. Nothing of the command, its arguments or its output goes into
+the journal, which stays metadata only. Without those records the journal of a review would hold its
+launch and its verdict with nothing in between, and a review reading the workspace for ten minutes
+would be indistinguishable from one that never started.
+
 Only verified metadata with its source (`native`, `launcher`, `manager`) reaches the journal:
 prompts, tool arguments and results, answer texts, thinking, the environment, keys, API error
 messages and paths from events are not written to it; the raw stream stays in `events.jsonl`.
 
 Viewing: `tail -f /path/to/run/progress/progress.log` or
-`python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress`. The page listens on
-127.0.0.1 only, port 0 picks a free port, and the URL is printed to stdout; the server returns only
-the page, `/api/events`, `/api/trace` and registered artifacts through
-`/api/artifact?id=<sha256>`; the artifact directory and other files are not reachable over HTTP, and
-the page loads no external resources. Stopping the page or the server does not affect the task. The
+`python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress`. That command starts the
+office of [docs/monitor-office.md](monitor-office.md) and this journal API behind it, prints one URL,
+and stops both when it stops. Both listen on 127.0.0.1 only and refuse a request with a foreign
+`Host`; port 0 picks a free port for the office. The readable journal is the same page as before, now
+at `<URL>/details`; the API answers `/api/events`, `/api/trace` and registered artifacts through
+`/api/artifact?id=<sha256>`. The artifact directory and other files are not reachable over HTTP, and
+the journal page loads no external resources at all. Stopping the page or the server does not affect the task. The
 journal is neither a report nor acceptance: `progress_status` in `result.json` says only that
 progress was recorded, and COMPLETE appears on the page only after an explicit decision by the
 manager. The launcher does not run manager stages itself; the page shows only what was recorded. A
@@ -125,13 +172,13 @@ What is recorded automatically:
   `output_tokens`) and the `--output-last-message` file. The requested model is recorded separately
   from the observed one; if the stream does not report a model, it stays unknown. Occupancy and the
   remaining context are not reported by `exec --json`, and the page does not compute them. The runner
-  writes no decision about the task: `review passed/failed`, `triage` and `decision` are recorded by
-  the manager through `emit`. Without `--acceptance-dir` it writes no verdict either: such a run only
-  records a review and proves no acceptance. With `--acceptance-dir` it additionally stores the
-  validated review receipt, and even that does not record a stage by itself.
+  writes no decision about the task: `triage` and `decision` are recorded by the manager through
+  `emit`. Without `--acceptance-dir` it writes no verdict either: such a run only records a review and
+  proves no acceptance. With `--acceptance-dir` it stores the validated review receipt and publishes
+  that receipt's own verdict as a `receipt` record (see below); the task decision stays the manager's.
 
 ```sh
-python3 scripts/run_codex_review.py \
+python3 codex/scripts/run_codex_review.py \
   --workspace /path/to/workspace \
   --prompt /path/to/run/review-1.md \
   --output-dir /path/to/run/review-1 \
@@ -194,9 +241,17 @@ that is not a completion; an unfinished call is never hidden by a finished call 
 and parallel calls are listed. "The CLI finished successfully; acceptance by the manager is not
 recorded" (blue) means `cli_result: success` and exit code 0; a non-zero code or a failed turn is
 red. "Waiting for the manager" (lilac) means the previous stage is recorded and the next one is not
-yet. Green, red and "not started" follow the statuses of the records. The "Stage" card shows
+yet. The results of the checks and of the review reach the row from the sealed receipts themselves,
+marked "по расписке": the captured checks of one attempt and one candidate tree are one aggregate,
+so a later receipt cannot hide the FAIL of an earlier one, and a registered triage report appears as
+registered without its prose being read. A stage nobody recorded anything about says "нет записей":
+an absence of evidence, not an observation that the stage has not started. The "Stage" card shows
 unfinished calls even when the manager has since recorded another stage. The next step is derived
 from the same chain.
+
+The model of a usage row is the one the stream reported. When it reported none, the row names the
+requested model and keeps the qualifier "(запрошена)" beside the real counters: a configuration is
+not an observation, and neither is a row whose invocation was never captured.
 
 Tokens: for finished calls the total from `result` / `turn.completed`, for running ones the
 intermediate sum of the snapshots of different `message.id` (an output of "at least"), grouped by
@@ -221,7 +276,34 @@ artifacts, and a changed or substituted file is not served.
 
 ## Related documents
 
-- [Manager workflow](../skills/self-correct/references/claude-codex.md): the order of the work, the
+- [Manager workflow](../shared/skills/dev-pipeline/references/claude-codex.md): the order of the work, the
   acceptance chain and the decisions.
 - [docs/components.md](components.md): what every script and component of the harness is for.
-- [docs/monitor-office.md](monitor-office.md): the pixel office view of the same journal.
+- [docs/monitor-office.md](monitor-office.md): the original Pixel Agents office over the same journal,
+  its patches, its local storage and its checks.
+
+## Machine-published stages (`source: receipt`)
+
+Besides `native`, `launcher` and `manager`, the journal accepts a fourth source: `receipt`. It may
+record `phase` events only, and every such record must name the sealed acceptance receipt it was
+derived from in `evidence`; a record without it is refused by the validator. Nothing else about it is
+special: it claims no finding, takes no decision, and COMPLETE remains a manager `decision` event
+backed by a completion receipt.
+
+Two producers write it, both from a receipt they have just sealed:
+
+- `run_acceptance.py check --progress-dir DIR` records the result of that one captured command under
+  phase `tests`, with `component` = the check id, `snapshot` = the digest of the candidate tree the
+  command really ran on, and `count` = the number of commands the plan declares. `passed` is the
+  observed pass; a timeout, an interruption, a launcher error and a tree that changed under the
+  command are `unverified`, because they say nothing about the code; a completed run with a non-zero
+  exit is `failed`. Omitting `--progress-dir` writes the receipt and publishes nothing.
+- `run_codex_review.py --acceptance-dir ...` records the validated verdict under phase `review`, with
+  `evidence` = the review receipt, `snapshot` = the reviewed tree, `count` = the number of findings
+  in the answer and `model` = the observed model when the stream reported one. A verified `FAIL` is
+  `failed` although both the reviewer process and the launcher exit 0; a review that could not be
+  validated is `unverified`.
+
+A journal that cannot be written leaves the check verdict and the receipt untouched and is reported
+as `progress.status: UNVERIFIED` in the command's own JSON summary: observation never decides whether
+a command passed.

@@ -1,0 +1,23 @@
+diff --git a/webview-ui/src/office/engine/characters.ts b/webview-ui/src/office/engine/characters.ts
+index 005253d..8093822 100644
+--- a/webview-ui/src/office/engine/characters.ts
++++ b/webview-ui/src/office/engine/characters.ts
+@@ -101,7 +101,17 @@ export function updateCharacter(
+ 
+   switch (ch.state) {
+     case CharacterState.TYPE: {
+-      if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
++      // Local pipeline extension. The typing animation is what an observed operation looks
++      // like, so only an active character plays it. setAgentActive(id, false) skips the long
++      // rest of the transition right after it, but the original engine seats an inactive
++      // character again at the end of every wander and rests it here for two to four minutes:
++      // with the frames still advancing, a human, idle, failed, stale or disconnected actor
++      // would be typing for minutes at a turn nobody is running. It holds the seated pose
++      // instead; the rest itself, the wandering and every other transition are unchanged.
++      if (!ch.isActive) {
++        ch.frame = 0;
++        ch.frameTimer = 0;
++      } else if (ch.frameTimer >= TYPE_FRAME_DURATION_SEC) {
+         ch.frameTimer -= TYPE_FRAME_DURATION_SEC;
+         ch.frame = (ch.frame + 1) % 2;
+       }

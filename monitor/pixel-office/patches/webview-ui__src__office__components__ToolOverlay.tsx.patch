@@ -1,0 +1,164 @@
+diff --git a/webview-ui/src/office/components/ToolOverlay.tsx b/webview-ui/src/office/components/ToolOverlay.tsx
+index 1bb1e13..3f70a80 100644
+--- a/webview-ui/src/office/components/ToolOverlay.tsx
++++ b/webview-ui/src/office/components/ToolOverlay.tsx
+@@ -17,6 +17,7 @@ import {
+   TEAM_ROLE_COLOR,
+   TOOL_OVERLAY_VERTICAL_OFFSET,
+ } from '../../constants.js';
++import type { PipelineActorState } from '../../../../core/src/messages.js';
+ import type { SubagentCharacter } from '../../hooks/useExtensionMessages.js';
+ import type { OfficeState } from '../engine/officeState.js';
+ import { overlayProjection } from '../projection.js';
+@@ -29,6 +30,23 @@ import { CharacterState } from '../types.js';
+ // surfaces this label. Driven by Character.waitingAwaitingInput.
+ const WAITING_INPUT_ACTIVITY_TEXT = 'Waiting for input';
+ 
++/**
++ * Local pipeline extension. A pipeline actor never sends agentStatus, so its dot is
++ * derived from its own neutral state. Only an actually observed operation gets the
++ * active colour and the pulse; a human, an idle actor, an absent observation and a
++ * lost feed are visibly not work, and none of them is a success.
++ */
++const PIPELINE_DOT: Record<string, string | null> = {
++  human: null,
++  idle: null,
++  working: 'var(--color-status-active)',
++  waiting: 'var(--color-status-permission)',
++  unknown: 'var(--color-text-muted)',
++  error: 'var(--color-status-error)',
++  stale: 'var(--color-text-muted)',
++  offline: 'var(--color-text-muted)',
++};
++
+ interface ToolOverlayProps {
+   officeState: OfficeState;
+   agents: number[];
+@@ -40,6 +58,8 @@ interface ToolOverlayProps {
+   panRef: React.RefObject<{ x: number; y: number }>;
+   onCloseAgent: (id: number) => void;
+   alwaysShowOverlay: boolean;
++  /** Local pipeline extension: neutral lifecycle per workflow role actor. */
++  pipelineStates: Record<number, PipelineActorState>;
+ }
+ 
+ /** Derive a short human-readable activity string from tools/status */
+@@ -92,6 +112,7 @@ export function ToolOverlay({
+   panRef,
+   onCloseAgent,
+   alwaysShowOverlay,
++  pipelineStates,
+ }: ToolOverlayProps) {
+   const [, setTick] = useState(0);
+   useEffect(() => {
+@@ -144,7 +165,8 @@ export function ToolOverlay({
+         // so overlay counts stay stable and hover/select can still bring the
+         // panel back. When always-show is off, the early return above already
+         // keeps the panel hidden for idle agents.
+-        const isDone = ch.bubbleType === 'waiting' && !ch.waitingAwaitingInput;
++        const pipeline = pipelineStates[id];
++        const isDone = !pipeline && ch.bubbleType === 'waiting' && !ch.waitingAwaitingInput;
+         if (isDone && !isSelected && !isHovered) {
+           return (
+             <div
+@@ -160,8 +182,18 @@ export function ToolOverlay({
+         // Get activity text
+         const hasWaitingBubble = ch.bubbleType === 'waiting';
+         const subHasPermission = isSub && ch.bubbleType === 'permission';
++        // A pipeline actor whose panel is neither selected nor hovered shows the compact
++        // form of its state: the always-on labels of two actors at neighbouring desks
++        // would otherwise be wide enough to cover each other's text. Selecting or
++        // hovering one gives the whole caption, its role and its provenance, in the same
++        // original panel; the exact evidence is in the journal either way.
++        const pipelineDetail = !pipeline || isSelected || isHovered;
+         let activityText: string;
+-        if (hasWaitingBubble && ch.waitingAwaitingInput) {
++        if (pipeline) {
++          // The adapter already resolved what this actor is doing, or that nobody
++          // observed it doing anything; the overlay states that instead of guessing.
++          activityText = pipelineDetail ? pipeline.caption : (pipeline.short ?? pipeline.caption);
++        } else if (hasWaitingBubble && ch.waitingAwaitingInput) {
+           // Idle, waiting on the user -> dedicated label. A finished turn (Stop)
+           // shows only the checkmark and falls through to the normal idle text.
+           activityText = WAITING_INPUT_ACTIVITY_TEXT;
+@@ -195,15 +227,32 @@ export function ToolOverlay({
+         const hasWaiting = ch.bubbleType === 'waiting';
+ 
+         let dotColor: string | null = null;
+-        if (hasPermission || hasWaiting) {
++        if (pipeline) {
++          // A state the map knows may deliberately have NO dot (a human, an idle actor); only a
++          // state nobody declared falls back to the neutral colour.
++          dotColor = Object.prototype.hasOwnProperty.call(PIPELINE_DOT, pipeline.state)
++            ? PIPELINE_DOT[pipeline.state]
++            : 'var(--color-text-muted)';
++        } else if (hasPermission || hasWaiting) {
+           dotColor = 'var(--color-status-permission)';
+         } else if (isActive && hasActiveTools) {
+           dotColor = 'var(--color-status-active)';
+         }
++        const pulse = pipeline
++          ? pipeline.state === 'working'
++          : isActive && !hasPermission && !hasWaiting;
+ 
+         // Team info
+-        const teamRoleLabel = ch.isTeamLead ? 'LEAD' : ch.agentName || null;
+-        const hasExtraLines = !!(ch.folderName || teamRoleLabel);
++        const teamRoleLabel = pipeline
++          ? (pipelineDetail ? (pipeline.role ?? ch.agentName ?? null) : (ch.agentName ?? pipeline.role ?? null))
++          : ch.isTeamLead
++            ? 'LEAD'
++            : ch.agentName || null;
++        // The provenance line takes the folderName slot: a pipeline actor has no
++        // workspace folder, and the source, attempt and step belong under the caption.
++        // The compact label leaves that line out; selecting the actor brings it back.
++        const secondLine = pipeline ? (pipelineDetail ? (pipeline.provenance ?? null) : null) : ch.folderName;
++        const hasExtraLines = !!(secondLine || teamRoleLabel);
+ 
+         // Context gauge. Every agent gets one — lead, teammate, adopted,
+         // headless — as soon as it has taken a turn. Sub-agents never do: they
+@@ -225,10 +274,14 @@ export function ToolOverlay({
+             data-testid="agent-overlay"
+             data-agent-id={id}
+           >
+-            <div className="flex items-center border-border px-8 pt-2 pb-4 gap-5 pixel-panel whitespace-nowrap max-w-2xs">
++            <div
++              className={`flex items-center border-border px-8 pt-2 pb-4 gap-5 pixel-panel whitespace-nowrap ${
++                pipelineDetail ? 'max-w-2xs' : 'max-w-[124px]'
++              }`}
++            >
+               {dotColor && (
+                 <span
+-                  className={`w-6 h-6 rounded-full shrink-0 ${isActive && !hasPermission && !hasWaiting ? 'pixel-pulse' : ''}`}
++                  className={`w-6 h-6 rounded-full shrink-0 ${pulse ? 'pixel-pulse' : ''}`}
+                   style={{ background: dotColor }}
+                 />
+               )}
+@@ -238,8 +291,8 @@ export function ToolOverlay({
+                     className="overflow-hidden text-ellipsis block leading-none"
+                     style={{
+                       fontSize: '18px',
+-                      color: ch.isTeamLead ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
+-                      fontWeight: ch.isTeamLead ? 'bold' : undefined,
++                      color: !pipeline && ch.isTeamLead ? TEAM_LEAD_COLOR : TEAM_ROLE_COLOR,
++                      fontWeight: !pipeline && ch.isTeamLead ? 'bold' : undefined,
+                     }}
+                   >
+                     {teamRoleLabel}
+@@ -254,13 +307,13 @@ export function ToolOverlay({
+                 >
+                   {activityText}
+                 </span>
+-                {ch.folderName && (
++                {secondLine && (
+                   <span className="text-2xs leading-none overflow-hidden text-ellipsis block">
+-                    {ch.folderName}
++                    {secondLine}
+                   </span>
+                 )}
+               </div>
+-              {isSelected && !isSub && (
++              {isSelected && !isSub && !pipeline && (
+                 <Button
+                   variant="ghost"
+                   size="icon"

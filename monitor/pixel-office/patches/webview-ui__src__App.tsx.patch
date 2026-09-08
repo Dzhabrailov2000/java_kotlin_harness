@@ -1,0 +1,89 @@
+diff --git a/webview-ui/src/App.tsx b/webview-ui/src/App.tsx
+index 68a2691..32c9d46 100644
+--- a/webview-ui/src/App.tsx
++++ b/webview-ui/src/App.tsx
+@@ -96,6 +96,8 @@ function App() {
+     setAreaMappings,
+     showAreas,
+     setShowAreas,
++    pipelineStates,
++    pipelineSource,
+   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
+ 
+   // Show migration notice once layout reset is detected
+@@ -232,6 +234,13 @@ function App() {
+     transport.send({ type: 'closeAgent', id });
+   }, []);
+ 
++  // Local pipeline extension: the journal is the readable side of this office —
++  // conversation, exact prompts and replies, attempts, receipts and usage. It is the
++  // page the monitor already serves, opened in its own tab so the office keeps running.
++  const handleOpenJournal = useCallback(() => {
++    window.open('./details', '_blank', 'noopener,noreferrer');
++  }, []);
++
+   const handleClick = useCallback((agentId: number) => {
+     // If clicked agent is a sub-agent, focus the parent's terminal instead
+     const os = getOfficeState();
+@@ -436,6 +445,7 @@ function App() {
+             panRef={editor.panRef}
+             onCloseAgent={handleCloseAgent}
+             alwaysShowOverlay={alwaysShowOverlay}
++            pipelineStates={pipelineStates}
+           />
+         </>
+       ) : (
+@@ -518,6 +528,7 @@ function App() {
+         isSettingsOpen={isSettingsOpen}
+         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
+         workspaceFolders={workspaceFolders}
++        onOpenJournal={handleOpenJournal}
+       />
+ 
+       <VersionIndicator
+@@ -527,7 +538,13 @@ function App() {
+         onOpenChangelog={handleOpenChangelog}
+       />
+ 
+-      <ConnectionIndicator />
++      {/* A readable feed with something to report keeps its actors: the badge carries the
++          note, and only a feed that cannot be read at all suppresses the states. */}
++      <ConnectionIndicator
++        sourceProblem={
++          pipelineSource.available ? pipelineSource.note || null : pipelineSource.detail
++        }
++      />
+ 
+       <ChangelogModal
+         isOpen={isChangelogOpen}
+@@ -544,30 +561,6 @@ function App() {
+         onToggleAlwaysShowOverlay={handleToggleAlwaysShowOverlay}
+         ghostHeadlessAgents={ghostHeadlessAgents}
+         onToggleGhostHeadlessAgents={handleToggleGhostHeadlessAgents}
+-        externalAssetDirectories={externalAssetDirectories}
+-        watchAllSessions={watchAllSessions}
+-        onToggleWatchAllSessions={() => {
+-          const newVal = !watchAllSessions;
+-          setWatchAllSessions(newVal);
+-          transport.send({ type: 'setWatchAllSessions', enabled: newVal });
+-        }}
+-        hooksInstalled={claudeHooksInstalled}
+-        onToggleHooksEnabled={() => {
+-          // Toggle the DISPLAYED state (actual install), not the preference: when the two disagree — preference on,
+-          // nothing installed while consent is pending — toggling the preference would turn hooks OFF for a user
+-          // asking for ON. No optimistic local update either; both backends answer with the truthful hooksStatus this
+-          // checkbox renders, so it lands correct instead of flickering when an install fails. The providerId is
+-          // ECHOED from that row (never originated here), so nothing sends until the row has arrived.
+-          const [rowProviderId] =
+-            Object.entries(hooksInstalled).find(([id]) => id === 'claude') ?? [];
+-          if (rowProviderId !== undefined) {
+-            transport.send({
+-              type: 'setHooksEnabled',
+-              providerId: rowProviderId,
+-              enabled: !claudeHooksInstalled,
+-            });
+-          }
+-        }}
+         showAreas={showAreas}
+         onToggleShowAreas={onToggleShowAreas}
+         showAreasAvailable={areasAvailable}

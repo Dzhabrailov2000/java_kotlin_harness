@@ -11,7 +11,7 @@
   --done: #d8f3df; --done-text: #1a6b35; --warn: #ffe2c2; --warn-text: #8a4a00; --bad: #ffd9d9; --bad-text: #9b1c1c;
   --wait: #f3ecff; --wait-text: #5b2d9c; --stale: #ececec; --stale-text: #555c66;
   --user: #2f6f4f; --manager: #5b2d9c; --claude: #1a4f9c; --codex: #8a4a00; --import: #555c66;
-  --accent: #3a7bd5; --loop-line: #b6c1d0;
+  --accent: #3a7bd5;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -24,8 +24,7 @@ header .meta { color: var(--muted); margin-top: 1px; font-size: 12.5px; white-sp
 header .head-run { flex: 1 1 240px; min-width: 0; }
 header .head-now { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .head-stage { font-weight: 600; max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#details-open { font: inherit; font-weight: 600; padding: 5px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--ok); color: var(--ok-text); cursor: pointer; }
-#details-open:focus-visible, .inspector-tab:focus-visible, .loop-node:focus-visible, .loop-chip:focus-visible, #inspector-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.inspector-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 main { padding: 12px 20px 10px; max-width: 1500px; margin: 0 auto; }
 .notice { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
 .notice.warn { background: var(--warn); color: var(--warn-text); border-color: transparent; }
@@ -46,6 +45,7 @@ main { padding: 12px 20px 10px; max-width: 1500px; margin: 0 auto; }
 .card.state-bad { border-left: 4px solid #d64545; }
 .card.state-wait { border-left: 4px solid #8b5cf6; }
 .card.state-stale { border-left: 4px solid #8a9099; }
+.card.state-offline { border-left: 4px dashed #9b1c1c; }
 .card.state-neutral { border-left: 4px solid #b8c0cc; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -69,6 +69,7 @@ tr.model-row td { color: var(--muted); }
 .pill-bad { background: var(--bad); color: var(--bad-text); }
 .pill-wait { background: var(--wait); color: var(--wait-text); }
 .pill-stale { background: var(--stale); color: var(--stale-text); }
+.pill-offline { background: var(--stale); color: var(--bad-text); }
 .src { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; border: 1px solid var(--line); color: var(--muted); }
 .src-manager { color: #5b2d9c; border-color: #c9b5e8; }
 .src-native { color: #1a4f9c; border-color: #b5cdf0; }
@@ -91,6 +92,9 @@ tr.model-row td { color: var(--muted); }
 .stage.s-bad { background: var(--bad); color: var(--bad-text); }
 .stage.s-wait { background: var(--wait); color: var(--wait-text); border-style: dashed; }
 .stage.s-stale { background: var(--stale); color: var(--stale-text); border-style: dotted; }
+/* Потерянная связь - не исполнение и не ошибка выполнения: серый фон состояния без подтверждения */
+/* и штриховая рамка цвета проблемы связи, чтобы отличать ее и от работы, и от тишины при связи. */
+.stage.s-offline { background: var(--stale); color: var(--bad-text); border-color: var(--bad-text); border-style: dashed; }
 .stage.s-neutral { color: var(--muted); }
 .pulse { animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 177, 0, 0); } 50% { box-shadow: 0 0 0 4px rgba(224, 177, 0, .35); } }
@@ -131,83 +135,9 @@ pre.text.collapsed { max-height: 9.8em; overflow: hidden; }
 .reading pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 footer, .kind, .flag { overflow-wrap: anywhere; }
 details.diagnostics summary { cursor: pointer; padding: 4px 0; }
-.office-stage { position: relative; display: flex; align-items: center; justify-content: center; height: clamp(200px, 56vh, 620px); padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
-#office-canvas { display: block; width: 100%; height: 100%; background: #171b22; border-radius: 6px; image-rendering: pixelated; }
-.office-labels { position: absolute; pointer-events: none; }
-.office-label { position: absolute; transform: translate(-50%, -100%); padding: 1px 6px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255, 255, 255, .93); font-size: 11px; line-height: 1.3; text-align: center; white-space: nowrap; }
-.office-label.selected { border-color: #3a7bd5; box-shadow: 0 0 0 2px rgba(58, 123, 213, .35); }
-.office-label-name { display: block; font-weight: 700; }
-.office-label-short { display: block; color: var(--muted); }
-.office-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 6px; }
-.office-bar .empty, .office-status { padding: 0; color: var(--muted); }
-.office-bar .notice { margin: 0; flex: 1 1 100%; }
-.office-controls { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-left: auto; }
-.office-controls label, .office-controls button, .office-controls .kind { font-size: 12.5px; }
-.office-controls button { font: inherit; padding: 2px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer; }
-.office-controls button:focus-visible, .office-controls input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.office-actors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.office-actor { flex: 1 1 240px; padding: 5px 10px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
-.office-actor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.office-actor[aria-pressed="true"] { border-color: var(--accent); background: var(--ok); }
-.office-actor.role-user { border-left-color: var(--user); }
-.office-actor.role-manager { border-left-color: var(--manager); }
-.office-actor.role-claude { border-left-color: var(--claude); }
-.office-actor-name { display: block; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.office-actor-status { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.office-actor-detail { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.office-details h3, .loop-details h3 { margin: 10px 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-.office-details h3:first-child, .loop-details h3:first-child { margin-top: 0; }
-.office-line { margin: 2px 0 0; overflow-wrap: anywhere; }
-.office-line.muted { color: var(--muted); }
-.office-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-
-/* Инженерный цикл: пять узлов основного пути, соединители и дуга возврата. Соединители - */
-/* статичная топология и намеренно скрыты от программ чтения: смысл несут сами кнопки. */
-.loop { position: relative; margin-top: 12px; }
-.loop-track { display: flex; align-items: stretch; }
-.loop-node { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;
-             min-height: 46px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 10px;
-             background: var(--panel); color: var(--text); font: inherit; text-align: center; cursor: pointer; }
-.loop-node[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(58, 123, 213, .35); border-color: var(--accent); }
-.loop-node-name { font-weight: 600; font-size: 13px; }
-.loop-node-state { font-size: 11.5px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loop-node.s-pending { background: var(--pending); color: var(--pending-text); border-color: #e0b100; }
-.loop-node.s-ok { background: var(--ok); color: var(--ok-text); }
-.loop-node.s-done { background: var(--done); color: var(--done-text); }
-.loop-node.s-warn { background: var(--warn); color: var(--warn-text); }
-.loop-node.s-bad { background: var(--bad); color: var(--bad-text); }
-.loop-node.s-wait { background: var(--wait); color: var(--wait-text); border-style: dashed; }
-.loop-node.s-stale { background: var(--stale); color: var(--stale-text); border-style: dotted; }
-.loop-node.s-neutral { color: var(--muted); }
-.loop-link { flex: 0 0 26px; align-self: center; height: 2px; background: var(--loop-line); position: relative; }
-.loop-link::after { content: ""; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left-color: var(--loop-line); border-right-width: 0; }
-/* Дуга и ее подпись живут в одной обертке: подпись позиционируется от нее, а не от самой дуги, */
-/* поэтому в мобильной раскладке она уходит в поток и не ложится поверх строки состояния. */
-.loop-graph { position: relative; }
-.loop-return { position: relative; height: 22px; margin: 0 9%; border: 2px solid var(--loop-line); border-top: 0; border-radius: 0 0 14px 14px; }
-.loop-return::after { content: ""; position: absolute; left: -4px; top: -9px; border: 5px solid transparent; border-bottom-color: var(--loop-line); border-top-width: 0; }
-.loop-return.active { border-color: var(--accent); }
-.loop-return.active::after { border-bottom-color: var(--accent); }
-.loop-return.traversed { border-color: #8a9099; }
-.loop-return.traversed::after { border-bottom-color: #8a9099; }
-.loop-return-label { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); padding: 0 8px; background: var(--bg); color: var(--muted); font-size: 11.5px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.loop-return.active + .loop-return-label { color: var(--ok-text); }
-.loop-state { margin: 14px 0 0; overflow-wrap: anywhere; }
-.loop-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-.loop-chip { padding: 2px 12px; border: 1px dashed var(--line); border-radius: 999px; background: var(--panel); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
-.loop-chip[aria-pressed="true"] { border-style: solid; border-color: var(--accent); background: var(--ok); }
-.loop-chip-state { color: var(--muted); }
-
-/* Один инспектор по требованию: overlay поверх страницы, чтобы канвас не перемонтировался. */
-dialog.inspector { width: min(720px, 100%); max-width: 100%; height: 100%; max-height: 100%; margin: 0 0 0 auto;
-                   padding: 0; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--text);
-                   flex-direction: column; }
-dialog.inspector[open] { display: flex; }
-dialog.inspector::backdrop { background: rgba(18, 24, 32, .45); }
-.inspector-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.inspector-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
-#inspector-close { font: inherit; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer; }
-.inspector-context { padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg); max-height: 42vh; overflow: auto; }
+/* Читаемая сторона офиса: разговор, сессии, метрики и журнал одной страницей. */
+section.inspector { display: flex; flex-direction: column; width: 100%; max-width: 100%; margin: 0;
+                   padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); }
 .inspector-tabs { display: flex; gap: 6px; padding: 8px 16px 0; flex-wrap: wrap; }
 .inspector-tab { font: inherit; font-size: 13px; padding: 5px 12px; border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; background: var(--bg); color: var(--muted); cursor: pointer; }
 .inspector-tab.current { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
@@ -224,22 +154,6 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   .stage { min-width: 0; flex: 1 1 40%; }
   .conversation { max-height: 60vh; }
 }
-@media (max-width: 600px) {
-  .loop-graph { padding-left: 26px; }
-  .loop-track { flex-direction: column; }
-  .loop-node { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; min-height: 44px; }
-  .loop-node-state { flex: 0 1 auto; }
-  .loop-link { flex: 0 0 14px; width: 2px; height: 14px; align-self: flex-start; margin-left: 22px; }
-  .loop-link::after { left: -4px; right: auto; top: auto; bottom: -1px; border: 5px solid transparent; border-top-color: var(--loop-line); border-left-color: transparent; border-bottom-width: 0; }
-  .loop-return { position: absolute; left: 0; top: 8px; bottom: 0; width: 18px; height: auto; margin: 0; border: 2px solid var(--loop-line); border-right: 0; border-radius: 12px 0 0 12px; }
-  .loop-return::after { left: auto; right: -6px; top: -4px; border: 5px solid transparent; border-bottom-color: var(--loop-line); border-top-width: 0; }
-  /* Подпись возврата занимает собственное место в потоке: поверх строки состояния она не ложится. */
-  .loop-return-label { position: static; display: block; margin-top: 8px; padding: 0; transform: none;
-                       background: none; white-space: normal; overflow: visible; }
-  .loop-state { margin-top: 8px; }
-  dialog.inspector { width: 100%; border-left: 0; }
-  .inspector-context { max-height: 38vh; }
-}
 </style>
 </head>
 <body>
@@ -251,66 +165,12 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   <div class="head-now">
     <span id="stage" class="head-stage">-</span>
     <span id="connection" class="pill">подключение...</span>
-    <button type="button" id="details-open" aria-haspopup="dialog" aria-expanded="false">Подробности</button>
     <span id="status-text" class="sr-only" role="status" aria-live="polite"></span>
   </div>
 </header>
 <main>
   <div id="notice" class="notice hidden" role="alert"></div>
-  <section class="office" aria-label="Офис конвейера">
-    <div id="office-stage" class="office-stage">
-      <canvas id="office-canvas" role="img" aria-label="Пиксельный офис: три персонажа конвейера. Их состояния и выбор доступны кнопками ниже."></canvas>
-    </div>
-    <div class="office-bar">
-      <div id="office-status" class="office-status">сцена офиса загружается</div>
-      <div class="office-controls">
-        <label><input type="checkbox" id="office-motion" checked> движение</label>
-        <button type="button" id="office-zoom-out">мельче</button>
-        <button type="button" id="office-zoom-in">крупнее</button>
-        <span id="office-zoom" class="kind">масштаб: вписан</span>
-      </div>
-    </div>
-    <div id="office-actors" class="office-actors">
-      <button type="button" class="office-actor role-user" id="office-actor-1" aria-pressed="false"></button>
-      <button type="button" class="office-actor role-manager" id="office-actor-2" aria-pressed="false"></button>
-      <button type="button" class="office-actor role-claude" id="office-actor-3" aria-pressed="false"></button>
-    </div>
-  </section>
-  <section class="loop" aria-label="Инженерный цикл">
-    <div class="loop-graph">
-    <div class="loop-track">
-      <button type="button" class="loop-node s-neutral" id="loop-node-build" aria-pressed="false"></button>
-      <span class="loop-link" aria-hidden="true"></span>
-      <button type="button" class="loop-node s-neutral" id="loop-node-tests" aria-pressed="false"></button>
-      <span class="loop-link" aria-hidden="true"></span>
-      <button type="button" class="loop-node s-neutral" id="loop-node-review" aria-pressed="false"></button>
-      <span class="loop-link" aria-hidden="true"></span>
-      <button type="button" class="loop-node s-neutral" id="loop-node-triage" aria-pressed="false"></button>
-      <span class="loop-link" aria-hidden="true"></span>
-      <button type="button" class="loop-node s-neutral" id="loop-node-decision" aria-pressed="false"></button>
-    </div>
-    <div id="loop-return" class="loop-return" aria-hidden="true"></div>
-    <span id="loop-return-label" class="loop-return-label">Исправления</span>
-    </div>
-    <p id="loop-state" class="loop-state">записей о фазах пока нет</p>
-    <div id="loop-chips" class="loop-chips">
-      <button type="button" class="loop-chip" id="loop-chip-verify" aria-pressed="false" hidden></button>
-      <button type="button" class="loop-chip" id="loop-chip-handoff" aria-pressed="false" hidden></button>
-    </div>
-  </section>
-</main>
-<footer>
-  Сцена и персонажи - Pixel Agents (MIT, Pablo De Lucca) · лицензия и провенанс - в monitor/pixel-office/
-</footer>
-<dialog id="inspector" class="inspector" aria-labelledby="inspector-title">
-  <div class="inspector-head">
-    <h2 id="inspector-title">Подробности</h2>
-    <button type="button" id="inspector-close">закрыть</button>
-  </div>
-  <div id="inspector-context" class="inspector-context" hidden>
-    <div id="office-details" class="office-details"></div>
-    <div id="loop-details" class="loop-details" hidden></div>
-  </div>
+<section id="inspector" class="inspector" aria-label="Подробности конвейера">
   <div class="inspector-tabs" role="tablist" aria-label="Разделы подробностей">
     <button type="button" role="tab" class="inspector-tab current" id="tab-talk" aria-controls="section-talk" aria-selected="true">Разговор</button>
     <button type="button" role="tab" class="inspector-tab" id="tab-sessions" aria-controls="section-sessions" aria-selected="false">Сессии</button>
@@ -392,9 +252,9 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     <div class="reading">
     <details>
     <summary>Как читать страницу и что записывает менеджер</summary>
-    <pre>Цикл: Код - Тесты - Ревью - Разбор - Решение, дуга возврата "Исправления" ведет от решения обратно к коду. Топология нарисована статически и сама по себе ничего не утверждает: работой считается только наблюдаемая запись CLI текущей попытки. Verify и handoff показываются отдельными фишками только при наличии собственных записей этой фазы.
-Сцена и персонажи - Pixel Agents (MIT, Copyright (c) 2026 Pablo De Lucca); спрайты восходят к пакету MetroCity. Движок и ассеты скопированы байт в байт из закрепленной ревизии и собраны заранее: запуск монитора остается запуском Python. Состояния берутся из тех же журналов, что и остальная страница.
-Этапы: работает (желтый), ожидает менеджера (сиреневый пунктир), тишина без подтверждения (серый точечный), CLI завершил успешно без приемки (синий), завершен или принят (зеленый), ошибка (красный), не начат (серый).
+    <pre>Страница - читаемая сторона офиса; ее открывает кнопка Journal, тот же адрес - путь /details у напечатанного URL офиса. Разделы: Разговор, Сессии, Метрики, Журнал. Графа цикла и дуги возврата здесь нет: в разделе Журнал одна строка на попытку, а в строке по фишке на каждую фазу - сборка, проверки, ревью, triage, verify, решение, handoff. Фаза без собственных записей так и подписана: нет записей. Работой считается только наблюдаемая запись CLI текущей попытки: запрошенный, но еще не наблюдавшийся запуск показан как "запуск запрошен, активность не наблюдалась".
+Сцена и персонажи - Pixel Agents (MIT, Copyright (c) 2026 Pablo De Lucca); спрайты восходят к пакету MetroCity. Движок и ассеты скопированы байт в байт из закрепленной ревизии и собраны заранее. Запуск - python3 scripts/run_progress.py serve --progress-dir DIR: команда поднимает Python-сервер журнала, рядом Node-адаптер офиса и печатает URL офиса. Состояния берутся из тех же журналов, что и остальная страница.
+Этапы: работает (желтый), ожидает менеджера (сиреневый пунктир), тишина без подтверждения (серый точечный), CLI завершил успешно без приемки (синий), завершен или принят (зеленый), ошибка (красный), запуск запрошен без наблюдаемой активности или записей об этапе нет (серый). Результаты проверок и ревью попадают сюда из приемочных расписок автоматически и помечены "по расписке"; зарегистрированный разбор показан как факт регистрации, его состав не разбирается.
 Тишина не означает завершения: состояние шага подтверждают только записи helper и менеджера. Активность считается по обоим потокам: журналу метаданных и трассировке сообщений.
 Успешный выход CLI не является приемкой задачи: приемку записывает только менеджер.
 Токены: итог по завершенным вызовам, промежуточные снимки помечены; неизвестное показано как неизвестное, не как ноль; "не менее" означает, что часть вызовов счетчик не сообщила.
@@ -408,15 +268,18 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   python3 scripts/run_trace.py register --progress-dir DIR --role user --kind user_prompt --file prompt.md
   python3 scripts/run_trace.py register --progress-dir DIR --role manager --kind feedback --file review-1-triage.md
   python3 scripts/run_trace.py register --progress-dir DIR --role manager --kind decision --text "RETRY: ..."
-  python3 scripts/run_codex_review.py --workspace WS --prompt review-1.md --output-dir RUN/review-1 --progress-dir DIR
+  python3 codex/scripts/run_codex_review.py --workspace WS --prompt review-1.md --output-dir RUN/review-1 --progress-dir DIR
   python3 scripts/run_trace.py import-claude --progress-dir DIR --launcher-dir RUN/build-1 --attempt 1 --step-id build-1
   python3 scripts/run_trace.py budget --progress-dir DIR --tokens N</pre>
     </details>
     </div>
   </section>
   </div>
-</dialog>
-<script src="/pixel-agents/office.js" integrity="sha256-zAFlciYEgz4PtMjOWMSPol8l2If85Uy9hakp4H+Yy/k="></script>
+</section>
+</main>
+<footer>
+  Читаемая сторона офиса Pixel Agents (MIT, Pablo De Lucca) · сама сцена, ее лицензия и провенанс - в monitor/pixel-office/
+</footer>
 <script>
 (function () {
   'use strict';
@@ -426,10 +289,7 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     failures: 0, connected: false, serverNow: null, receivedAt: null, timer: null, feed: 'events',
     ui: { cycle: '', step: '', subagents: false, activity: false, expanded: {}, forceExpanded: null,
           renderedKey: '', atBottom: true, unread: 0, cycleOptions: '', stepOptions: '', opened: {},
-          inspectorOpen: false, section: 'talk', opener: null, savedScroll: 0 },
-    office: { view: null, error: null, pending: null, motion: true, zoomStep: 1, selected: null, nodes: {},
-              detailKey: '', detailNodes: null },
-    loop: { selected: null, nodes: {}, detailKey: '' }
+          section: 'talk', savedScroll: 0 }
   };
   var AGENT_TOOLS = { Agent: true, Task: true };
   var STALE_SECONDS = 120;
@@ -597,13 +457,25 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     }
   }
 
-  function summarize() {
-    var summary = { attempt: 0, runId: null, first: null, last: null, decision: null, stage: null, current: null,
+  // The run this page shows, chosen once for both feeds. The journal owns the identity of the
+  // directory; only when it has no records at all does the trace decide, so a directory that
+  // holds imported history alone is still readable. Folding each feed under its own first record
+  // would let a journal of one run and a trace of another meet in one session block.
+  function selectedRun() {
+    var journal = state.events.list[0], trace = state.trace.list[0];
+    return (journal && journal.run_id) || (trace && trace.run_id) || null;
+  }
+
+  function summarize(selected) {
+    var summary = { attempt: 0, runId: selected || null, first: null, last: null, decision: null, stage: null, current: null,
                     steps: {}, stepOrder: [], failedObservers: [], calls: {}, callOrder: [], tasks: {}, tools: {},
-                    manager: [], lastTime: null };
+                    semantic: [], foreign: {}, lastTime: null };
     state.events.list.forEach(function (event) {
-      summary.attempt = Math.max(summary.attempt, event.attempt);
       summary.runId = summary.runId || event.run_id;
+      // One directory is one run. A record of another run is well formed and still describes
+      // another pipeline: it is counted and named, never joined to this one by attempt and step.
+      if (event.run_id !== summary.runId) { summary.foreign[event.run_id] = (summary.foreign[event.run_id] || 0) + 1; return; }
+      summary.attempt = Math.max(summary.attempt, event.attempt);
       summary.first = summary.first || event.time;
       summary.last = event.time;
       var k = key(event.attempt, event.step_id), step = summary.steps[k];
@@ -630,7 +502,10 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       if (event.event === 'cli_result') { step.cliResult = event; }
       if (event.event === 'result') { step.result = event; }
       if (event.event === 'decision') { summary.decision = event; }
-      if (event.source === 'manager') { summary.manager.push(event); }
+      // Semantic records of both kinds: what the manager wrote by hand and what a sealed
+      // receipt published for itself. A validated check or review result is a stage outcome
+      // exactly as a typed one is, and leaving receipts out left those stages looking unstarted.
+      if (event.source === 'manager' || event.source === 'receipt') { summary.semantic.push(event); }
       if (event.event === 'run' || event.event === 'cli_exit' || event.event === 'result' || event.event === 'phase'
           || event.event === 'finding' || event.event === 'decision') { summary.stage = event; }
       // Native call and task IDs are local to one CLI invocation: the same ID in another step is
@@ -687,13 +562,16 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
 
   function finalKey(record) { return record.message_id + '/' + (record.block == null ? '' : record.block); }
 
-  function summarizeTrace() {
+  function summarizeTrace(selected) {
     var trace = { steps: {}, stepOrder: [], messages: [], index: {}, artifacts: {}, budget: null, title: null, userTitle: null, rate: null,
-                  rateImported: null, attempt: 0, runId: null, last: null, count: 0 };
+                  rateImported: null, attempt: 0, runId: selected || null, last: null, count: 0, foreign: {} };
     state.trace.list.forEach(function (record) {
+      trace.runId = trace.runId || record.run_id;
+      // The trace of one directory belongs to one run, like its journal: a record of another
+      // run keeps its own identity and is counted, never folded into this run's steps.
+      if (record.run_id !== trace.runId) { trace.foreign[record.run_id] = (trace.foreign[record.run_id] || 0) + 1; return; }
       trace.count += 1;
       trace.attempt = Math.max(trace.attempt, record.attempt);
-      trace.runId = trace.runId || record.run_id;
       trace.last = record.time;
       var k = key(record.attempt, record.step_id), step = trace.steps[k];
       if (!step) {
@@ -701,7 +579,7 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
                                   snapshots: {}, snapshotOrder: [], finals: [], statuses: [], messages: 0, modelMessages: 0, lastMain: null,
                                   captured: false, requestedModel: null, requestedEffort: null, observedModel: null, finalMarked: {}, exited: null,
                                   started: null, sessionId: null, threadId: null, cliVersion: null, harness: {}, harnessVersions: 0, context: null,
-                                  imported: false, observed: null, lastActivity: null, lastRetry: null, lastMainMessage: null };
+                                  imported: false, observed: null, lastActivity: null, lastRetry: null, lastMainMessage: null, work: false };
         trace.stepOrder.push(k);
       }
       if (record.provider && !step.provider) { step.provider = record.provider; }
@@ -711,6 +589,11 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       }
       // Activity is evidenced by live records only: a replayed history says nothing about the present.
       if (live(record) && !(record.kind === 'status' && record.state === 'api_retry')) { step.lastActivity = record.time; }
+      // Work is evidenced by the CLI's own output: its native records, an answer of the model, or the
+      // token accounting of a turn. What the launcher wrote about the request - the prompt it sent, the
+      // harness it selected, the context it read - is the request, and a request is not its execution.
+      if (live(record) && (record.source === 'native' || record.kind === 'usage'
+          || (record.kind === 'message' && (record.role === 'claude' || record.role === 'codex')))) { step.work = true; }
       if (record.kind === 'message') {
         // A text block keeps its identity across updates: the latest version is shown at the place of the first one,
         // and the page state of the entry (expanded or not) follows that identity, not the record that last carried it.
@@ -779,6 +662,11 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     if (captured && captured.lastActivity && captured.lastActivity > latest) { latest = captured.lastActivity; }
     return latest;
   }
+  function observedWork(step, captured) {
+    // The two feeds evidence the same invocation: native records of the journal and the captured
+    // output of the CLI in the trace. A launcher record of this step is not among them.
+    return !!(step.lastNative || (captured && captured.work));
+  }
   function pendingRetry(step, captured) {
     // The last api_retry of a running step counts as waiting only while nothing later was observed in either feed.
     if (!captured || !captured.lastRetry) { return null; }
@@ -795,13 +683,32 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     return { kind: 'wait', label: text };
   }
 
+  // The kinds that assert something is happening right now. Only they lose their ground when the page
+  // stops observing: a recorded outcome and an absence of records say the same thing offline as online.
+  var CURRENT = { pending: true, wait: true };
+
   function stepState(step, captured, moment) {
+    var entry = observedState(step, captured, moment);
+    // While its polls fail the page has no current observation of anything. The invocation keeps its
+    // identity, its records and its place among the open ones, and stops being presented as work in
+    // progress until a poll succeeds again. What was already received - a result, an exit, a native
+    // turn outcome, an error, an observed silence - is read exactly as it was read with the connection.
+    if (state.connected || !entry.active || !CURRENT[entry.kind]) { return entry; }
+    var since = entry.age != null ? entry.age : (moment - Date.parse(entry.time)) / 1000;
+    return { kind: 'offline', active: true, time: entry.time, short: 'связь потеряна ' + step.id,
+             label: 'связь с сервером потеряна, состояние не подтверждено: последнее наблюдение ' + span(since) + ' назад' };
+  }
+
+  function observedState(step, captured, moment) {
     // One launcher invocation's state from explicit records: result, exit, native turn outcome, retry, or plain freshness.
     var retry = null, exitCode = step.exit ? step.exit.exit_code : null;
     if (step.result) {
-      var ready = step.result.status === 'ready';
+      // ready means the helper finished its own turn. What that turn WAS decides the label: a
+      // read-only handoff delivered a report and asks for nothing, while a build is the thing the
+      // manager still has to check. Neither of them says the work is correct.
+      var ready = step.result.status === 'ready', handoff = step.phase === 'handoff';
       return { kind: ready ? 'done' : step.result.status === 'completed' ? 'warn' : 'bad', active: false, time: step.result.time,
-               label: ready ? 'готово к проверке' : step.result.status === 'completed' ? 'CLI завершил, но не ready' : 'не завершено' };
+               label: ready ? (handoff ? 'отчет передан' : 'готово к проверке') : step.result.status === 'completed' ? 'CLI завершил, но не ready' : 'не завершено' };
     }
     if (step.exit) {
       if (step.exit.status !== 'exited') { return { kind: 'bad', active: false, time: step.exit.time, label: step.exit.label }; }
@@ -819,19 +726,54 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
         ? { kind: 'warn', active: false, time: step.exit.time, label: 'CLI завершен (exit 0), итог helper не записан ' + span(sinceExit) }
         : { kind: 'pending', active: false, time: step.exit.time, label: 'CLI завершен, итог пишется' };
     }
-    if (step.cliResult && step.phase === 'review') {
-      return step.cliResult.status === 'success'
-        ? { kind: 'pending', active: true, time: step.cliResult.time, label: 'ход завершен, процесс закрывается', short: 'закрывается ' + step.id }
-        : { kind: 'bad', active: true, time: step.cliResult.time, label: 'ход завершился ошибкой', short: 'ошибка ' + step.id };
+    // The CLI's own evidence that the model turn ended, in whatever phase it was invoked. It is not the
+    // close of the process (cli_exit), and neither of them is the manager's acceptance, so the invocation
+    // stays open and claims none of them. It decides the state while it is the last thing this
+    // invocation's output showed: a native record after it is work observed after the turn, and that
+    // work is what the reader has to see instead.
+    if (step.cliResult && step.lastNative === step.cliResult) {
+      var sinceTurn = (moment - Date.parse(step.cliResult.time)) / 1000;
+      if (step.cliResult.status !== 'success') {
+        return { kind: 'bad', active: true, time: step.cliResult.time, short: 'ошибка хода ' + step.id,
+                 label: 'ход завершился ошибкой, процесс не закрыт' + (sinceTurn > STALE_SECONDS ? ' ' + span(sinceTurn) : '') };
+      }
+      // Closing is a short expectation like any other: past the deadline it is simply not confirmed.
+      return sinceTurn > STALE_SECONDS
+        ? { kind: 'stale', active: true, time: step.cliResult.time, short: 'закрытие не подтверждено ' + step.id,
+            label: 'ход завершен, закрытие процесса не подтверждено ' + span(sinceTurn) }
+        : { kind: 'wait', active: true, time: step.cliResult.time, short: 'закрывается ' + step.id,
+            label: 'ход завершен, процесс закрывается; приемка не записана' };
     }
     if ((retry = pendingRetry(step, captured))) {
       var waiting = retryLabel(retry, moment);
       return { kind: waiting.kind, active: true, time: retry.time, label: waiting.label, short: (waiting.kind === 'wait' ? 'ждет API ' : 'повтор API не подтвержден ') + step.id, retry: retry };
     }
     var seen = lastSeen(step, captured), age = (moment - Date.parse(seen)) / 1000;
-    return age > STALE_SECONDS
-      ? { kind: 'stale', active: true, time: seen, label: 'тишина ' + span(age) + ': состояние не подтверждено', short: 'тишина ' + span(age) + ' ' + step.id, age: age }
-      : { kind: 'pending', active: true, time: seen, label: 'работает, ' + step.id, short: 'работает ' + step.id, age: age };
+    if (age > STALE_SECONDS) {
+      return { kind: 'stale', active: true, time: seen, label: 'тишина ' + span(age) + ': состояние не подтверждено', short: 'тишина ' + span(age) + ' ' + step.id, age: age };
+    }
+    // A fresh record of the launcher says that a run was asked for just now, not that anything is
+    // running: until the invocation's own execution is observed, it stays open and claims nothing.
+    // Age is left out on purpose - it is what the readers turn into "working, last activity N ago".
+    if (!observedWork(step, captured)) {
+      return { kind: 'neutral', active: true, time: seen, label: 'запуск запрошен, активность не наблюдалась', short: 'запуск запрошен ' + step.id };
+    }
+    return { kind: 'pending', active: true, time: seen, label: 'работает, ' + step.id, short: 'работает ' + step.id, age: age };
+  }
+
+  function checkGroups(semantic) {
+    // One aggregate per attempt and candidate tree, exactly as the office builds it: a later
+    // attempt or a rebuilt tree starts its own instead of inheriting an earlier PASS.
+    var groups = {}, order = [];
+    semantic.forEach(function (event) {
+      if (event.source !== 'receipt' || event.phase !== 'tests') { return; }
+      var id = key(event.attempt, event.snapshot || 'unknown'), group = groups[id];
+      if (!group) { group = groups[id] = { attempt: event.attempt, declared: null, results: {}, time: event.time }; order.push(id); }
+      if (event.count != null) { group.declared = event.count; }
+      if (event.component) { group.results[event.component] = event.status; }
+      if (event.time > group.time) { group.time = event.time; }
+    });
+    return order.map(function (id) { return groups[id]; });
   }
 
   function stageStates(summary, trace, moment) {
@@ -856,9 +798,13 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       var active = entries.filter(function (entry) { return entry.active; }), chosen;
       if (active.length) {
         chosen = active.reduce(function (best, entry) { return entry.time > best.time ? entry : best; });
+        // The chip of a phase names the strongest claim its open invocations support; an invocation
+        // whose execution was never observed supports none, so it never colours or pulses the row.
         var kind = active.some(function (entry) { return entry.kind === 'bad'; }) ? 'bad'
           : active.some(function (entry) { return entry.kind === 'pending'; }) ? 'pending'
-          : active.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait' : 'stale';
+          : active.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait'
+          : active.some(function (entry) { return entry.kind === 'offline'; }) ? 'offline'
+          : active.some(function (entry) { return entry.kind === 'stale'; }) ? 'stale' : 'neutral';
         row(attempt).phases[phase] = { kind: kind, active: true, time: chosen.time, count: active.length,
                                        label: active.length === 1 ? chosen.label : plural(active.length, 'вызов', 'вызова', 'вызовов') + ': ' + active.map(function (entry) { return entry.short; }).join('; ') };
       } else {
@@ -870,11 +816,39 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       var current = row(attempt).phases[phase];
       if (!current || (!current.active && current.time <= time)) { row(attempt).phases[phase] = { kind: kind, label: label, time: time, active: false }; }
     }
-    summary.manager.forEach(function (event) {
+    // A registered triage report is a recorded fact of its own phase. Its existence is what is
+    // shown; nobody here reads its prose for findings, and it accepts nothing.
+    trace.messages.forEach(function (item) {
+      var record = item.record;
+      if (record.kind === 'message' && record.message_kind === 'feedback' && record.phase === 'triage') {
+        set(record.attempt, 'triage', 'warn', 'обратная связь зарегистрирована, состав замечаний неизвестен', item.time);
+      }
+    });
+    // The captured checks of one attempt and one candidate tree are one outcome. Shown one by
+    // one they would overwrite each other and the last receipt would hide a FAIL of the first.
+    checkGroups(summary.semantic).forEach(function (group) {
+      var values = Object.keys(group.results).map(function (name) { return group.results[name]; });
+      var passed = values.filter(function (status) { return status === 'passed'; }).length;
+      var failed = values.filter(function (status) { return status === 'failed'; }).length;
+      var other = values.length - passed - failed;
+      var parts = ['проверки: ' + passed + ' PASS'];
+      if (failed) { parts.push(failed + ' FAIL'); }
+      if (other) { parts.push(other + ' UNVERIFIED'); }
+      var missing = group.declared == null ? null : Math.max(0, group.declared - values.length);
+      parts.push(group.declared == null ? 'всего объявлено неизвестно'
+        : 'из ' + group.declared + (missing ? ', ' + missing + ' без результата' : ''));
+      var kind = failed ? 'bad' : other ? 'warn' : missing === 0 ? 'done' : 'ok';
+      set(group.attempt, 'tests', kind, parts.join(', ') + ' (по распискам)', group.time);
+    });
+    summary.semantic.forEach(function (event) {
+      // Check receipts are aggregated above; every other semantic record stands for itself.
+      if (event.source === 'receipt' && event.phase === 'tests') { return; }
       var phase = event.phase, kind = statusClass(event.status), label = event.label.replace(/^[a-z]+: /, '').replace(/ \[.*\]$/, '');
       if (event.event === 'finding') { label = label + (event.count != null ? ' (' + event.count + ')' : ''); kind = event.status === 'confirmed' ? 'warn' : event.status === 'refuted' ? 'done' : 'warn'; }
       if (event.event === 'phase' && event.status === 'passed') { kind = 'done'; }
       if (event.event === 'decision') { kind = event.status === 'complete' ? 'done' : event.status === 'escalate' ? 'bad' : 'warn'; }
+      // A receipt says where its outcome came from: it was validated, not typed by the manager.
+      if (event.source === 'receipt') { label = label + ' (по расписке' + (event.component ? ': ' + event.component : '') + ')'; }
       set(event.attempt, phase, kind, label, event.time);
     });
     // Waiting is evidenced by a finished step without a successor, never assumed from quiet.
@@ -947,7 +921,8 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
         var chip = node('span', 'stage s-' + kind + (kind === 'pending' ? ' pulse' : ''));
         chip.setAttribute('role', 'status');
         chip.appendChild(node('span', 'name', PHASE_NAMES[phase]));
-        chip.appendChild(node('span', 'state', entry ? entry.label : 'не начат'));
+        // An absent stage is an absence of records, not an observation that it never started.
+        chip.appendChild(node('span', 'state', entry ? entry.label : 'нет записей'));
         line.appendChild(chip);
       });
       box.appendChild(line);
@@ -992,9 +967,13 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
 
   function stepUsage(step) {
     // Terminal usage supersedes interim snapshots; snapshots of distinct message ids are summed while the CLI runs.
+    // The model of a usage row is the one the stream actually reported. The requested one is
+    // kept beside it and stays labelled as requested: a configuration is not an observation,
+    // and copying it into this field is what made an unobserved model read as the observed one.
     var usage = { provider: step.provider, status: 'unknown', input: null, uncached: null, cacheCreation: null, cacheRead: null, cached: null,
                   output: null, reasoning: null, cost: null, totalInput: null, models: null, modelCount: 0, otherModels: null, partial: {}, modelPartial: {},
-                  model: step.observedModel || step.requestedModel || null, snapshots: step.snapshotOrder.length, contextWindows: {} };
+                  model: step.observedModel || null, requestedModel: step.requestedModel || null,
+                  snapshots: step.snapshotOrder.length, contextWindows: {} };
     var final = step.finals.length ? step.finals[step.finals.length - 1] : null;
     function add(target, entry, tracked) { addCounters(target, entry, step.provider, tracked); }
     if (final) {
@@ -1044,7 +1023,7 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       // belongs to another model, so a subagent's consumption is never shown under the main model's name, not even while
       // the main model has no snapshot of its own yet. A snapshot without a model name is another model's, unless the
       // session's model is unknown as well.
-      usage.otherModels = groupOrder.filter(function (name) { return name !== (usage.model || '?'); }).length;
+      usage.otherModels = groupOrder.filter(function (name) { return name !== (usage.model || usage.requestedModel || '?'); }).length;
       if (groupOrder.length > 1 || usage.otherModels) {
         usage.models = {};
         groupOrder.forEach(function (name) {
@@ -1060,7 +1039,10 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   }
 
   function modelLabel(usage, step) {
-    var name = usage.model || (step.requestedModel ? step.requestedModel + ' (запрошена)' : 'модель не сообщена');
+    // Only a model the stream reported is named without a qualifier. A requested one keeps its
+    // label even here, beside real counters: the counters are observed, the name is not.
+    var requested = usage.requestedModel || step.requestedModel;
+    var name = usage.model || (requested ? requested + ' (запрошена)' : 'модель не сообщена');
     // Interim rows count the models other than the session's own; a terminal total counts every model but the main one.
     var others = usage.otherModels != null ? usage.otherModels : usage.modelCount - 1;
     if (others > 0) { name += ' (и еще ' + others + ': субагенты)'; }
@@ -1091,7 +1073,11 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       }
     });
     if (state.ui.activity) {
+      // Activity is read straight off the journal, so it repeats the boundary the step fold drew:
+      // a native record of another run describes another pipeline and never enters this conversation.
+      // The raw journal table below keeps those records; only this reading of them is bounded.
       state.events.list.forEach(function (event) {
+        if (event.run_id !== summary.runId) { return; }
         if (event.source === 'native' && (event.event === 'tool_call' || event.event === 'task' || event.event === 'hook')) {
           items.push({ time: event.time, kind: 'activity', record: event, attempt: event.attempt, step: event.step_id });
         }
@@ -1287,7 +1273,12 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     invocationKeys(summary, trace).forEach(function (k) {
       var step = trace.steps[k], launcher = summary.steps[k];
       if (!step) {
-        if (launcher && launcher.run) { addUsageRow(body, launcher.attempt, launcher.id, launcher.run.model || '?', 'неизвестно (захвата нет)', null); total.unknown += 1; rows += 1; }
+        // Nothing was captured of this invocation, so its model is the requested one and says so.
+        if (launcher && launcher.run) {
+          addUsageRow(body, launcher.attempt, launcher.id,
+            launcher.run.model ? launcher.run.model + ' (запрошена)' : 'модель не сообщена', 'неизвестно (захвата нет)', null);
+          total.unknown += 1; rows += 1;
+        }
         return;
       }
       if (!step.snapshotOrder.length && !step.finals.length && !step.captured) { return; }
@@ -1482,537 +1473,9 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     $('invocations-empty').className = count ? 'empty hidden' : 'empty';
   }
 
-  // ── Офис конвейера ────────────────────────────────────────────────────────────
-  // Сцену рисует оригинальный движок Pixel Agents, а состояния приходят из тех же
-  // summarize() и summarizeTrace(), что и вся остальная страница: ни своего опроса,
-  // ни своего разбора журнала здесь нет. Канвас - только представление; тексты,
-  // авторство и происхождение записей остаются за страницей.
-  var OFFICE_ACTORS = [
-    { id: 1, name: 'Пользователь', role: 'user', duty: 'человек: автор запроса' },
-    { id: 2, name: 'Codex', role: 'manager', duty: 'менеджер конвейера' },
-    { id: 3, name: 'Claude', role: 'claude', duty: 'исполнитель Claude' }
-  ];
-  var REVIEW_LABEL = 'независимое ревью · отдельная сессия';
-  var OFFICE_ZOOM_NAMES = { 1: 'вписан', 2: 'крупнее, ×2', 3: 'крупнее, ×3' };
-
-  function officeSteps(summary, trace, provider) {
-    // Запуски одного провайдера в порядке журнала. Провайдер берется из трассировки, а без нее -
-    // из записанной лаунчером фазы: ревью запускает ревьюера, остальные шаги - исполнителя.
-    // Шаг без захвата не приписывается исполнителю только потому, что поток недоступен.
-    return summary.stepOrder.map(function (k) { return summary.steps[k]; }).filter(function (step) {
-      if (!step.run) { return false; }
-      var captured = trace.steps[step.key];
-      var seen = captured && captured.provider ? captured.provider : step.phase === 'review' ? 'codex' : 'claude';
-      return seen === provider;
-    });
-  }
-  function officeObserved(step, captured) {
-    // Наблюдением считаются только записи самого CLI: run/started и cli_started лаунчер пишет
-    // до запуска процесса, поэтому запуск работой не является.
-    if (step && (step.lastNative || step.init)) { return true; }
-    if (!captured) { return false; }
-    return captured.modelMessages > 0 || !!captured.sessionId || !!captured.threadId
-      || !!captured.observedModel || !!captured.lastRetry || !!captured.exited;
-  }
-
-  function officeEntry(step, captured, moment) {
-    // Состояние для сцены: те же записи и тот же редьюсер, что и у остальной страницы, но работой
-    // здесь считается только наблюдаемая работа. Записанный запуск без единой записи CLI и уже
-    // завершенный ход анимацию не включают, а после тишины перестают быть подтвержденными.
-    var entry = stepState(step, captured, moment);
-    if (!entry.active) { return entry; }
-    var age = (moment - Date.parse(entry.time)) / 1000, stale = age > STALE_SECONDS;
-    if (step.cliResult && !step.exit && !step.result) {
-      var done = step.cliResult.status === 'success' ? 'ход завершен, процесс закрывается' : 'ход завершился ошибкой, процесс закрывается';
-      return stale
-        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'выход CLI не подтвержден ' + span(age),
-            label: done + '; выхода процесса нет ' + span(age) + ': состояние не подтверждено' }
-        : { kind: step.cliResult.status === 'success' ? 'ok' : 'bad', active: false, time: entry.time,
-            shortText: officeShort(done), label: done };
-    }
-    // Импортированная запись описывает прошлый запуск, поэтому наблюдением настоящего она не является:
-    // такой шаг остается историей и в подписи, и в состоянии, а не только в снятом флаге работы.
-    if (captured && captured.imported) {
-      return stale
-        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'история, тишина',
-            label: 'записи CLI импортированы, тишина ' + span(age) + ': текущая работа не наблюдается' }
-        : { kind: 'wait', active: false, time: entry.time, shortText: 'история: ' + step.id,
-            label: 'записи CLI импортированы: они описывают прошлый запуск, текущая работа не наблюдается' };
-    }
-    if (!officeObserved(step, captured)) {
-      return stale
-        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'запуск не подтвержден ' + span(age),
-            label: 'запуск записан ' + span(age) + ' назад, записей CLI нет: состояние не подтверждено' }
-        : { kind: 'wait', active: false, time: entry.time, shortText: 'запускается: ' + step.id,
-            label: 'запуск записан, наблюдений CLI еще нет' };
-    }
-    return entry;
-  }
-
-  function officeTool(summary, step) {
-    // Инструмент последнего вызова этого шага, который еще не вернул результат.
-    var current = null;
-    summary.callOrder.forEach(function (callKey) {
-      var call = summary.calls[callKey];
-      if (call.attempt !== step.attempt || call.step !== step.id) { return; }
-      if (call.result || call.taskStatus === 'completed' || call.taskStatus === 'failed') { return; }
-      if (!current || call.updated >= current.updated) { current = call; }
-    });
-    return current ? current.tool : null;
-  }
-  function officeShort(text, limit) {
+  function shorten(text, limit) {
     var value = String(text == null ? '' : text);
     return value.length > (limit || 34) ? value.slice(0, (limit || 34) - 1) + '…' : value;
-  }
-  function officeSession(step, captured) {
-    var lines = [];
-    lines.push('запрошено: ' + ((step && step.run && step.run.model) || (captured && captured.requestedModel) || 'модель не задана')
-      + ' / ' + ((step && step.run && step.run.effort) || (captured && captured.requestedEffort) || '?') + ' (профиль запуска)');
-    var observed = step && step.init ? step.init.model : captured ? captured.observedModel : null;
-    lines.push('наблюдается: ' + (observed || 'модель в потоке не сообщена'));
-    if (captured) {
-      lines.push((captured.sessionId ? 'сессия Claude ' + captured.sessionId : captured.threadId ? 'поток Codex ' + captured.threadId
-        : 'идентификатор сессии не наблюдался') + (captured.cliVersion ? ', CLI ' + captured.cliVersion : ''));
-      var selected = captured.harness.selected;
-      if (selected) {
-        lines.push('обвязка: ' + plural((selected.skills || []).length, 'скилл', 'скилла', 'скиллов')
-          + ', агентов ' + ((selected.agents || []).length || 'нет') + ', MCP ' + ((selected.mcp_servers || []).length || 'нет')
-          + '; подробности - в разделе "Вызовы LLM"');
-      }
-      if (captured.imported) { lines.push('запись импортирована: текущую сессию она не описывает'); }
-    } else if (step) {
-      lines.push('поток не захвачен: сообщения и usage этого шага недоступны');
-    }
-    return lines;
-  }
-
-  function officeUser(trace) {
-    var actor = { kind: 'neutral', short: 'запросов нет', active: false, tool: null,
-                  detail: 'запрос пользователя регистрирует менеджер; записей пока нет',
-                  lines: ['роль: человек. Запись создает менеджер (source=manager), авторство остается пользовательским.'] };
-    var prompts = trace.messages.filter(function (item) { return item.record.role === 'user'; });
-    if (!prompts.length) { return actor; }
-    var last = prompts[prompts.length - 1].record;
-    actor.kind = 'ok';
-    actor.short = plural(prompts.length, 'запрос', 'запроса', 'запросов');
-    actor.detail = 'последний запрос ' + clock(when(last)) + (last.title ? ': ' + last.title : '');
-    actor.lines.push('человек не является наблюдаемым процессом: работа за него не показывается.');
-    return actor;
-  }
-
-  function officeManager(summary, trace, moment) {
-    var actor = { kind: 'neutral', short: 'записей менеджера нет', active: false, tool: null,
-                  detail: 'активность родительского менеджера не наблюдается: состояние неизвестно', lines: [] };
-    var reviews = officeSteps(summary, trace, 'codex');
-    var running = reviews.filter(function (step) { return !step.exit && !step.result; });
-    if (running.length) {
-      var step = running[running.length - 1], captured = trace.steps[step.key];
-      var entry = officeEntry(step, captured, moment);
-      var live = !(captured && captured.imported);
-      actor.active = live && entry.kind === 'pending' && entry.active === true;
-      actor.kind = entry.kind;
-      actor.short = REVIEW_LABEL;
-      actor.detail = REVIEW_LABEL + ': ' + entry.label + ' (' + step.id + ', попытка ' + step.attempt + ')';
-      actor.lines.push('за столом показана отдельная сессия ревьюера, а не работа менеджера: провенанс записей сохранен.');
-      actor.lines = actor.lines.concat(officeSession(step, captured));
-      return actor;
-    }
-    if (summary.decision) {
-      actor.kind = statusClass(summary.decision.status);
-      actor.short = 'решение: ' + (DECISIONS[summary.decision.status] || summary.decision.status);
-      actor.detail = 'решение ' + (DECISIONS[summary.decision.status] || summary.decision.status) + ', попытка '
-        + summary.decision.attempt + ', ' + clock(summary.decision.time);
-    } else if (summary.manager.length) {
-      var last = summary.manager[summary.manager.length - 1];
-      actor.kind = statusClass(last.status);
-      actor.short = officeShort(last.label);
-      actor.detail = 'последняя запись менеджера: ' + last.label + ', ' + clock(last.time);
-    }
-    actor.lines.push('записи менеджера - это события, а не наблюдаемая работа: между ними состояние неизвестно.');
-    if (reviews.length && !running.length) {
-      var finished = reviews[reviews.length - 1];
-      actor.lines.push(REVIEW_LABEL + ': ' + officeEntry(finished, trace.steps[finished.key], moment).label
-        + ' (' + finished.id + ', попытка ' + finished.attempt + ')');
-    }
-    return actor;
-  }
-
-  function officeWorker(summary, trace, moment) {
-    var actor = { kind: 'neutral', short: 'вызовов не было', active: false, tool: null,
-                  detail: 'запуск исполнителя не зафиксирован', lines: [] };
-    var steps = officeSteps(summary, trace, 'claude');
-    if (!steps.length) {
-      var historical = trace.stepOrder.map(function (k) { return trace.steps[k]; })
-        .filter(function (captured) { return captured.provider === 'claude'; });
-      if (historical.length && historical.every(function (captured) { return captured.imported; })) {
-        actor.short = 'импорт истории';
-        actor.detail = 'только импортированные записи: текущую сессию они не описывают';
-        actor.lines.push('историческая запись не является наблюдением настоящего.');
-      }
-      return actor;
-    }
-    var running = steps.filter(function (step) { return !step.exit && !step.result; });
-    var step = running.length ? running[running.length - 1] : steps[steps.length - 1];
-    var captured = trace.steps[step.key];
-    var entry = officeEntry(step, captured, moment);
-    // Работой считается только наблюдаемое "идет прямо сейчас": запись о запуске, тишина, ожидание
-    // API, импорт и завершенный ход работой не являются.
-    actor.active = !!running.length && !(captured && captured.imported) && entry.kind === 'pending' && entry.active === true;
-    actor.kind = entry.kind;
-    actor.short = actor.active ? 'работает: ' + step.id
-      : entry.shortText ? entry.shortText
-      : entry.kind === 'wait' ? 'ждет ответа API'
-      : entry.kind === 'stale' ? 'тишина ' + span(entry.age)
-      : officeShort(entry.label);
-    actor.detail = entry.label + ' (' + step.id + ', попытка ' + step.attempt + ')';
-    actor.tool = actor.active ? officeTool(summary, step) : null;
-    if (actor.tool) { actor.lines.push('наблюдаемый инструмент: ' + actor.tool); }
-    actor.lines = actor.lines.concat(officeSession(step, captured));
-    if (entry.kind === 'ok' && step.exit) { actor.lines.push('успешный выход CLI не является приемкой задачи: ее записывает менеджер.'); }
-    return actor;
-  }
-
-  function officeActors(summary, trace, moment) {
-    var byRole = { user: officeUser(trace), manager: officeManager(summary, trace, moment), claude: officeWorker(summary, trace, moment) };
-    var lost = !state.connected && state.failures > 0;
-    return OFFICE_ACTORS.map(function (base) {
-      var derived = byRole[base.role];
-      var actor = { id: base.id, name: base.name, role: base.role, duty: base.duty, kind: derived.kind, short: derived.short,
-                    detail: derived.detail, active: derived.active, tool: derived.tool, lines: derived.lines.slice() };
-      if (lost) {
-        // Связи нет: последнее известное состояние остается видимым, но подтвержденным не считается.
-        actor.active = false;
-        actor.tool = null;
-        actor.kind = 'bad';
-        actor.short = 'нет связи';
-        actor.detail = 'нет связи с сервером; последнее известное: ' + actor.detail;
-        actor.lines.unshift('данные не обновляются: состояние не подтверждено.');
-      }
-      return actor;
-    });
-  }
-
-  function officeRecords(actor, trace) {
-    var roles = actor.role === 'manager' ? { manager: true, codex: true } : actor.role === 'claude' ? { claude: true } : { user: true };
-    return trace.messages.filter(function (item) { return roles[item.record.role]; }).slice(-6);
-  }
-
-  function officeRecordEntry(item, trace) {
-    var record = item.record, entry = node('article', 'entry role-' + record.role);
-    var head = node('div', 'entry-head');
-    var who = ROLE_NAMES[record.role] || record.role;
-    if (record.thread) { who += ' (субагент)'; }
-    head.appendChild(node('span', 'who who-' + record.role, who));
-    head.appendChild(node('span', 'kind', (KIND_NAMES[record.message_kind] || record.message_kind) + (record.title ? ': ' + record.title : '')));
-    if (record.model) { head.appendChild(node('span', 'mono', record.model)); }
-    if (isFinal(record, trace)) { head.appendChild(node('span', 'flag final', 'итоговый ответ')); }
-    if (item.versions > 1) { head.appendChild(node('span', 'flag', 'обновлялось: ' + item.versions + ' версии, показана последняя')); }
-    if (record.truncated) { head.appendChild(node('span', 'flag cut', 'усечено при записи')); }
-    if (record.source === 'import') { head.appendChild(node('span', 'flag', 'импорт старого журнала')); }
-    if (record.thread) { head.appendChild(node('span', 'flag mono', 'вызов ' + record.thread)); }
-    if (record.artifact_id && trace.artifacts[record.artifact_id]) {
-      var link = artifactLink(record.artifact_id, 'оригинал', false);
-      if (link) { head.appendChild(link); }
-    }
-    var moment = record.source === 'import'
-      ? (record.observed ? 'после запуска ' + clock(record.observed) + ' (импорт)' : 'записано ' + clock(record.time))
-      : clock(record.time);
-    head.appendChild(node('span', 'meta', 'попытка ' + record.attempt + ' · ' + record.step_id + ' · ' + moment));
-    entry.appendChild(head);
-    var body = String(record.text == null ? '' : record.text);
-    var cut = body.length > 220;
-    entry.appendChild(node('pre', 'office-excerpt', cut ? body.slice(0, 220) + '…' : body));
-    if (cut) { entry.appendChild(node('div', 'office-line muted', 'показано начало записи; полный текст, фильтры и история - в разделе "Разговор"')); }
-    return entry;
-  }
-
-  function renderOfficeDetails(actors, trace) {
-    var box = $('office-details'), selected = state.office.selected;
-    var actor = null;
-    actors.forEach(function (item) { if (item.id === selected) { actor = item; } });
-    var records = actor ? officeRecords(actor, trace) : [];
-    var identity = records.map(function (item) { return item.record.record_id || item.id; }).join(',');
-    // Ключ намеренно не включает сами тексты: отсчет тишины меняет их каждую секунду, а пересборка
-    // блока унесла бы фокус со ссылки на артефакт. Меняющийся текст обновляется на месте.
-    var key = (actor ? actor.id + '|' + actor.lines.length : '') + '|' + identity;
-    if (key !== state.office.detailKey) {
-      state.office.detailKey = key;
-      state.office.detailNodes = null;
-      box.textContent = '';
-      if (!actor) {
-        box.appendChild(node('div', 'empty', 'выберите персонажа: клик по фигуре в офисе или кнопка выше; откроются его записи с сохранением авторства и происхождения'));
-        return;
-      }
-      var nodes = { detail: node('div', 'office-line'), lines: [] };
-      box.appendChild(node('h3', null, actor.name + ' · ' + actor.duty));
-      box.appendChild(nodes.detail);
-      actor.lines.forEach(function () {
-        var line = node('div', 'office-line muted');
-        nodes.lines.push(line);
-        box.appendChild(line);
-      });
-      box.appendChild(node('h3', null, records.length ? 'последние записи' : 'записи'));
-      if (records.length) {
-        records.forEach(function (item) { box.appendChild(officeRecordEntry(item, trace)); });
-      } else {
-        box.appendChild(node('div', 'empty', 'записей этого участника пока нет'));
-      }
-      state.office.detailNodes = nodes;
-    }
-    if (actor && state.office.detailNodes) {
-      state.office.detailNodes.detail.textContent = actor.detail;
-      actor.lines.forEach(function (line, index) {
-        var target = state.office.detailNodes.lines[index];
-        if (target) { target.textContent = line; }
-      });
-    }
-  }
-
-  function officeStatus() {
-    var office = state.office, line = $('office-status');
-    if (office.error) {
-      line.className = 'notice bad';
-      line.textContent = 'Сцена офиса не загрузилась: ' + office.error
-        + '. Состояния участников ниже остаются доступны текстом; соберите monitor/pixel-office (npm ci --ignore-scripts && npm run build).';
-      return;
-    }
-    if (!office.view) {
-      line.className = 'empty';
-      line.textContent = 'сцена офиса загружается';
-      return;
-    }
-    line.className = 'empty';
-    line.textContent = officeMotionOff()
-      ? 'движение выключено' + (officeReduced() ? ' системной настройкой «уменьшить движение»' : ' переключателем') + ': сцена замерла, состояния обновляются'
-      : 'сцена Pixel Agents: движение включено';
-  }
-  function officeReduced() {
-    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }
-  function officeMotionOff() { return !state.office.motion || officeReduced(); }
-
-  function renderOffice(summary, trace, moment) {
-    var actors = officeActors(summary, trace, moment);
-    actors.forEach(function (actor) {
-      var nodes = state.office.nodes[actor.id];
-      if (!nodes) { return; }
-      nodes.name.textContent = actor.name + ' · ' + actor.duty;
-      nodes.status.textContent = actor.short + (actor.tool ? ' · ' + actor.tool : '');
-      nodes.detail.textContent = actor.detail;
-      nodes.button.setAttribute('aria-pressed', state.office.selected === actor.id ? 'true' : 'false');
-      nodes.button.className = 'office-actor role-' + actor.role + ' state-' + actor.kind;
-    });
-    var snapshot = { connected: !(!state.connected && state.failures > 0), motion: !officeMotionOff(),
-                     selectedActorId: state.office.selected,
-                     actors: actors.map(function (actor) {
-                       return { id: actor.id, name: actor.name, short: actor.short, active: actor.active, tool: actor.tool };
-                     }) };
-    if (state.office.view) { state.office.view.update(snapshot); } else { state.office.pending = snapshot; }
-    renderOfficeDetails(actors, trace);
-    officeStatus();
-    return actors;
-  }
-
-  // ── Инженерный цикл ───────────────────────────────────────────────────────────
-  // Пять узлов основного пути и дуга возврата. Топология статична и сама по себе ничего
-  // не утверждает: работа берется из officeEntry/officeObserved - тех же исправленных
-  // наблюдений, что и сцена. Наличие фазы в журнале работой не считается.
-  var LOOP_NODES = [
-    { phase: 'build', name: 'Код' }, { phase: 'tests', name: 'Тесты' }, { phase: 'review', name: 'Ревью' },
-    { phase: 'triage', name: 'Разбор' }, { phase: 'decision', name: 'Решение' }
-  ];
-  var LOOP_CHIPS = [{ phase: 'verify', name: 'Сбор оснований' }, { phase: 'handoff', name: 'Передача' }];
-  var LOOP_KIND_NAMES = { neutral: 'записей нет', pending: 'идет', wait: 'ожидает', ok: 'CLI завершил',
-                          done: 'записано', warn: 'внимание', bad: 'ошибка', stale: 'не подтверждено' };
-  var DECISION_NEXT = { retry: 'ожидается новый запуск исполнителя', verify: 'менеджер собирает основания без правок кода',
-                        escalate: 'нужен ответ пользователя, конвейер не продолжается сам',
-                        complete: 'конвейер завершен решением менеджера' };
-
-  function loopAttempt(summary) {
-    // Наблюдаемая попытка - максимум по записанным запускам и записям менеджера. Строка ожидания,
-    // которую stageStates дорисовывает после RETRY, запуском не является и сюда не попадает.
-    var attempt = 0;
-    summary.stepOrder.forEach(function (k) {
-      var step = summary.steps[k];
-      if (step.run && PHASES.indexOf(step.phase) >= 0) { attempt = Math.max(attempt, step.attempt); }
-    });
-    summary.manager.forEach(function (event) { attempt = Math.max(attempt, event.attempt); });
-    return attempt;
-  }
-
-  function loopShort(entry) {
-    // Короткий токен узла: он должен различать состояния, а не пересказывать полную подпись,
-    // которая целиком лежит в строке цикла, в aria-label узла и в инспекторе.
-    if (entry.working) { return entry.parallel ? plural(entry.count, 'вызов', 'вызова', 'вызовов') : 'идет'; }
-    var inner = entry.entry || {};
-    if (inner.shortText) { return officeShort(inner.shortText, 24); }
-    if (entry.kind === 'stale' && inner.age != null) { return 'тишина ' + span(inner.age); }
-    if (entry.kind === 'wait') { return 'ждет ответа API'; }
-    return LOOP_KIND_NAMES[entry.kind] || entry.kind;
-  }
-
-  function loopStates(summary, trace, moment) {
-    var attempt = loopAttempt(summary), lost = !state.connected && state.failures > 0, phases = {}, byPhase = {};
-    summary.stepOrder.forEach(function (k) {
-      var step = summary.steps[k];
-      if (!step.run || step.attempt !== attempt || PHASES.indexOf(step.phase) < 0) { return; }
-      (byPhase[step.phase] = byPhase[step.phase] || []).push(step);
-    });
-    Object.keys(byPhase).forEach(function (phase) {
-      var seen = byPhase[phase].map(function (step) {
-        var captured = trace.steps[step.key], entry = officeEntry(step, captured, moment);
-        // Все четыре условия обязательны вместе: связь есть, запись не импорт, вызов наблюдается
-        // и он еще идет. Записанный запуск и завершенный ход этот набор не проходят.
-        return { step: step, entry: entry,
-                 working: !lost && !(captured && captured.imported) && entry.kind === 'pending' && entry.active === true };
-      });
-      // Параллельные вызовы складываются: более свежий завершенный не прячет идущий.
-      var working = seen.filter(function (item) { return item.working; });
-      var pool = working.length ? working : seen;
-      var chosen = pool.reduce(function (best, item) { return item.entry.time > best.entry.time ? item : best; });
-      phases[phase] = {
-        phase: phase, kind: working.length ? 'pending' : chosen.entry.kind, working: working.length > 0,
-        parallel: working.length > 1, count: working.length || seen.length, time: chosen.entry.time,
-        step: chosen.step.id, entry: chosen.entry, steps: seen,
-        label: working.length > 1
-          ? plural(working.length, 'наблюдаемый вызов', 'наблюдаемых вызова', 'наблюдаемых вызовов') + ': '
-            + working.map(function (item) { return item.step.id; }).join(', ')
-          : chosen.entry.label + (chosen.entry.label.indexOf(chosen.step.id) >= 0 ? '' : ' (' + chosen.step.id + ')')
-      };
-      phases[phase].short = loopShort(phases[phase]);
-    });
-    // Запись менеджера - событие фазы, а не наблюдаемая работа: идущий вызов она не вытесняет.
-    summary.manager.forEach(function (event) {
-      if (event.attempt !== attempt || PHASES.indexOf(event.phase) < 0) { return; }
-      var current = phases[event.phase];
-      if (current && (current.working || current.time > event.time)) { return; }
-      var kind = statusClass(event.status), label = event.label.replace(/^[a-z]+: /, '').replace(/ \[.*\]$/, '');
-      if (event.event === 'phase' && event.status === 'passed') { kind = 'done'; }
-      if (event.event === 'finding') { kind = event.status === 'refuted' ? 'done' : 'warn'; }
-      if (event.event === 'decision') { kind = event.status === 'complete' ? 'done' : event.status === 'escalate' ? 'bad' : 'warn'; }
-      phases[event.phase] = { phase: event.phase, kind: kind, working: false, parallel: false, count: 1, manager: event,
-                              time: event.time, step: event.step_id, steps: [],
-                              label: 'запись менеджера: ' + label, short: officeShort(label, 22) };
-    });
-    // Связи нет: последнее известное состояние остается видимым, но перестает быть утверждением
-    // о настоящем времени - ровно как у персонажей сцены.
-    if (lost) {
-      PHASES.forEach(function (phase) {
-        if (!phases[phase]) { return; }
-        phases[phase].label = 'нет связи с сервером; последнее известное: ' + phases[phase].label;
-        phases[phase].short = 'нет связи';
-      });
-    }
-    var decision = summary.decision && summary.decision.attempt === attempt ? summary.decision : null;
-    // Решение читается одним словом: у него есть собственный словарь, а не усеченная подпись события.
-    if (decision && phases.decision && !phases.decision.working) {
-      phases.decision.short = DECISIONS[decision.status] || decision.status;
-    }
-    // Дуга возврата - записанное событие, а не номер попытки: активна она по RETRY текущей попытки,
-    // пройденной становится по RETRY более ранней. Без такой записи остается статичная топология.
-    var retries = summary.manager.filter(function (event) { return event.event === 'decision' && event.status === 'retry'; });
-    var arc = { kind: 'idle', label: 'Исправления' };
-    if (decision && decision.status === 'retry') {
-      arc = { kind: 'active', label: 'Исправления: RETRY записан, ожидает нового запуска' };
-    } else if (retries.some(function (event) { return event.attempt < attempt; })) {
-      arc = { kind: 'traversed', label: 'Исправления · пройдена: попытка ' + attempt + ' после RETRY' };
-    }
-    // Наблюдаемая работа берется по всем фазам, включая условные verify и handoff: записанное
-    // решение по задаче и идущий вспомогательный вызов - разные факты, и второй первым не закрывается.
-    var working = LOOP_NODES.concat(LOOP_CHIPS).filter(function (base) { return phases[base.phase] && phases[base.phase].working; });
-    var known = PHASES.map(function (phase) { return phases[phase]; }).filter(Boolean);
-    var prefix = attempt ? 'попытка ' + attempt + ': ' : '';
-    var line;
-    if (lost) {
-      line = 'нет связи с сервером: показанные состояния не подтверждены';
-    } else if (working.length) {
-      line = prefix + 'идет ' + working.map(function (base) { return base.name + ' - ' + phases[base.phase].label; }).join('; ')
-        + (decision ? '; записано решение ' + (DECISIONS[decision.status] || decision.status) : '');
-    } else if (decision) {
-      line = prefix + 'решение ' + (DECISIONS[decision.status] || decision.status) + ': ' + (DECISION_NEXT[decision.status] || 'см. раздел "Журнал"');
-    } else if (known.length) {
-      var last = known.reduce(function (best, entry) { return entry.time > best.time ? entry : best; });
-      var name = (LOOP_NODES.concat(LOOP_CHIPS).filter(function (base) { return base.phase === last.phase; })[0] || {}).name || last.phase;
-      line = prefix + 'наблюдаемой работы нет; последняя запись: ' + name + ' - ' + last.label;
-    } else {
-      line = 'записей о фазах пока нет';
-    }
-    return { attempt: attempt, phases: phases, arc: arc, line: line, lost: lost };
-  }
-
-  function loopRecords(loop, phase, trace) {
-    var entry = loop.phases[phase];
-    if (!entry) { return []; }
-    var steps = {};
-    entry.steps.forEach(function (item) { steps[item.step.id] = true; });
-    if (entry.manager) { steps[entry.manager.step_id] = true; }
-    return trace.messages.filter(function (item) {
-      return item.record.attempt === loop.attempt && steps[item.record.step_id];
-    }).slice(-6);
-  }
-
-  function renderLoopDetails(loop, trace) {
-    var phase = state.loop.selected, box = $('loop-details');
-    box.hidden = !phase;
-    if (!phase) { state.loop.detailKey = ''; return; }
-    var entry = loop.phases[phase];
-    var base = LOOP_NODES.concat(LOOP_CHIPS).filter(function (item) { return item.phase === phase; })[0];
-    var records = loopRecords(loop, phase, trace);
-    var key = phase + '|' + loop.attempt + '|' + (entry ? entry.label : '') + '|'
-      + records.map(function (item) { return item.record.record_id || item.id; }).join(',');
-    if (key === state.loop.detailKey) { return; }
-    state.loop.detailKey = key;
-    box.textContent = '';
-    box.appendChild(node('h3', null, base.name + ' · попытка ' + (loop.attempt || '?')));
-    box.appendChild(node('div', 'office-line', entry ? entry.label : 'записей этой фазы в наблюдаемой попытке нет'));
-    if (entry) {
-      entry.steps.forEach(function (item) {
-        box.appendChild(node('div', 'office-line muted', item.step.id + ': ' + item.entry.label
-          + (item.working ? ' (наблюдается сейчас)' : ' (работой не считается)')));
-      });
-      if (entry.manager) {
-        box.appendChild(node('div', 'office-line muted', 'запись менеджера ' + clock(entry.manager.time)
-          + '; статус ' + entry.manager.status + '. Запись фазы не является наблюдаемой работой.'));
-      }
-    }
-    box.appendChild(node('h3', null, records.length ? 'последние записи фазы' : 'записи фазы'));
-    if (records.length) {
-      records.forEach(function (item) { box.appendChild(officeRecordEntry(item, trace)); });
-    } else {
-      box.appendChild(node('div', 'empty', 'сообщений этой фазы пока нет; полный разговор и история - в разделах ниже'));
-    }
-  }
-
-  function renderLoop(summary, trace, moment) {
-    var loop = loopStates(summary, trace, moment), still = officeMotionOff();
-    LOOP_NODES.forEach(function (base) {
-      var nodes = state.loop.nodes[base.phase];
-      if (!nodes) { return; }
-      var entry = loop.phases[base.phase], kind = entry ? entry.kind : 'neutral';
-      nodes.state.textContent = entry ? entry.short : 'не начат';
-      nodes.button.className = 'loop-node s-' + kind + (entry && entry.working && !still ? ' pulse' : '');
-      nodes.button.setAttribute('aria-pressed', state.loop.selected === base.phase ? 'true' : 'false');
-      nodes.button.setAttribute('aria-label', base.name + ', попытка ' + (loop.attempt || '?') + ': '
-        + (entry ? entry.label : 'записей нет'));
-    });
-    LOOP_CHIPS.forEach(function (base) {
-      var nodes = state.loop.nodes[base.phase];
-      if (!nodes) { return; }
-      // Фишка появляется только при собственных записях фазы: запрошенный VERIFY и решение
-      // COMPLETE сами по себе не доказывают ни сбора оснований, ни передачи.
-      var entry = loop.phases[base.phase];
-      nodes.button.hidden = !entry;
-      if (!entry) { return; }
-      nodes.state.textContent = entry.short;
-      nodes.button.className = 'loop-chip s-' + entry.kind + (entry.working && !still ? ' pulse' : '');
-      nodes.button.setAttribute('aria-pressed', state.loop.selected === base.phase ? 'true' : 'false');
-      nodes.button.setAttribute('aria-label', base.name + ', попытка ' + (loop.attempt || '?') + ': ' + entry.label);
-    });
-    $('loop-return').className = 'loop-return ' + loop.arc.kind;
-    text('loop-return-label', loop.arc.label);
-    text('loop-state', loop.line);
-    renderLoopDetails(loop, trace);
-    return loop;
   }
 
   // ── Инспектор ─────────────────────────────────────────────────────────────────
@@ -2028,7 +1491,7 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   function stashReading() {
     // Позиция снимается только пока разговор виден: у скрытого раздела высота нулевая, и запись
     // такого нуля стерла бы место, на котором остановился читатель.
-    if (state.ui.inspectorOpen && state.ui.section === 'talk') { state.ui.savedScroll = $('conversation').scrollTop; }
+    if (state.ui.section === 'talk') { state.ui.savedScroll = $('conversation').scrollTop; }
   }
   function setSection(name) {
     // Уход с раздела разговора - последний момент, когда его геометрия еще настоящая. Повторный
@@ -2043,73 +1506,9 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     });
     if (name === 'talk' && changed) { syncReading(); }
   }
-  function openInspector(opener) {
-    state.ui.opener = opener || $('details-open');
-    if (!state.ui.inspectorOpen) {
-      state.ui.inspectorOpen = true;
-      $('inspector').showModal();
-      $('details-open').setAttribute('aria-expanded', 'true');
-    }
-    if (state.ui.section === 'talk') { syncReading(); }
-  }
-  function closeInspector() {
-    stashReading();
-    if (state.ui.inspectorOpen) { $('inspector').close(); }
-  }
-  function renderContext() {
-    var actor = state.office.selected != null, phase = !!state.loop.selected;
-    $('inspector-context').hidden = !(actor || phase);
-    $('office-details').hidden = !actor;
-    text('inspector-title', actor || phase ? 'Подробности: выбранный контекст' : 'Подробности');
-  }
-
-  function bindLoopControl(button, base, prefix) {
-    var name = node('span', prefix + '-name', base.name), status = node('span', prefix + '-state', 'не начат');
-    button.appendChild(name);
-    button.appendChild(status);
-    state.loop.nodes[base.phase] = { button: button, name: name, state: status };
-    button.addEventListener('click', function () { selectLoopPhase(base.phase, button); });
-  }
-
-  function selectOfficeActor(id) {
-    state.office.selected = state.office.selected === id ? null : id;
-    if (state.office.selected != null) { state.loop.selected = null; }
-    openInspector($('office-actor-' + id));
-    render();
-  }
-  function selectLoopPhase(phase, opener) {
-    state.loop.selected = state.loop.selected === phase ? null : phase;
-    if (state.loop.selected) { state.office.selected = null; }
-    openInspector(opener);
-    render();
-  }
-
-  function mountOffice() {
-    var mount = typeof mountPixelOffice === 'function' ? mountPixelOffice : null;
-    if (!mount) {
-      state.office.error = 'скрипт сцены не выполнен (нет /pixel-agents/office.js или его не пропустила политика CSP)';
-      officeStatus();
-      return;
-    }
-    try {
-      mount($('office-canvas'), { onSelect: selectOfficeActor }).then(function (view) {
-        state.office.view = view;
-        state.office.error = null;
-        view.setZoomStep(state.office.zoomStep);
-        if (state.office.pending) { view.update(state.office.pending); }
-        officeStatus();
-      }, function (error) {
-        state.office.error = String((error && error.message) || error);
-        officeStatus();
-      });
-    } catch (error) {
-      state.office.error = String((error && error.message) || error);
-      officeStatus();
-    }
-  }
-
   function render() {
-    var summary = summarize(), trace = summarizeTrace(), current = summary.current, moment = now();
+    var selected = selectedRun();
+    var summary = summarize(selected), trace = summarizeTrace(selected), current = summary.current, moment = now();
     var connection = $('connection');
     if (state.connected) {
       connection.className = 'pill pill-ok'; connection.textContent = 'связь с сервером есть';
@@ -2118,19 +1517,26 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       connection.textContent = state.failures ? 'нет связи, повтор через ' + Math.min(2 * state.failures, 10) + ' с' : 'подключение...';
     }
     var notice = $('notice');
+    var foreign = Object.keys(summary.foreign).concat(Object.keys(trace.foreign).filter(function (name) { return !(name in summary.foreign); }));
     if (!state.connected && state.failures) {
       notice.className = 'notice bad';
       notice.textContent = 'Сервер прогресса не отвечает: данные ниже могли устареть, состояния этапов не подтверждены. Страница продолжает попытки подключения.';
     } else if (state.events.journal === false && state.trace.journal === false) {
       notice.className = 'notice warn';
       notice.textContent = 'Журнал progress.jsonl еще не создан: дождитесь запуска helper или проверьте --progress-dir.';
+    } else if (foreign.length) {
+      // Records of another run stay in the files and in the table below; nothing on this page
+      // mixes them into the selected run's steps, and this line says they are there.
+      notice.className = 'notice warn';
+      notice.textContent = 'В каталоге есть записи другого прогона (' + foreign.join(', ') + '): показан только прогон '
+        + (summary.runId || trace.runId || '-') + ', чужие записи в состояния этапов не входят.';
     } else {
       notice.className = 'notice hidden';
     }
     var runId = summary.runId || trace.runId, attempts = Math.max(summary.attempt, trace.attempt);
     // Заголовок - опознание задачи, а не пересказ запроса: полный текст с авторством остается
     // сообщением пользователя в разделе "Разговор" и в записях персонажа "Пользователь".
-    text('title', officeShort(trace.userTitle || trace.title || (runId ? 'Задача ' + runId : 'Монитор конвейера'), 64));
+    text('title', shorten(trace.userTitle || trace.title || (runId ? 'Задача ' + runId : 'Монитор конвейера'), 64));
     text('run', 'run: ' + (runId || '-'));
     text('attempt', 'попытка: ' + (attempts || '-') + (attempts > 1 ? ' (циклов: ' + attempts + ')' : ''));
     text('records', 'записей: ' + state.events.list.length + ', трассировка: ' + state.trace.list.length
@@ -2161,7 +1567,7 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
       }
       if (states.some(function (entry) { return entry.kind === 'stale'; }) && !states.some(function (entry) { return entry.kind === 'pending' || entry.kind === 'wait'; })) { detail += '; тишина не означает завершения'; }
       text('stage-detail', detail);
-      setCard('card-stage', states.some(function (entry) { return entry.kind === 'pending'; }) ? 'pending' : states.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait' : states.some(function (entry) { return entry.kind === 'bad'; }) ? 'bad' : 'stale');
+      setCard('card-stage', states.some(function (entry) { return entry.kind === 'pending'; }) ? 'pending' : states.some(function (entry) { return entry.kind === 'wait'; }) ? 'wait' : states.some(function (entry) { return entry.kind === 'bad'; }) ? 'bad' : states.some(function (entry) { return entry.kind === 'offline'; }) ? 'offline' : states.some(function (entry) { return entry.kind === 'stale'; }) ? 'stale' : 'neutral');
     } else if (!stage) {
       text('stage', state.events.list.length ? 'только наблюдаемые вызовы' : 'нет данных');
       text('stage-detail', state.events.list.length ? 'событий этапа еще не было' : 'событий еще нет');
@@ -2207,8 +1613,11 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
         var captured = trace.steps[step.key], provider = captured && captured.provider === 'codex' ? 'Codex' : 'Claude';
         var entry = stepState(step, captured, moment);
         var line = provider + ' ' + (step.run.model || '?') + ' / ' + (step.run.effort || '?') + ' (' + PHASE_NAMES[step.phase] + ', ' + step.id + ', попытка ' + step.attempt + '): '
-          + (entry.retry ? retryLabel(entry.retry, moment).label : entry.kind === 'stale' ? 'тишина ' + span(entry.age) + ', состояние не подтверждено'
-             : entry.age != null ? 'работает, последняя активность ' + span(entry.age) + ' назад' : entry.label);
+          // The same order the stage detail reads in: a state that carries no age of its own says what it
+          // says, and only a state measured from the last observation is turned into work or silence here.
+          + (entry.retry ? retryLabel(entry.retry, moment).label : entry.age == null ? entry.label
+             : entry.kind === 'stale' ? 'тишина ' + span(entry.age) + ', состояние не подтверждено'
+             : 'работает, последняя активность ' + span(entry.age) + ' назад');
         var seen = step.init ? step.init.model : captured ? captured.observedModel : null;
         line += seen ? '; в потоке: ' + seen : '; модель в потоке не сообщена';
         var selected = captured && captured.harness.selected;
@@ -2395,12 +1804,8 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     renderInvocations(summary, trace, moment);
     refreshFilters(summary, trace);
     renderConversation(summary, trace);
-    var office = renderOffice(summary, trace, moment);
-    var loop = renderLoop(summary, trace, moment);
-    renderContext();
     text('status-text', 'Состояние: ' + $('stage').textContent + '. ' + $('stage-detail').textContent + '. ' + $('next-action').textContent
-      + '. Цикл: ' + loop.line + '. Токены: ' + $('usage').textContent + '. Связь: ' + connection.textContent + '. Офис: '
-      + office.map(function (actor) { return actor.name + ' - ' + actor.short; }).join('; ') + '.');
+      + '. Токены: ' + $('usage').textContent + '. Связь: ' + connection.textContent + '.');
   }
 
   function bind() {
@@ -2421,40 +1826,6 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
     ['show-user', 'show-manager', 'show-claude', 'show-codex'].forEach(function (id) { $(id).addEventListener('change', render); });
     $('show-subagents').addEventListener('change', function () { state.ui.subagents = $('show-subagents').checked; render(); });
     $('show-activity').addEventListener('change', function () { state.ui.activity = $('show-activity').checked; render(); });
-    // Кнопки участников офиса живут в разметке и никогда не пересоздаются: выбор и фокус
-    // переживают перерисовку страницы. Обновляются только тексты внутри них.
-    OFFICE_ACTORS.forEach(function (base) {
-      var button = $('office-actor-' + base.id);
-      var nodes = { button: button, name: node('span', 'office-actor-name'), status: node('span', 'office-actor-status'),
-                    detail: node('span', 'office-actor-detail') };
-      button.appendChild(nodes.name);
-      button.appendChild(nodes.status);
-      button.appendChild(nodes.detail);
-      button.addEventListener('click', function () { selectOfficeActor(base.id); });
-      state.office.nodes[base.id] = nodes;
-    });
-    state.office.motion = $('office-motion').checked;
-    $('office-motion').addEventListener('change', function () { state.office.motion = $('office-motion').checked; render(); });
-    function zoom(delta) {
-      var next = Math.max(1, Math.min(3, state.office.zoomStep + delta));
-      state.office.zoomStep = next;
-      if (state.office.view) { state.office.view.setZoomStep(next); }
-      text('office-zoom', 'масштаб: ' + OFFICE_ZOOM_NAMES[next]);
-    }
-    $('office-zoom-in').addEventListener('click', function () { zoom(1); });
-    $('office-zoom-out').addEventListener('click', function () { zoom(-1); });
-    // Узлы цикла и фишки тоже живут в разметке и не пересоздаются: выбор и фокус переживают опрос.
-    LOOP_NODES.forEach(function (base) { bindLoopControl($('loop-node-' + base.phase), base, 'loop-node'); });
-    LOOP_CHIPS.forEach(function (base) { bindLoopControl($('loop-chip-' + base.phase), base, 'loop-chip'); });
-    $('details-open').addEventListener('click', function () { openInspector($('details-open')); });
-    $('inspector-close').addEventListener('click', closeInspector);
-    // Escape закрывает нативно; позиция чтения снимается до закрытия, пока раздел еще имеет высоту.
-    $('inspector').addEventListener('cancel', stashReading);
-    $('inspector').addEventListener('close', function () {
-      state.ui.inspectorOpen = false;
-      $('details-open').setAttribute('aria-expanded', 'false');
-      (state.ui.opener || $('details-open')).focus();
-    });
     SECTIONS.forEach(function (name) {
       $('tab-' + name).addEventListener('click', function () { setSection(name); });
     });
@@ -2462,7 +1833,6 @@ footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0
   }
 
   bind();
-  mountOffice();
   setInterval(function () { if (state.events.list.length || state.trace.list.length) { render(); } }, 1000);
   poll();
 })();

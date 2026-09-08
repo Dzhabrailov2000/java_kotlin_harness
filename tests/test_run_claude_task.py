@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 run_acceptance = importlib.import_module("run_acceptance")
-LAUNCHER = SCRIPTS / "run_claude_task.py"
+LAUNCHER = ROOT / "claude" / "scripts" / "run_claude_task.py"
 # The group leader exits on SIGTERM while its descendant ignores it and keeps writing to the workspace.
 DESCENDANT_CLI = textwrap.dedent("""\
     import json
@@ -271,7 +271,7 @@ class RunClaudeTaskTest(unittest.TestCase):
         )
         for name, source in sources.items():
             with self.subTest(skill=name):
-                path = ROOT / "skills" / name / "SKILL.md"
+                path = ROOT / "shared" / "skills" / name / "SKILL.md"
                 content = path.read_bytes()
                 self.assertEqual(Path(source["path"]), path)
                 self.assertIn(content.decode("utf-8"), forwarded)
@@ -283,6 +283,88 @@ class RunClaudeTaskTest(unittest.TestCase):
             hashlib.sha256(captured["stdin"].encode("utf-8")).hexdigest(),
         )
         self.assertEqual(Path(captured["cwd"]), self.workspace.resolve())
+
+    def install_skill(self, location, name, body):
+        """A skill of this name installed where the component search looks before the checkout."""
+        path = location / ".claude" / "skills" / name / "SKILL.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("---\nname: %s\ndescription: fixture\n---\n\n%s\n" % (name, body), encoding="utf-8")
+        return path
+
+    def test_a_mandatory_skill_is_taken_from_this_checkout_and_a_selected_one_from_the_project(self):
+        # scope-fence and evidence-before-claim carry what the implementer role relies on, and an
+        # older copy of the same name is installed on real machines: its scope-fence still ends with
+        # the compulsory final /verify cycle this role rules out. Whatever such a copy says, the text
+        # actually sent is the checkout's. A skill the manager selected is the project's own material
+        # and keeps winning over the checkout, so the two rules are checked in the same invocation.
+        overriding = {
+            self.install_skill(self.workspace, "scope-fence",
+                               "- Before handing over a non-trivial diff, use the built-in `/verify`."
+                               "\n- OVERRIDING-BASE-SENTINEL-11aa"),
+            self.install_skill(self.user_home, "evidence-before-claim",
+                               "- The built-in `/verify` is compulsory.\n- OVERRIDING-BASE-SENTINEL-22bb"),
+        }
+        project = self.install_skill(self.workspace, "kotlin-testing", "PROJECT-SKILL-SENTINEL-33cc")
+        before = {path: path.read_bytes() for path in overriding | {project}}
+
+        process, output = self.invoke(extra=("--skill", "kotlin-testing"))
+
+        self.assert_completed(process, output)
+        forwarded = self.option(self.read_json(self.capture)["argv"], "--append-system-prompt")
+        sources = {source["skill"]: source for source in
+                   self.read_json(output / "invocation.json")["harness_sources"]}
+        for name in ("scope-fence", "evidence-before-claim"):
+            with self.subTest(skill=name):
+                canonical = ROOT / "shared" / "skills" / name / "SKILL.md"
+                self.assertEqual(Path(sources[name]["path"]), canonical)
+                self.assertEqual(sources[name]["sha256"], hashlib.sha256(canonical.read_bytes()).hexdigest())
+                self.assertIn(canonical.read_text(encoding="utf-8"), forwarded, "the bytes sent are the checkout's")
+        for sentinel in ("OVERRIDING-BASE-SENTINEL-11aa", "OVERRIDING-BASE-SENTINEL-22bb"):
+            with self.subTest(sentinel=sentinel):
+                self.assertNotIn(sentinel, forwarded, "an overriding copy of a mandatory skill is not sent")
+                self.assertNotIn(sentinel, (output / "instructions.md").read_text(encoding="utf-8"))
+        # The selected skill still comes from the project installation, with its own bytes.
+        self.assertEqual(Path(sources["kotlin-testing"]["path"]), project.resolve())
+        self.assertIn("PROJECT-SKILL-SENTINEL-33cc", forwarded)
+        # Files of another installation are read at most, never rewritten or removed.
+        for path, content in before.items():
+            with self.subTest(file=path.name):
+                self.assertEqual(path.read_bytes(), content)
+
+    def test_the_role_and_the_user_policy_reach_the_model_and_the_record(self):
+        process, output = self.invoke()
+        self.assert_completed(process, output)
+        forwarded = self.option(self.read_json(self.capture)["argv"], "--append-system-prompt")
+        role = ROOT / "teams" / "dev" / "implementer.md"
+        policy = ROOT / "shared" / "rules" / "simplicity.md"
+        # The canonical texts themselves are sent, not their paths: a link is not delivery.
+        self.assertIn(role.read_text(encoding="utf-8").split("---", 2)[2].strip(), forwarded)
+        self.assertIn(policy.read_text(encoding="utf-8").strip(), forwarded)
+        self.assertIn("Choose the simplest implementation that fully satisfies the requirements.", forwarded)
+        self.assertIn("Do not open a self-review pass, a double-check loop, a verification agent", forwarded)
+        # A single non-interactive turn: an uncertainty goes back in the report instead of a guess.
+        self.assertIn("Return the question to the manager in the report instead of guessing", forwarded)
+        self.assertIn("the answer arrives in the prompt of\nthe next invocation", forwarded)
+        sources = {source["name"]: source for source in
+                   self.read_json(output / "invocation.json")["instruction_sources"]}
+        self.assertEqual(set(sources), {"pipeline-implementer", "simplicity"})
+        for name, path in (("pipeline-implementer", role), ("simplicity", policy)):
+            with self.subTest(source=name):
+                self.assertEqual(sources[name]["path"], str(path))
+                self.assertEqual(sources[name]["sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_the_manager_only_skill_is_refused_before_the_executable_starts(self):
+        for name, reason in (("dev-pipeline", "the manager runs the loop"),
+                             ("adversarial-self-check", "independent review")):
+            with self.subTest(skill=name):
+                process, output = self.invoke(extra=("--skill", name))
+                self.assertNotEqual(process.returncode, 0, process.stdout)
+                self.assertIn(name + " belongs to the manager, not the implementer", process.stderr)
+                self.assertIn(reason, process.stderr)
+                self.assertIn("focused debugging and testing", process.stderr)
+                self.assertFalse(self.capture.exists(), "a refused selection must not start the executable")
+                self.assertFalse(output.exists(), "a refused selection must not leave an output directory")
+                self.assertEqual(self.workspace_entries(), self.workspace_before)
 
     def test_the_frozen_contract_reaches_the_model_and_the_records(self):
         process, output = self.invoke()

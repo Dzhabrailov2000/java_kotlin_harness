@@ -48,10 +48,12 @@ Not run: <what and why>.
 | <place, substance> | REFUTED | untouched |
 | <place, substance> | UNVERIFIED | evidence: <what you found or did not, and where you looked> |
 
-## Unknown and missing input
+## Unknown and questions for the manager
 
-<Sources that were not enough; questions the available material cannot answer; assumptions the work
-rests on.>
+<Sources that were not enough; assumptions the work rests on; and every question you could not
+settle yourself. For each one: what is unclear, which sources you checked, and what decision or
+evidence would unblock it. Say which parts of the assignment went ahead without the answer. The
+manager answers in the next prompt; this launch is one turn and has no way to ask mid-work.>
 
 ## Capabilities you could not use
 

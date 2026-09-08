@@ -27,14 +27,15 @@ import sys
 import threading
 import uuid
 
-from run_progress import (DEFAULT_LIMIT, LOCK_TIMEOUT, MALFORMED, MAX_LIMIT, PHASES, TIME, JOURNAL, _Lock, _append,
-                          first_line, identifier, journal_summary, open_plain, read_events, slug, utc_now)
+from run_progress import (DEFAULT_LIMIT, LOCK_TIMEOUT, MALFORMED, MAX_LIMIT, PHASES, TIME, JOURNAL, TRACE,
+                          RunIdentityError, _Lock, _append, directory_run_id, first_line, identifier, journal_summary,
+                          open_plain, read_events, slug, utc_now)
 
 
 TRACE_SCHEMA = 1
 CAPTURE = "trace/1"
 TOOL_VERSION = "1.1"
-TRACE, TRACE_LOCK, ARTIFACTS = "trace.jsonl", ".trace.lock", "artifacts"
+TRACE_LOCK, ARTIFACTS = ".trace.lock", "artifacts"
 # Inline text bound; a longer text keeps this much as a labelled preview and the whole original as an artifact.
 MAX_TEXT_BYTES = 60 * 1000
 MAX_TRACE_LINE_BYTES = 128 * 1024
@@ -675,8 +676,13 @@ def load_artifact(directory, artifact_id):
     return record, data
 
 
-def check_trace_target(path):
-    """Adopt an existing trace only when it is a plain single-link file that starts as ours."""
+def check_trace_target(path, run_id=None):
+    """Adopt an existing trace only when it is a plain single-link file that starts as ours.
+
+    The run of its first record owns the file for the same reason the journal's does: two
+    runs in one trace would share step identities that mean different invocations. A
+    publisher that names another run is refused here, before it writes anything.
+    """
     try:
         info = os.lstat(path)
     except FileNotFoundError:
@@ -686,9 +692,11 @@ def check_trace_target(path):
     if info.st_size == 0:
         return
     try:
-        validate_trace(json.loads(first_line(path).decode("utf-8")))
+        first = validate_trace(json.loads(first_line(path).decode("utf-8")))
     except MALFORMED:
         raise ValueError("Existing file is not a trace: " + str(path))
+    if run_id is not None and first["run_id"] != run_id:
+        raise RunIdentityError("This trace belongs to run %s, not to %s: %s" % (first["run_id"], run_id, path))
 
 
 class TraceStore:
@@ -719,8 +727,14 @@ class TraceStore:
         if source not in SOURCES or (phase is not None and phase not in PHASES):
             raise ValueError("Unknown trace source or phase")
         directory.mkdir(parents=True, exist_ok=True)
+        # The journal beside the trace owns the identity of the directory: a trace of another run
+        # would be a second run in the same place even before its own first record exists.
+        journal_run = journal_summary(directory / JOURNAL)["run_id"]
+        if journal_run is not None and journal_run != run_id:
+            raise RunIdentityError("This progress directory belongs to run %s, not to %s: %s"
+                                   % (journal_run, run_id, directory / TRACE))
         with _Lock(directory / TRACE_LOCK):
-            check_trace_target(directory / TRACE)
+            check_trace_target(directory / TRACE, run_id)
             _append(directory / TRACE, b"")
         return cls(directory, run_id, attempt, step_id, source, phase, tool, provider)
 
@@ -1274,17 +1288,25 @@ def read_metadata(path):
 
 
 def open_store(args, *, default_step, source, tool, phase=None, provider=None, identity=None):
-    """Resolve the run identity from the journal beside the trace, the way emit does, then open the store.
+    """Resolve the run identity from the journal and the trace beside it, then open the store.
 
-    `identity`, when given, is a trace record whose run id, attempt and step id the store takes
-    instead: the completion of a killed import continues under the identity its records carry.
+    `identity`, when given, is a trace record whose attempt and step id the store takes instead:
+    the completion of a killed import continues under the identity its records carry. It decides
+    the invocation, never the run: a caller that explicitly named another run is publishing into
+    the wrong directory and is refused here, exactly as an ordinary import of that run would be.
+    Without a prefix the journal decides, then the trace already written here, and only an empty
+    directory falls back to its own name: joining a trace under a second run is refused, so a
+    default that ignored the trace would make an import of history impossible.
     """
     directory = Path(args.progress_dir).resolve()
     if identity is not None:
         run_id, attempt, step_id = identity["run_id"], identity["attempt"], identity["step_id"]
+        if args.run_id is not None and args.run_id != run_id:
+            raise RunIdentityError("This progress directory belongs to run %s, not to %s: %s"
+                                   % (run_id, args.run_id, directory / TRACE))
     else:
         summary = journal_summary(directory / JOURNAL)
-        run_id = args.run_id or summary["run_id"] or slug(directory.name, "run")
+        run_id = args.run_id or directory_run_id(directory, summary)[0] or slug(directory.name, "run")
         attempt = args.attempt or summary["attempt"] or 1
         step_id = args.step_id or slug(default_step, "step")
     return TraceStore.open(directory, run_id=run_id, attempt=attempt, step_id=step_id, source=source, tool=tool,

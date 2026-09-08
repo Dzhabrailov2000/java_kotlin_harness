@@ -23,7 +23,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
-LAUNCHER, PROGRESS = SCRIPTS / "run_claude_task.py", SCRIPTS / "run_progress.py"
+LAUNCHER, PROGRESS = ROOT / "claude" / "scripts" / "run_claude_task.py", SCRIPTS / "run_progress.py"
 sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 run_acceptance = importlib.import_module("run_acceptance")
@@ -126,13 +126,8 @@ PAGE_HARNESS = textwrap.dedent("""\
     Stub.prototype.getAttribute = function (name) { return this.attributes[name] == null ? null : this.attributes[name]; };
     Stub.prototype.addEventListener = function (name, handler) { (this.handlers[name] = this.handlers[name] || []).push(handler); };
     Stub.prototype.fire = function (name) { (this.handlers[name] || []).forEach(function (handler) { handler({ target: this }); }, this); };
-    // The on-demand inspector is a native dialog: the stub models opening, closing, Escape and focus so the
-    // page can call them without a branch, and a test can read where the focus went.
-    Stub.prototype.showModal = function () { this.open = true; };
-    Stub.prototype.close = function () { this.open = false; this.fire('close'); };
-    Stub.prototype.escape = function () { this.fire('cancel'); this.close(); };
     Stub.prototype.focus = function () { globalThis.__focused = this; };
-    const CHECKED = { follow: true, 'follow-events': true, 'show-user': true, 'show-manager': true, 'show-claude': true, 'show-codex': true, 'office-motion': true };
+    const CHECKED = { follow: true, 'follow-events': true, 'show-user': true, 'show-manager': true, 'show-claude': true, 'show-codex': true };
     const elements = {};
     globalThis.document = {
       getElementById(id) { if (!elements[id]) { elements[id] = new Stub('div'); elements[id].elementId = id; elements[id].checked = !!CHECKED[id]; } return elements[id]; },
@@ -212,7 +207,6 @@ PAGE_HARNESS = textwrap.dedent("""\
         const button = walk(articles[action[1]], []).filter(function (node) { return node.tagName === 'button'; })[0];
         button.fire('click');
       }
-      else if (name === 'escape') { document.getElementById('inspector').escape(); }
     }
     (async function () {
       await settle();
@@ -253,55 +247,16 @@ PAGE_HARNESS = textwrap.dedent("""\
         return { tag: block.tagName, open: block.attributes.open != null, summary: block.children[0].textContent,
                  lines: block.children.filter(function (child) { return child.className.indexOf('line') === 0; }).map(function (child) { return child.textContent; }) };
       });
-      // The office bundle is never loaded here: the stub DOM has no canvas, so the page must fall back to
-      // its readable actor controls and say why the scene is missing.
-      const office = {
-        status: document.getElementById('office-status').textContent,
-        statusClass: document.getElementById('office-status').className,
-        actors: [1, 2, 3].map(function (id) {
-          const button = document.getElementById('office-actor-' + id);
-          return { className: button.className, pressed: button.getAttribute('aria-pressed'),
-                   parts: button.children.map(function (part) { return part.textContent; }) };
-        }),
-        details: document.getElementById('office-details').children.map(function (block) {
-          const all = walk(block, []);
-          return { tag: block.tagName, className: block.className, text: block.textContent,
-                   links: all.filter(function (item) { return item.tagName === 'a'; }).map(function (item) { return item.attributes.href; }),
-                   flags: all.filter(function (item) { return (item.className || '').indexOf('flag') === 0; }).map(function (item) { return item.textContent; }) };
-        })
-      };
-      // The minimal main screen keeps the five loop nodes and the return arc; everything else moved behind
-      // one on-demand inspector, so its open state, section and selected context are read here too.
-      const control = function (id) {
-        const button = document.getElementById(id);
-        return { className: button.className, pressed: button.getAttribute('aria-pressed'), hidden: !!button.hidden,
-                 label: button.getAttribute('aria-label'), parts: button.children.map(function (part) { return part.textContent; }) };
-      };
-      const loop = {
-        nodes: ['build', 'tests', 'review', 'triage', 'decision'].map(function (phase) { return control('loop-node-' + phase); }),
-        chips: ['verify', 'handoff'].map(function (phase) { return control('loop-chip-' + phase); }),
-        arc: { className: document.getElementById('loop-return').className, label: document.getElementById('loop-return-label').textContent },
-        state: document.getElementById('loop-state').textContent
-      };
+      // The office itself is another program on another route; what this page owns is the readable
+      // side of it, so only its sections are read here.
       const inspector = {
-        open: !!document.getElementById('inspector').open,
-        expanded: document.getElementById('details-open').getAttribute('aria-expanded'),
-        title: document.getElementById('inspector-title').textContent,
-        contextHidden: !!document.getElementById('inspector-context').hidden,
-        actorHidden: !!document.getElementById('office-details').hidden,
-        phaseHidden: !!document.getElementById('loop-details').hidden,
         sections: ['talk', 'sessions', 'metrics', 'journal'].map(function (name) {
           return { name: name, hidden: !!document.getElementById('section-' + name).hidden,
                    selected: document.getElementById('tab-' + name).getAttribute('aria-selected') };
         }),
-        phase: document.getElementById('loop-details').children.map(function (block) {
-          const all = walk(block, []);
-          return { tag: block.tagName, className: block.className, text: block.textContent,
-                   links: all.filter(function (item) { return item.tagName === 'a'; }).map(function (item) { return item.attributes.href; }) };
-        }),
         focused: globalThis.__focused ? globalThis.__focused.elementId || null : null
       };
-      process.stdout.write(JSON.stringify({ office: office, loop: loop, inspector: inspector, steps: rows('steps'), agents: rows('agents'),
+      process.stdout.write(JSON.stringify({ inspector: inspector, steps: rows('steps'), agents: rows('agents'),
         events: rows('events').length, usage: rows('usage-rows'),
         tools: document.getElementById('tools').children.map(function (chip) { return chip.textContent; }), cards: cards, cardClass: cardClass, stages: stages,
         conversation: conversation, filters: { cycle: options('filter-cycle'), step: options('filter-step') }, created: created,
@@ -559,6 +514,28 @@ class JournalTest(unittest.TestCase):
         self.assertTrue(log.startswith(run_progress.LOG_HEADER))
         self.assertEqual(len(log.splitlines()), 5)
         self.assertIn("#1 tests manager  tests: этап PASS [n=40]", log)
+
+    def test_a_publisher_of_another_run_is_refused_and_writes_nothing(self):
+        """One progress directory is one run: the second run's records never join the first's."""
+        self.open_launcher(run_id="run-a")
+        before = (self.progress / "progress.jsonl").read_bytes()
+        with self.assertRaises(run_progress.RunIdentityError) as refused:
+            self.open_launcher(run_id="run-b")
+        self.assertIn("run-a", str(refused.exception))
+        self.assertIn("run-b", str(refused.exception))
+        self.assertEqual((self.progress / "progress.jsonl").read_bytes(), before, "a refused publication writes nothing")
+        # It is a ValueError, so every caller that already treats a bad target as an observation
+        # failure keeps doing so, and the same run continues to be accepted.
+        self.assertIsInstance(refused.exception, ValueError)
+        same = self.open_launcher(run_id="run-a")
+        self.assertEqual(same.run_id, "run-a")
+        self.assertEqual([record["run_id"] for record in journal_records(self.progress / "progress.jsonl")], ["run-a", "run-a"])
+        # The trace beside it holds the same identity and refuses the same way.
+        run_trace = importlib.import_module("run_trace")
+        run_trace.TraceStore.open(self.progress, run_id="run-a", attempt=1, step_id="build-1", source="launcher",
+                                  tool="test").record("status", state="cli_started")
+        with self.assertRaises(run_progress.RunIdentityError):
+            run_trace.TraceStore.open(self.progress, run_id="run-b", attempt=1, step_id="build-1", source="launcher", tool="test")
 
     def test_concurrent_openers_and_writers_keep_every_line_whole(self):
         workers, per_worker = 6, 30
@@ -1092,15 +1069,10 @@ class ServerTest(unittest.TestCase):
         script = re.search("<script>(.*?)</script>", html, re.DOTALL).group(1)
         digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
         self.assertIn("'sha256-" + digest + "'", csp)
-        # The office bundle is the only external script: authorized by the digest of the very bytes the
-        # server holds, and pinned in the page by the same value as integrity metadata.
-        external = re.findall(r"<script ([^>]*)></script>", html)
-        self.assertEqual(len(external), 1, external)
-        attributes = dict(re.findall(r'(\w+)="([^"]*)"', external[0]))
-        self.assertEqual(attributes["src"], "/pixel-agents/office.js")
-        bundle = run_progress.sri(self.server.office["/pixel-agents/office.js"])
-        self.assertEqual(attributes["integrity"], bundle)
-        self.assertIn("script-src '" + bundle + "' 'sha256-" + digest + "'", csp)
+        # The journal page has no external script at all: the office is another program on another
+        # route, and everything this page runs is the one inline block named by its own digest.
+        self.assertEqual(re.findall(r"<script ([^>]*)></script>", html), [])
+        self.assertIn("script-src 'sha256-" + digest + "'", csp)
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["Cache-Control"], "no-store")
         for forbidden in ("http://", "https://", "<link", "<img", "<iframe", "innerHTML", "outerHTML",
@@ -1110,51 +1082,16 @@ class ServerTest(unittest.TestCase):
         self.assertIn("tail -f", html)
         self.assertIn("COMPLETE только по явному событию менеджера", html)
 
-    def test_office_bundle_is_served_from_two_exact_paths_only(self):
-        for path, content_type, head in (("/pixel-agents/office.js", "application/javascript; charset=utf-8", b"/* Pixel Agents"),
-                                         ("/pixel-agents/assets.json", "application/json; charset=utf-8", b'{"characters"')):
-            with self.subTest(path=path):
-                status, headers, body = self.get(path)
-                self.assertEqual(status, 200)
-                self.assertEqual(headers["Content-Type"], content_type)
-                self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
-                self.assertTrue(body.startswith(head), body[:40])
-                self.assertEqual(body, (run_progress.OFFICE / Path(path).name).read_bytes())
-        # Nothing else under the prefix is reachable: the two URLs above are mapped to two fixed files,
-        # no request path is ever joined onto a directory, and no other file of the repository is served.
-        for path in ("/pixel-agents/", "/pixel-agents", "/pixel-agents/office.js/", "/pixel-agents/build-manifest.json",
-                     "/pixel-agents/../prompt.md", "/pixel-agents/%2e%2e/prompt.md", "/pixel-agents/office.js%00.txt",
-                     "/pixel-agents//office.js", "/PIXEL-AGENTS/office.js", "/monitor/pixel-office/dist/office.js",
-                     "/pixel-agents/vendor/LICENSE"):
+    def test_the_office_is_not_served_from_this_api(self):
+        """The office and its assets belong to the office server; this one keeps the journal."""
+        for path in ("/pixel-agents/office.js", "/pixel-agents/assets.json", "/pixel-agents/",
+                     "/index.html", "/assets/index.js", "/fonts/FSPixelSansUnicode-Regular.ttf",
+                     "/details", "/ws", "/monitor/pixel-office/dist/office.js",
+                     "/../prompt.md", "/%2e%2e/prompt.md"):
             with self.subTest(path=path):
                 status, _, body = self.get(path)
                 self.assertEqual(status, 404, path)
                 assert_no_sentinel(self, body.decode("utf-8"), path)
-        # A query cannot select another file: the route is the whole path, and the path alone picks the file.
-        self.assertEqual(self.get("/pixel-agents/office.js?file=../../prompt.md")[2],
-                         (run_progress.OFFICE / "office.js").read_bytes())
-        self.assertEqual(self.get("/pixel-agents/office.js", host="example.com")[0], 403)
-        self.assertEqual(self.get("/pixel-agents/office.js", method="POST")[0], 501)
-
-    def test_a_missing_bundle_is_reported_and_authorizes_nothing(self):
-        """Without the built bundle the page says so instead of loading an unauthorized script."""
-        with mock.patch.dict(run_progress.OFFICE_FILES,
-                             {"/pixel-agents/office.js": (self.progress / "absent.js", "application/javascript; charset=utf-8")}):
-            server = run_progress.ProgressServer(self.progress, 0)
-            self.addCleanup(server.server_close)
-            thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
-            thread.start()
-            self.addCleanup(thread.join, 5)
-            self.addCleanup(server.shutdown)
-            self.assertNotIn("'sha256-" + base64.b64encode(hashlib.sha256(b"").digest()).decode(), server.csp)
-            self.assertEqual(server.csp.count("'sha256-"), 2, server.csp)
-            connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=10)
-            try:
-                connection.request("GET", "/pixel-agents/office.js")
-                response = connection.getresponse()
-                self.assertEqual((response.status, response.read()), (503, b"office bundle is not built\n"))
-            finally:
-                connection.close()
 
     def test_api_pages_with_cursor_and_reports_journal_state(self):
         status, headers, body = self.get("/api/events")
@@ -1210,9 +1147,9 @@ class PageViewTest(unittest.TestCase):
                 stream.write(json.dumps(event).encode("utf-8") + b"\n")
         observer.poll()
 
-    def api(self, path):
-        """One real API response of a server over the current progress directory."""
-        server = run_progress.ProgressServer(self.progress, 0)
+    def api(self, path, directory=None):
+        """One real API response of a server over a progress directory; the current one by default."""
+        server = run_progress.ProgressServer(directory or self.progress, 0)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
         thread.start()
         try:
@@ -1396,7 +1333,7 @@ class PageViewTest(unittest.TestCase):
         self.assertEqual(mixed["cards"]["usage-detail"], "вход без кеша 849, создание кеша 25 276, чтение кеша 33 629, из кеша (Codex, входит во вход) 24 448; "
                                                          "рассуждения в составе выхода: 120")
         self.assertEqual([row for row in mixed["usage"] if row[1] in ("review-1", "builder-2")], [
-            ["1", "builder-2", MODEL, "неизвестно (захвата нет)", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно"],
+            ["1", "builder-2", MODEL + " (запрошена)", "неизвестно (захвата нет)", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно", "неизвестно"],
             ["1", "review-1", "Codex модель не сообщена", "итог", "24 763", "315", "неизвестно", "неизвестно", "24 448", "122", "0", "неизвестно"]])
         # A Codex turn that reports no cached subset keeps its uncached part unknown rather than equal to its input.
         partial = run_trace.CodexTrace(self.trace_store("review-2", provider="codex", phase="review"))
@@ -1416,10 +1353,12 @@ class PageViewTest(unittest.TestCase):
                            record(500, event="cli_exit", status="exited", exit_code=0, **launcher),
                            record(490, event="result", status="ready", **launcher))
         view = self.view()
+        # A stage with no record of its own is an absence of evidence, never an assertion that
+        # it has not started: nothing here observed a stage failing to begin.
         self.assertEqual(view["stages"], [[["сборка", "готово к проверке", "stage s-done"], ["проверки", "ожидает менеджера", "stage s-wait"],
-                                           ["ревью", "не начат", "stage s-neutral"], ["triage", "не начат", "stage s-neutral"],
-                                           ["verify", "не начат", "stage s-neutral"], ["решение", "не начат", "stage s-neutral"],
-                                           ["handoff", "не начат", "stage s-neutral"]]])
+                                           ["ревью", "нет записей", "stage s-neutral"], ["triage", "нет записей", "stage s-neutral"],
+                                           ["verify", "нет записей", "stage s-neutral"], ["решение", "нет записей", "stage s-neutral"],
+                                           ["handoff", "нет записей", "stage s-neutral"]]])
         self.assertEqual(view["cards"]["next-action"], "следующий шаг: менеджер: запустить проверки (шаг сборка записан: готово к проверке)")
         self.assertEqual(view["cards"]["models"], "активных вызовов LLM нет")
         manager = {"source": "manager", "attempt": 1}
@@ -1433,7 +1372,7 @@ class PageViewTest(unittest.TestCase):
         retry = self.view()
         self.assertEqual([chip[1:] for chip in retry["stages"][0]][:6], [
             ["готово к проверке", "stage s-done"], ["этап PASS", "stage s-done"], ["этап FAIL", "stage s-bad"],
-            ["замечания CONFIRMED (3)", "stage s-warn"], ["не начат", "stage s-neutral"], ["решение менеджера: RETRY", "stage s-warn"]])
+            ["замечания CONFIRMED (3)", "stage s-warn"], ["нет записей", "stage s-neutral"], ["решение менеджера: RETRY", "stage s-warn"]])
         self.assertEqual(retry["stages"][1][0], ["сборка", "ожидает запуска исполнителя", "stage s-wait"])
         self.assertEqual(retry["cards"]["next-action"], "следующий шаг: RETRY: менеджер передает отчет исполнителю и запускает попытку 2")
         self.assertEqual(retry["cards"]["decision"], "RETRY")
@@ -1485,8 +1424,67 @@ class PageViewTest(unittest.TestCase):
                            record(190, event="result", status="ready", **handoff),
                            record(100, phase="decision", step_id="decision", event="decision", status="complete", **manager))
         closed = self.view()
-        self.assertEqual(closed["stages"][0][6], ["handoff", "готово к проверке", "stage s-done"])
+        # A read-only handoff delivered a report; it is not a build that still needs the manager's check.
+        self.assertEqual(closed["stages"][0][6], ["handoff", "отчет передан", "stage s-done"])
+        self.assertEqual(closed["stages"][0][0], ["сборка", "готово к проверке", "stage s-done"],
+                         "a build keeps its own label; only the handoff changed")
         self.assertEqual(closed["cards"]["next-action"], "следующий шаг: решение COMPLETE и handoff записаны; установка и активация в журнале не отражаются и решаются пользователем")
+
+    def test_a_requested_launch_claims_no_work_until_this_invocation_is_observed(self):
+        """A launcher record asks for a run; only the CLI's own output evidences one."""
+        launcher = {"source": "launcher", "phase": "build", "step_id": "build-1"}
+        native = {"source": "native", "phase": "build", "step_id": "build-1"}
+        self.write_journal(self.journal_line(5, model=MODEL, effort="max", **launcher))
+        requested = self.view()
+        # The Journal: the chip of the phase neither says working nor pulses.
+        self.assertEqual(requested["stages"][0][0], ["сборка", "запуск запрошен, активность не наблюдалась", "stage s-neutral"])
+        # Metrics: the invocation stays open, counted and named; what it says is what was observed.
+        self.assertEqual(requested["cards"]["stage"], "сборка · build-1 · попытка 1")
+        self.assertEqual(requested["cards"]["stage-detail"], "build-1: запуск запрошен, активность не наблюдалась")
+        self.assertEqual(requested["cardClass"]["card-stage"], "card state-neutral")
+        self.assertIn("Claude " + MODEL + " / max (сборка, build-1, попытка 1): запуск запрошен, активность не наблюдалась; модель в потоке не сообщена",
+                      requested["cards"]["models"])
+        self.assertNotIn("работает", requested["cards"]["models"])
+        self.assertIn("инициализация CLI еще не наблюдалась", requested["cards"]["model-detail"])
+        self.assertIn("идет: сборка - запуск запрошен", requested["cards"]["next-action"], "an unobserved launch does not hand the step to the manager")
+        # Sessions: the same invocation, the same claim.
+        self.assertIn("попытка 1 · build-1 · " + MODEL + " / max · запуск запрошен, активность не наблюдалась · обвязка: записи нет · контекст: не захвачен",
+                      requested["invocations"][0]["summary"])
+        self.assertTrue(requested["invocations"][0]["open"], "an unfinished invocation is still current")
+        # The launcher's own trace records are the request itself: the CLI it asked for, the prompt it
+        # sent and the harness it selected. Metadata of a request is not an observation of work.
+        store = self.trace_store("build-1")
+        store.record("status", state="cli_started", model=MODEL, effort="max")
+        store.message("manager", "task_prompt", "Задача исполнителю", title="Задача")
+        store.record("harness", **run_trace.harness_selected({"skills": ["scope-fence"], "agents": [], "mcp_servers": []}, [], []))
+        store.record("context", model=MODEL, capacity=1000000, capacity_source="catalog")
+        metadata = self.view()
+        self.assertEqual(metadata["stages"][0][0][1:], ["запуск запрошен, активность не наблюдалась", "stage s-neutral"])
+        self.assertEqual(metadata["cards"]["stage-detail"], "build-1: запуск запрошен, активность не наблюдалась")
+        self.assertIn("обвязка: 1 скилл", metadata["invocations"][0]["summary"], "the selection is still shown; showing it is not claiming work")
+        # One observed record of this invocation's own CLI, and the working state is back.
+        time.sleep(0.003)
+        with (self.progress / "progress.jsonl").open("ab") as stream:
+            stream.write(record_line(**self.journal_line(0, event="init", status="observed", model=MODEL, **native)))
+        observed = self.view()
+        self.assertEqual(observed["stages"][0][0][1:], ["работает, build-1", "stage s-pending pulse"])
+        self.assertIn("build-1: исполнитель работает, последняя активность", observed["cards"]["stage-detail"])
+        self.assertEqual(observed["cardClass"]["card-stage"], "card state-pending")
+        # The other feed evidences the same thing: a public answer of the model is observed work,
+        # while the journal holds nothing but the launcher's record of the request.
+        self.write_journal(self.journal_line(5, model=MODEL, effort="max", **launcher))
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        self.trace_store("build-1").message("claude", "response", "Ответ модели", model=MODEL, message_id="m1")
+        answered = self.view()
+        self.assertEqual(answered["stages"][0][0][1:], ["работает, build-1", "stage s-pending pulse"])
+        self.assertIn("build-1: исполнитель работает, последняя активность", answered["cards"]["stage-detail"])
+        # An old launcher record is silence, not a fresh neutral: the stale wording keeps its own case.
+        self.write_journal(self.journal_line(600, model=MODEL, effort="max", **launcher))
+        (self.progress / "trace.jsonl").write_bytes(b"")
+        quiet = self.view()
+        self.assertEqual(quiet["stages"][0][0][2], "stage s-stale")
+        self.assertIn("тишина 10 мин", quiet["stages"][0][0][1])
+        self.assertEqual(quiet["cardClass"]["card-stage"], "card state-stale")
 
     def test_api_retry_is_an_evidenced_wait_that_recovers_with_later_activity(self):
         def record(offset, **fields):
@@ -1590,15 +1588,20 @@ class PageViewTest(unittest.TestCase):
 
     def assertBusy(self, view, why):
         self.assertEqual(view["cards"]["connection"], "связь с сервером есть", why)
-        self.assertIn("работает", " ".join(view["office"]["actors"][2]["parts"]), why)
+        self.assertIn("исполнитель работает", view["cards"]["stage-detail"], why)
 
     def assertLost(self, view, why):
         self.assertEqual(view["cards"]["connection"], "нет связи, повтор через 2 с", why)
         self.assertEqual(view["cardClass"]["notice"], "notice bad", why)
         self.assertIn("состояния этапов не подтверждены", view["cards"]["notice"], why)
-        self.assertEqual([any("нет связи" == part for part in actor["parts"]) for actor in view["office"]["actors"]],
-                         [True, True, True], why)
-        self.assertIn("нет связи с сервером", view["loop"]["state"], why)
+        # A truthful banner is not the whole state: what the page cannot observe any more may not stay
+        # on it as work in progress. The three readers of one invocation say the same thing about it.
+        self.assertIn("связь с сервером потеряна, состояние не подтверждено", view["cards"]["stage-detail"], why)
+        self.assertIn("связь с сервером потеряна, состояние не подтверждено", view["cards"]["models"], why)
+        self.assertNotIn("работает", view["cards"]["stage-detail"], why)
+        self.assertNotIn("работает", view["cards"]["models"], why)
+        self.assertEqual([chip for row in view["stages"] for chip in row if "pulse" in chip[2]], [], why)
+        self.assertEqual([block["summary"] for block in view["invocations"] if "работает" in block["summary"]], [], why)
 
     def test_a_request_that_never_answers_expires_instead_of_confirming_the_connection(self):
         """A local request has a deadline of its own; without one it would neither confirm nor deny anything."""
@@ -1665,6 +1668,64 @@ class PageViewTest(unittest.TestCase):
         self.assertEqual(recovered["cards"]["connection"], "связь с сервером есть")
         self.assertGreater(recovered["events"], view["events"], "the retry after the refusal is really made")
 
+    def test_a_lost_feed_suppresses_current_work_until_a_fresh_observation(self):
+        """Observed work is evidence of a moment, not a state the page may keep asserting without a feed."""
+        launcher = {"source": "launcher", "phase": "build", "step_id": "build-1"}
+        native = {"source": "native", "phase": "build", "step_id": "build-1"}
+        self.write_journal(self.journal_line(20, model=MODEL, effort="max", **launcher),
+                           self.journal_line(5, event="init", status="observed", model=MODEL, **native))
+        first = self.snapshot()
+        # The control: while the polls are answered, this invocation's own observed record is work.
+        live = self.view(rounds=[first])
+        self.assertEqual(live["stages"][0][0][1:], ["работает, build-1", "stage s-pending pulse"])
+        self.assertIn("build-1: исполнитель работает", live["cards"]["stage-detail"])
+        self.assertIn("(сборка, build-1, попытка 1): работает", live["cards"]["models"])
+        # Both ways of losing the feed end in the same state: the request refused outright, and the one
+        # given up on when its own deadline passes. Neither of them observed anything.
+        losses = {"refusal": [first, self.next_snapshot(first, network={"events": "refused"})],
+                  "deadline": [first, self.next_snapshot(first, network={"events": "headers"}), self.next_snapshot(first)]}
+        for loss, rounds in losses.items():
+            with self.subTest(loss=loss):
+                lost = self.view(rounds=rounds)
+                self.assertLost(lost, "the feed is gone, whichever way it went")
+                # Journal: the chip keeps its phase, stops pulsing and says what is unconfirmed.
+                chip = lost["stages"][0][0]
+                self.assertEqual(chip[0], "сборка")
+                self.assertTrue(chip[1].startswith("связь с сервером потеряна, состояние не подтверждено: последнее наблюдение "), chip)
+                self.assertEqual(chip[2], "stage s-offline")
+                # Sessions: the same invocation, still open, still named, and no longer working.
+                self.assertEqual(lost["cards"]["stage"], "сборка · build-1 · попытка 1")
+                self.assertTrue(lost["cards"]["stage-detail"].startswith("build-1: связь с сервером потеряна"), lost["cards"]["stage-detail"])
+                self.assertEqual(lost["cardClass"]["card-stage"], "card state-offline")
+                self.assertIn("попытка 1 · build-1 · " + MODEL + " / max · связь с сервером потеряна", lost["invocations"][0]["summary"])
+                self.assertTrue(lost["invocations"][0]["open"], "an open invocation stays open where the reader left it")
+                # Metrics: one more reader of the same state, with the identity of the call intact.
+                self.assertIn("Claude " + MODEL + " / max (сборка, build-1, попытка 1): связь с сервером потеряна", lost["cards"]["models"])
+                # The records already read are history and stay: only the claim about now is withdrawn.
+                self.assertEqual((lost["events"], lost["cards"]["records"]), (live["events"], live["cards"]["records"]))
+                self.assertEqual(lost["cards"]["decision"], "не принято")
+        # Recovery is evidence, not memory: the state comes back from the records the successful poll
+        # brings, and it is the native record made meanwhile that makes this invocation work again.
+        time.sleep(0.003)
+        with (self.progress / "progress.jsonl").open("ab") as stream:
+            stream.write(record_line(**self.journal_line(0, event="tool_call", status="observed", tool="Read", call_id="c1", **native)))
+        recovered = self.view(rounds=losses["refusal"] + [self.next_snapshot(first)])
+        self.assertEqual(recovered["cards"]["connection"], "связь с сервером есть")
+        self.assertEqual(recovered["stages"][0][0][1:], ["работает, build-1", "stage s-pending pulse"])
+        self.assertIn("build-1: исполнитель работает", recovered["cards"]["stage-detail"])
+        self.assertEqual(recovered["cardClass"]["card-stage"], "card state-pending")
+        self.assertGreater(recovered["events"], live["events"], "the poll after the loss really brings the new record")
+        # A reconnection with nothing new behind it restores the connection and no more than that: the
+        # invocation is silent for longer than the page waits, and silence is not completion.
+        self.write_journal(self.journal_line(700, model=MODEL, effort="max", **launcher),
+                           self.journal_line(650, event="init", status="observed", model=MODEL, **native))
+        quiet = self.snapshot()
+        silent = self.view(rounds=[quiet, self.next_snapshot(quiet, network={"events": "refused"}), self.next_snapshot(quiet)])
+        self.assertEqual(silent["cards"]["connection"], "связь с сервером есть")
+        self.assertEqual(silent["stages"][0][0][2], "stage s-stale")
+        self.assertIn("состояние не подтверждено", silent["stages"][0][0][1])
+        self.assertIn("тишина не означает завершения", silent["cards"]["stage-detail"])
+
     def test_reused_native_ids_in_another_step_are_separate_calls(self):
         agent = {"type": "tool_use", "id": "call-1", "name": "Agent",
                  "input": {"subagent_type": "local-reader", "run_in_background": True, "prompt": SENTINELS["prompt"]}}
@@ -1728,6 +1789,103 @@ class PageViewTest(unittest.TestCase):
         base.update(fields)
         return base
 
+    def foreign_trace(self, run_id, directory):
+        """A whole valid capture of one review session of `run_id`, published in its own directory."""
+        store = run_trace.TraceStore.open(directory, run_id=run_id, attempt=1, step_id="shared-review",
+                                          source="launcher", tool="test", provider="codex", phase="review")
+        store.record("status", state="cli_started", model="foreign-requested-model", effort="ultra")
+        store.record("status", state="thread_started", thread_id="thr-foreign")
+        store.message("codex", "review", "Сообщение чужого прогона", message_id="item_foreign",
+                      model="foreign-observed-model", title="Чужая задача")
+        store.record("usage", scope="turn", final=True, input_tokens=123, cached_input_tokens=0, output_tokens=45, reasoning_tokens=0)
+        return store
+
+    def test_a_trace_of_another_run_is_never_joined_to_this_run_s_sessions(self):
+        """Two feeds, each consistent on its own, still describe two pipelines.
+
+        Both hold attempt 1 step shared-review, so every join by attempt and step matches. The page
+        selects one run for both feeds before folding: the foreign capture is counted and named, and
+        its thread, model, usage and text stay out of this run's session.
+        """
+        shared = {"phase": "review", "step_id": "shared-review"}
+        self.write_journal(self.journal_line(300, run_id="run-a", model="gpt-review-test", effort="ultra", **shared))
+        journal = self.api("/api/events?cursor=0&limit=2000")
+        elsewhere = self.directory / "another-run"
+        self.foreign_trace("run-b", elsewhere)
+        view = self.view(rounds=[{"events": journal, "trace": self.api("/api/trace?cursor=0&limit=2000", elsewhere)}])
+        self.assertEqual(view["cards"]["run"], "run: run-a")
+        self.assertEqual(view["cardClass"]["notice"], "notice warn")
+        self.assertIn("run-b", view["cards"]["notice"])
+        self.assertIn("показан только прогон run-a", view["cards"]["notice"])
+        self.assertNotIn("Чужая задача", view["cards"]["title"])
+        conversation = " ".join(entry["text"] for entry in view["conversation"])
+        self.assertNotIn("Сообщение чужого прогона", conversation, "no foreign text is read as this run's conversation")
+        self.assertIn("не захвачены", conversation, "and this run's own session is reported as uncaptured")
+        block = [item for item in view["invocations"] if "shared-review" in item["summary"]][0]
+        self.assertIn("gpt-review-test / ultra", block["summary"])
+        for absent in ("foreign-observed-model", "foreign-requested-model", "thr-foreign"):
+            self.assertNotIn(absent, block["summary"] + " ".join(block["lines"]), absent + " belongs to another run")
+        self.assertNotIn("123", " ".join(" ".join(row) for row in view["usage"]), "foreign counters are not this run's usage")
+        # The same capture under this run is joined exactly as before: the isolation is by identity,
+        # not by the file it came from.
+        same = self.directory / "same-run"
+        self.foreign_trace("run-a", same)
+        joined = self.view(rounds=[{"events": journal, "trace": self.api("/api/trace?cursor=0&limit=2000", same)}])
+        self.assertEqual(joined["cardClass"]["notice"], "notice hidden")
+        block = [item for item in joined["invocations"] if "shared-review" in item["summary"]][0]
+        self.assertIn("поток Codex thr-foreign", " ".join(block["lines"]))
+        self.assertTrue(any("123" in " ".join(row) for row in joined["usage"]), joined["usage"])
+
+    def activity_journal(self, other):
+        """A journal of this run plus the native records of `other`, all at attempt 1 step shared-review.
+
+        Every kind the optional activity fold reads is present: a tool call, a background task and a
+        hook. Nothing but the run identity separates the two sides, so a join by attempt and step
+        cannot tell them apart.
+        """
+        native = {"source": "native", "phase": "review", "step_id": "shared-review"}
+        self.write_journal(
+            self.journal_line(300, run_id="run-a", phase="review", step_id="shared-review", model="gpt-review-test", effort="ultra"),
+            self.journal_line(290, run_id="run-a", event="tool_call", status="observed", tool="Read", call_id="call-own", **native),
+            self.journal_line(280, run_id=other, event="tool_call", status="observed", tool="Bash", call_id="call-other", **native),
+            self.journal_line(270, run_id=other, event="task", status="started", task_id="task-other", call_id="call-task-other", **native),
+            self.journal_line(260, run_id=other, event="hook", status="started", hook="Stop", **native))
+
+    def test_conversation_activity_shows_the_selected_run_only(self):
+        """Tool activity in the conversation is another fold of the journal, so it stops at the same run boundary.
+
+        With activity enabled, the records of the other run must stay out of this run's conversation
+        exactly as its messages, sessions and usage do, while this run's own call is still shown and
+        the journal below keeps every record it read.
+        """
+        self.activity_journal("run-b")
+        mixed = self.view(actions=[["check", "show-activity", True]])
+        self.assertEqual(mixed["cards"]["run"], "run: run-a")
+        self.assertIn("run-b", mixed["cards"]["notice"], "the foreign records are still counted and named")
+        activity = [entry["text"] for entry in mixed["conversation"] if entry["className"] == "entry activity"]
+        self.assertEqual(len(activity), 1, activity)
+        self.assertIn("вызов инструмента [Read, call call-own] · shared-review", activity[0])
+        conversation = " ".join(entry["text"] for entry in mixed["conversation"])
+        for absent in ("call-other", "task-other", "hook Stop", "Bash"):
+            self.assertNotIn(absent, conversation, absent + " is activity of run-b, not of this conversation")
+        # The raw journal keeps the whole history it read: isolation is in the reading, not in the record.
+        self.assertEqual(mixed["events"], 5)
+
+        # The same records under this run are folded exactly as before: the boundary is the identity.
+        self.activity_journal("run-a")
+        own = self.view(actions=[["check", "show-activity", True]])
+        self.assertEqual(own["cardClass"]["notice"], "notice hidden")
+        activity = [entry["text"] for entry in own["conversation"] if entry["className"] == "entry activity"]
+        self.assertEqual(len(activity), 4, activity)
+        for present in ("call call-own", "call call-other", "task task-other", "hook Stop"):
+            self.assertTrue(any(present in text for text in activity), present + " is this run's own activity")
+
+        # And the control that costs the leak its cover: with activity off there is no activity at all.
+        self.activity_journal("run-b")
+        quiet = self.view()
+        self.assertEqual([entry["text"] for entry in quiet["conversation"] if entry["className"] == "entry activity"], [])
+        self.assertIn("run-b", quiet["cards"]["notice"])
+
     def test_unfinished_invocations_stay_current_and_fresh_from_both_feeds(self):
         # Two reviewers run; the manager records a tests PASS afterwards; their only fresh activity is in the trace.
         review_a, review_b = {"phase": "review", "step_id": "review-a"}, {"phase": "review", "step_id": "review-b"}
@@ -1789,6 +1947,80 @@ class PageViewTest(unittest.TestCase):
                            self.journal_line(40, event="cli_exit", status="exited", exit_code=0, **review),
                            self.journal_line(10, source="manager", phase="review", step_id="review", event="phase", status="failed"))
         self.assertEqual(self.view()["stages"][0][2][1:], ["этап FAIL", "stage s-bad"])
+
+    def test_a_native_turn_outcome_ends_the_claim_of_work_in_every_phase(self):
+        """A CLI that reported the end of its own turn is not working any more, whatever phase it ran in."""
+        # The record under test is the one the real observers write: NativeObserver turns the Claude result
+        # event into it here, and run_codex_review writes the same record for a completed Codex turn.
+        journal, observer = self.step()
+        self.feed(observer, {"type": "system", "subtype": "init", "model": MODEL},
+                  {"type": "result", "subtype": "success", "duration_ms": 1200, "num_turns": 3})
+        produced = [record for record in journal_records(self.progress / "progress.jsonl") if record["event"] == "cli_result"]
+        self.assertEqual([(record["source"], record["status"], record["phase"]) for record in produced], [("native", "success", "build")],
+                         "the observer of a build really writes the terminal record this view is about")
+        ended = self.view()
+        self.assertEqual(ended["stages"][0][0][1:], ["ход завершен, процесс закрывается; приемка не записана", "stage s-wait"])
+        self.assertEqual(ended["cards"]["stage-detail"], "builder: ход завершен, процесс закрывается; приемка не записана")
+        self.assertEqual(ended["cardClass"]["card-stage"], "card state-wait")
+        self.assertIn("(сборка, builder, попытка 1): ход завершен, процесс закрывается; приемка не записана", ended["cards"]["models"])
+        self.assertNotIn("работает", ended["cards"]["models"])
+        self.assertEqual([chip for row in ended["stages"] for chip in row if "pulse" in chip[2]], [],
+                         "an ended turn is not animated as work in progress")
+        # The turn ended. The process closing, the helper's own result and the manager's acceptance are
+        # three other records, and none of them is claimed here.
+        self.assertIn("ход завершен, процесс закрывается", ended["invocations"][0]["summary"])
+        self.assertTrue(ended["invocations"][0]["open"], "the invocation has no recorded end and stays open")
+        self.assertEqual(ended["cards"]["decision"], "не принято")
+        self.assertIn("идет: сборка - ход завершен", ended["cards"]["next-action"])
+        self.assertNotIn("готово к проверке", ended["cards"]["next-action"])
+        # Elapsed time and a recorded exit are what the live observer above cannot produce, so the rest of
+        # the cases are written with exactly the shapes it just wrote, at times of the test's own choosing.
+        build, review = {"phase": "build", "step_id": "build-1"}, {"phase": "review", "step_id": "review-1"}
+        cases = [
+            ("build, turn failed", build, 0, "error", 50, None, "ход завершился ошибкой, процесс не закрыт", "bad"),
+            ("build, closing unconfirmed", build, 0, "success", 600, None, "ход завершен, закрытие процесса не подтверждено 10 мин", "stale"),
+            ("build, a failure keeps its own age", build, 0, "error", 600, None, "ход завершился ошибкой, процесс не закрыт 10 мин", "bad"),
+            ("review, closing", review, 2, "success", 50, None, "ход завершен, процесс закрывается; приемка не записана", "wait"),
+            ("review, closing unconfirmed", review, 2, "success", 600, None, "ход завершен, закрытие процесса не подтверждено 10 мин", "stale"),
+            ("review, turn failed", review, 2, "error", 50, None, "ход завершился ошибкой, процесс не закрыт", "bad"),
+            # The recorded close of the process is what ends the invocation - and still accepts nothing.
+            ("review, closed", review, 2, "success", 600, 0, "CLI завершил успешно; приемка менеджером не записана", "ok"),
+            ("review, closed after a failed turn", review, 2, "error", 600, 1, "CLI завершился с кодом 1 после ошибки хода", "bad"),
+        ]
+        for name, step, spot, status, age, code, label, kind in cases:
+            with self.subTest(case=name):
+                records = [self.journal_line(age + 100, model=MODEL, effort="max", **step),
+                           self.journal_line(age + 50, source="native", event="init", status="observed", model=MODEL, **step),
+                           self.journal_line(age, source="native", event="cli_result", status=status, **step)]
+                if code is not None:
+                    records.append(self.journal_line(age - 10, event="cli_exit", status="exited", exit_code=code, **step))
+                self.write_journal(*records)
+                view = self.view()
+                chip = view["stages"][0][spot]
+                self.assertTrue(chip[1].startswith(label), (name, chip))
+                self.assertEqual(chip[2], "stage s-" + kind, name)
+                self.assertEqual(view["cardClass"]["card-stage"], "card state-" + kind, name)
+                self.assertNotIn("работает", view["cards"]["stage-detail"], name)
+                self.assertNotIn("работает", view["cards"]["models"], name)
+                self.assertEqual(view["cards"]["decision"], "не принято", name)
+        # A native record after the terminal one is execution observed after the turn: the outcome names
+        # the state while it is the last thing this invocation showed, and never freezes it.
+        self.write_journal(self.journal_line(150, model=MODEL, effort="max", **build),
+                           self.journal_line(100, source="native", event="cli_result", status="success", **build),
+                           self.journal_line(5, source="native", event="tool_call", status="observed", tool="Read", call_id="c1", **build))
+        again = self.view()
+        self.assertEqual(again["stages"][0][0][1:], ["работает, build-1", "stage s-pending pulse"])
+        self.assertIn("build-1: исполнитель работает", again["cards"]["stage-detail"])
+        # Two invocations of one phase keep their own identities: one turn has ended, the other is running.
+        self.write_journal(self.journal_line(150, model=MODEL, effort="max", phase="review", step_id="review-a"),
+                           self.journal_line(140, model=MODEL, effort="max", phase="review", step_id="review-b"),
+                           self.journal_line(100, source="native", event="cli_result", status="success", phase="review", step_id="review-a"),
+                           self.journal_line(5, source="native", event="init", status="observed", model=MODEL, phase="review", step_id="review-b"))
+        parallel = self.view()
+        self.assertEqual(parallel["stages"][0][2][1:], ["2 вызова: закрывается review-a; работает review-b", "stage s-pending pulse"])
+        self.assertIn("review-a: ход завершен, процесс закрывается", parallel["cards"]["stage-detail"])
+        self.assertIn("review-b: исполнитель работает", parallel["cards"]["stage-detail"])
+        self.assertIn("параллельных вызовов: 2", parallel["cards"]["models"])
 
     def test_partial_counters_are_lower_bounds_and_missing_input_keeps_context_unknown(self):
         self.write_journal(self.journal_line(100, phase="review", step_id="review-a"), self.journal_line(90, phase="review", step_id="review-b"))

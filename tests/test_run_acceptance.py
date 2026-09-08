@@ -3,6 +3,7 @@
 Every model call goes to a local fake codex executable; no paid model is called from these tests.
 """
 
+import hashlib
 import importlib
 import json
 import os
@@ -17,10 +18,12 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
+REVIEWER = ROOT / "codex" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
+sys.path.insert(0, str(REVIEWER))
 run_acceptance = importlib.import_module("run_acceptance")
 run_codex_review = importlib.import_module("run_codex_review")
-ACCEPTANCE, REVIEW, PROGRESS = SCRIPTS / "run_acceptance.py", SCRIPTS / "run_codex_review.py", SCRIPTS / "run_progress.py"
+ACCEPTANCE, REVIEW, PROGRESS = SCRIPTS / "run_acceptance.py", REVIEWER / "run_codex_review.py", SCRIPTS / "run_progress.py"
 MODEL = "gpt-review-test-model"
 # The fake answers with whatever the scenario holds, and can disagree with itself: the stream, the
 # final result and the exit code are set separately, so a run that only looks finished can be built.
@@ -153,9 +156,12 @@ class AcceptanceFixture(unittest.TestCase):
                                "--declaration", str(declaration or self.declaration),
                                "--workspace", str(workspace or self.workspace), expect=expect)
 
-    def check(self, check_id, attempt=1, evidence=None, expect=0):
-        process = self.acceptance("check", "--evidence-dir", str(evidence or self.evidence),
-                                  "--check-id", check_id, "--attempt", str(attempt), expect=expect)
+    def check(self, check_id, attempt=1, evidence=None, expect=0, progress=None):
+        arguments = ["check", "--evidence-dir", str(evidence or self.evidence),
+                     "--check-id", check_id, "--attempt", str(attempt)]
+        if progress is not None:
+            arguments += ["--progress-dir", str(progress)]
+        process = self.acceptance(*arguments, expect=expect)
         return json.loads(process.stdout) if process.stdout.strip() else None
 
     def review(self, scenario, *, attempt=1, checks=(), evidence=None, output=None, extra=(), expect=None):
@@ -514,7 +520,26 @@ class ReviewTest(AcceptanceFixture):
         self.assertIn("# Ревью попытки 1", request, "the manager's own request travels verbatim")
         self.assertIn("Role: terminal check", request)
         self.assertIn("Do not start other agents", request)
+        # The reviewer is the last instance: it neither becomes the manager nor closes a gap by guessing.
+        self.assertIn("You are not the manager and never become one", request)
+        self.assertIn("Evidence you cannot obtain stays UNVERIFIED", request)
         self.assertIn("tests actually exercise the required behaviour", request)
+        # The reviewer receives its role, the shared criteria and the user's policy as full text.
+        role = ROOT / "teams" / "dev" / "reviewer.md"
+        criteria = ROOT / "shared" / "rules" / "review-criteria.md"
+        policy = ROOT / "shared" / "rules" / "simplicity.md"
+        self.assertIn(role.read_text(encoding="utf-8").split("---", 2)[2].strip(), request)
+        self.assertIn(criteria.read_text(encoding="utf-8").strip(), request)
+        self.assertIn(policy.read_text(encoding="utf-8").strip(), request)
+        self.assertIn("never a HIGH conclusion by itself", request)
+        self.assertIn("Choose the simplest implementation that fully satisfies the requirements.", request)
+        sources = {source["name"]: source for source in
+                   json.loads((output / "invocation.json").read_text(encoding="utf-8"))["instruction_sources"]}
+        self.assertEqual(set(sources), {"pipeline-reviewer", "review-criteria", "simplicity"})
+        for name, path in (("pipeline-reviewer", role), ("review-criteria", criteria), ("simplicity", policy)):
+            with self.subTest(source=name):
+                self.assertEqual(sources[name]["path"], str(path))
+                self.assertEqual(sources[name]["sha256"], hashlib.sha256(path.read_bytes()).hexdigest())
         # The contract is the rendering of the frozen plan, not a copy retyped for the reviewer.
         plan = run_acceptance.load_plan(self.evidence)
         self.assertIn(run_acceptance.contract_text(plan, 1), request)

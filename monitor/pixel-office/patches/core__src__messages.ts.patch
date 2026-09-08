@@ -1,0 +1,70 @@
+diff --git a/core/src/messages.ts b/core/src/messages.ts
+index a17ad63..5e2b4ef 100644
+--- a/core/src/messages.ts
++++ b/core/src/messages.ts
+@@ -38,7 +38,9 @@ export type ServerMessage =
+   | ExternalAssetDirectoriesUpdated
+   | AreaMappingsLoaded
+   | WorkspaceFolders
+-  | AgentDiagnostics;
++  | AgentDiagnostics
++  | PipelineActorState
++  | PipelineSourceState;
+ 
+ export type ClientMessage =
+   | WebviewReady
+@@ -62,7 +64,8 @@ export type ClientMessage =
+   | RemoveExternalAssetDirectory
+   | SaveAreaMappings
+   | SetShowAreas
+-  | RequestDiagnostics;
++  | RequestDiagnostics
++  | RequestSnapshot;
+ 
+ export interface ProviderCapabilities {
+   type: 'providerCapabilities';
+@@ -315,6 +318,36 @@ export interface AgentDiagnostics {
+   agents: Record<string, any>[];
+ }
+ 
++export interface PipelineActorState {
++  type: 'pipelineActorState';
++  id: number;
++  state: PipelineActivityState;
++  caption: string;
++  /** Compact form of the caption, carried by the always-on label of an unselected actor. */
++  short?: string;
++  role?: string;
++  provenance?: string;
++  toolName?: string;
++}
++
++export type PipelineActivityState =
++  | 'human'
++  | 'idle'
++  | 'working'
++  | 'waiting'
++  | 'unknown'
++  | 'error'
++  | 'stale'
++  | 'offline';
++
++export interface PipelineSourceState {
++  type: 'pipelineSourceState';
++  available: boolean;
++  detail: string;
++  /** An observation problem of a feed that still works, such as records of another run. */
++  note?: string;
++}
++
+ export interface WebviewReady {
+   type: 'webviewReady';
+ }
+@@ -429,3 +462,7 @@ export interface SetShowAreas {
+ export interface RequestDiagnostics {
+   type: 'requestDiagnostics';
+ }
++
++export interface RequestSnapshot {
++  type: 'requestSnapshot';
++}

@@ -1,0 +1,144 @@
+diff --git a/webview-ui/src/hooks/useExtensionMessages.ts b/webview-ui/src/hooks/useExtensionMessages.ts
+index 29a1a6b..7aabb6f 100644
+--- a/webview-ui/src/hooks/useExtensionMessages.ts
++++ b/webview-ui/src/hooks/useExtensionMessages.ts
+@@ -1,6 +1,11 @@
+ import { useCallback, useEffect, useRef, useState } from 'react';
+ 
+-import type { HooksConsentRequest } from '../../../core/src/messages.js';
++import type {
++  HooksConsentRequest,
++  PipelineActorState,
++  PipelineSourceState,
++} from '../../../core/src/messages.js';
++import type { TransportState } from '../../../core/src/transport.js';
+ import { playDoneSound, playPermissionSound, setSoundEnabled } from '../notificationSound.js';
+ import type { ExistingAgentMeta, PendingAgent } from '../office/engine/existingAgents.js';
+ import { reconcileExistingAgents } from '../office/engine/existingAgents.js';
+@@ -110,6 +115,25 @@ interface ExtensionMessageState {
+   setAreaMappings: (m: Record<string, string[]>) => void;
+   showAreas: boolean;
+   setShowAreas: (v: boolean) => void;
++  /** Local pipeline extension: the neutral lifecycle of every workflow role actor. */
++  pipelineStates: Record<number, PipelineActorState>;
++  /** Local pipeline extension: whether the adapter can currently read its source. */
++  pipelineSource: PipelineSourceState;
++}
++
++/**
++ * Local pipeline extension. The upstream protocol knows `active` and `waiting` only,
++ * and `waiting` is a finished turn: it paints the green checkmark and plays the done
++ * sound. A pipeline actor that is human, idle, unknown, failed, stale or cut off from
++ * its source is none of those, so its lifecycle arrives as pipelineActorState and this
++ * is the single place that turns it into engine calls. Only `working` animates, and no
++ * state here ever shows a completion cue.
++ */
++const PIPELINE_WORKING = 'working';
++
++/** The office state a pipeline message applies, used to skip a repeated identical one. */
++function pipelineApplied(message: PipelineActorState): string {
++  return message.state + '\u0000' + (message.state === PIPELINE_WORKING ? (message.toolName ?? '') : '');
+ }
+ 
+ function saveAgentSeats(os: OfficeState): void {
+@@ -153,6 +177,16 @@ export function useExtensionMessages(
+   const consentRequest = consentQueue[0] ?? null;
+   const [areaMappings, setAreaMappings] = useState<Record<string, string[]>>({});
+   const [showAreas, setShowAreas] = useState(false);
++  const [pipelineStates, setPipelineStates] = useState<Record<number, PipelineActorState>>({});
++  const [pipelineSource, setPipelineSource] = useState<PipelineSourceState>({
++    type: 'pipelineSourceState',
++    available: true,
++    detail: '',
++    note: '',
++  });
++  // What was last applied to the engine per actor. setAgentActive(id, false) resets the
++  // walk path on every call, so a repeated identical state would freeze the character.
++  const pipelineAppliedRef = useRef<Record<number, string>>({});
+ 
+   // The renderer keeps its own module-level copy (read every rAF frame), so both
+   // sources of truth move together — the persisted value on settingsLoaded and
+@@ -735,6 +769,26 @@ export function useExtensionMessages(
+       } else if (msg.type === 'agentContextUsage') {
+         const id = msg.id as number;
+         os.setAgentContext(id, msg.contextTokens as number, msg.maxContextTokens as number);
++      } else if (msg.type === 'pipelineActorState') {
++        const message = msg as PipelineActorState;
++        const id = message.id;
++        setPipelineStates((prev) => ({ ...prev, [id]: message }));
++        const applied = pipelineApplied(message);
++        if (pipelineAppliedRef.current[id] === applied) return;
++        pipelineAppliedRef.current[id] = applied;
++        const working = message.state === PIPELINE_WORKING;
++        os.setAgentTool(id, working ? (message.toolName ?? null) : null);
++        os.setAgentActive(id, working);
++        // Any bubble left over from an earlier state goes with it. Nothing here ever
++        // calls showWaitingBubble: a neutral state is not a completed turn.
++        os.clearPermissionBubble(id);
++      } else if (msg.type === 'pipelineSourceState') {
++        setPipelineSource({
++          type: 'pipelineSourceState',
++          available: msg.available === true,
++          detail: typeof msg.detail === 'string' ? msg.detail : '',
++          note: typeof msg.note === 'string' ? msg.note : '',
++        });
+       }
+     };
+     const unsubscribe = transport.onMessage(handler);
+@@ -758,6 +812,48 @@ export function useExtensionMessages(
+     }
+   }, [subagentTools, subagentCharacters, getOfficeState]);
+ 
++  // Local pipeline extension. The socket is the only source of live activity, so losing
++  // it invalidates every activity claim at once: the characters stop, the captions say
++  // the feed is gone, and the recorded history stays. A regained socket asks for a fresh
++  // complete snapshot, because the original reconnect path only flushes queued client
++  // messages and never repeats webviewReady.
++  useEffect(() => {
++    const apply = (state: TransportState) => {
++      if (state === 'connected') {
++        transport.send({ type: 'requestSnapshot' });
++        return;
++      }
++      const os = getOfficeState();
++      for (const key of Object.keys(pipelineAppliedRef.current)) {
++        const id = Number(key);
++        os.setAgentTool(id, null);
++        os.setAgentActive(id, false);
++        os.clearPermissionBubble(id);
++      }
++      pipelineAppliedRef.current = {};
++      setPipelineStates((prev) => {
++        const next: Record<number, PipelineActorState> = {};
++        for (const [key, value] of Object.entries(prev)) {
++          next[Number(key)] = {
++            ...value,
++            state: 'offline',
++            caption: 'связь с монитором потеряна, состояние не подтверждено',
++            short: 'связь потеряна',
++            toolName: undefined,
++          };
++        }
++        return next;
++      });
++      setPipelineSource({
++        type: 'pipelineSourceState',
++        available: false,
++        detail: 'monitor connection lost',
++        note: '',
++      });
++    };
++    return transport.onStateChange(apply);
++  }, [getOfficeState]);
++
+   return {
+     agents,
+     selectedAgent,
+@@ -799,5 +895,7 @@ export function useExtensionMessages(
+     setAreaMappings,
+     showAreas,
+     setShowAreas,
++    pipelineStates,
++    pipelineSource,
+   };
+ }

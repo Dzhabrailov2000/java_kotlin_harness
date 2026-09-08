@@ -9,31 +9,32 @@ substantial portions of the software.
 
 Comparison basis: a local checkout of ECC at revision
 `e04ea0b9cc8248686edf5ac751cadff550e162b8`, compared on 2026-09-06 with the
-files of this repository at the same relative paths. "Body identical" means
-the Markdown body after the YAML frontmatter matched byte for byte at that
-revision; the frontmatter differs locally (tools list format, model,
-description, `origin: ECC` marker). This is a statement of textual similarity
-between two checkouts, not a reconstructed authorship history of every file
-in either repository.
+files of this repository at the ECC-relative paths `agents/<name>.md` and
+`skills/<name>/SKILL.md`, which this repository now keeps under `claude/agents/`
+and `shared/skills/`. "Body identical" means the Markdown body after the YAML
+frontmatter matched byte for byte at that revision; the frontmatter differs
+locally (tools list format, model, description, `metadata.origin: ECC` marker).
+This is a statement of textual similarity between two checkouts, not a
+reconstructed authorship history of every file in either repository.
 
 | Local path | Relation to ECC at the compared revision |
 | --- | --- |
-| agents/code-architect.md | body identical; frontmatter: tools without Bash |
-| agents/code-explorer.md | body identical |
-| agents/code-reviewer.md | derived; local changes to the review scope (comparison baseline, new and explicitly supplied files, unchanged code inside a whole-file review) |
-| agents/comment-analyzer.md | body identical; frontmatter model changed |
-| agents/database-reviewer.md | derived; tools without Bash; the diagnostic section was rewritten locally on 2026-09-06 to read supplied evidence instead of executing it |
-| agents/pr-test-analyzer.md | body identical |
-| agents/silent-failure-hunter.md | body identical |
-| agents/type-design-analyzer.md | body identical |
-| skills/api-design/SKILL.md | body identical |
-| skills/architecture-decision-records/SKILL.md | body identical |
-| skills/database-migrations/SKILL.md | body identical |
-| skills/hexagonal-architecture/SKILL.md | body identical |
-| skills/kotlin-coroutines-flows/SKILL.md | body identical |
-| skills/kotlin-patterns/SKILL.md | body identical |
-| skills/kotlin-testing/SKILL.md | same path and name; the local body describes a JUnit 5 stack and was written locally, it does not reproduce the upstream Kotest text |
-| skills/postgres-patterns/SKILL.md | body identical |
+| claude/agents/code-architect.md | body identical; frontmatter: tools without Bash |
+| claude/agents/code-explorer.md | body identical |
+| claude/agents/code-reviewer.md | derived; local changes to the review scope (comparison baseline, new and explicitly supplied files, unchanged code inside a whole-file review) |
+| claude/agents/comment-analyzer.md | body identical; frontmatter model changed |
+| claude/agents/database-reviewer.md | derived; tools without Bash; the diagnostic section was rewritten locally on 2026-09-06 to read supplied evidence instead of executing it |
+| claude/agents/pr-test-analyzer.md | body identical |
+| claude/agents/silent-failure-hunter.md | body identical |
+| claude/agents/type-design-analyzer.md | body identical |
+| shared/skills/api-design/SKILL.md | body identical |
+| shared/skills/architecture-decision-records/SKILL.md | body identical |
+| shared/skills/database-migrations/SKILL.md | body identical |
+| shared/skills/hexagonal-architecture/SKILL.md | body identical |
+| shared/skills/kotlin-coroutines-flows/SKILL.md | body identical |
+| shared/skills/kotlin-patterns/SKILL.md | body identical |
+| shared/skills/kotlin-testing/SKILL.md | same file name; the local body describes a JUnit 5 stack and was written locally, it does not reproduce the upstream Kotest text |
+| shared/skills/postgres-patterns/SKILL.md | body identical |
 
 The ECC files `agents/database-reviewer.md` and `skills/postgres-patterns/SKILL.md`
 state in their own text that their patterns were adapted from Supabase Agent
@@ -41,10 +42,11 @@ Skills under the MIT License (credit: Supabase team). That statement is carried
 over unchanged; the Supabase license text was not part of the local ECC
 checkout and is not reproduced here.
 
-Files not listed above (`agents/builder.md`, `agents/judge.md`, the discipline
+Files not listed above (`claude/agents/builder.md`, `claude/agents/judge.md`, the discipline
 skills `scope-fence`, `evidence-before-claim`, `adversarial-self-check`,
-`lead-with-outcome`, `context-hygiene`, `self-correct`, the skills
+`lead-with-outcome`, `context-hygiene`, `dev-pipeline`, the skills
 `kotlin-comment-style`, `epic-decomposition`, `system-design-tradeoffs`, the
+pipeline roles under `teams/dev/`, the shared rules, the
 commands, hooks, statusline, scripts, tests, templates and docs) had no
 counterpart at the same path in the compared ECC revision. This notice does not
 assign the MIT License to them.

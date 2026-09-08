@@ -1,802 +1,409 @@
-"""Check the office panel: build provenance of the vendored Pixel Agents engine, the states the page
-derives for its three actors, and the real scene in headless Chrome.
+"""Check the office the monitor serves: its provenance, its entry point and what publishes into it.
 
-The state checks run the page's own script against the stub DOM of test_run_progress; the scene checks
-drive a real Chrome over the DevTools protocol, the same way test_run_progress_browser does. Both are
-skipped where node or Chrome is absent.
+Three things are checked here and nowhere else in Python. First, provenance: every vendored file is
+the pinned upstream byte for byte, every local change is a patch that really applies to that byte and
+produces the recorded result, and dist is what the recorded build produced. Second, the documented
+entry point: `run_progress.py serve` really starts the office, serves what it declares and nothing
+else, and takes its child down with it. Third, the semantic publication: a captured check and a
+validated review record their own outcome, and neither can claim more than its receipt says.
+
+The office's own state projection is checked by `npm --prefix monitor/pixel-office test`, and the
+rendered office by tests/check_original_office_browser.py.
 """
 
-import base64
 import hashlib
 import http.client
 import importlib
 import json
+import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
-import textwrap
-import threading
 import time
 import unittest
-from unittest import mock
-
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 run_progress = importlib.import_module("run_progress")
-run_trace = importlib.import_module("run_trace")
-from test_run_progress import NODE, PAGE_HARNESS, record_line  # noqa: E402 - the page harness is shared, not duplicated
-from test_run_progress_browser import CHROME, node_has_websocket  # noqa: E402 - one browser launcher for both suites
+from test_run_acceptance import AcceptanceFixture, answer  # noqa: E402 - one acceptance fixture for the whole suite
 
 OFFICE = ROOT / "monitor" / "pixel-office"
-MODEL = "claude-office-test-model"
-REVIEW_LABEL = "независимое ревью · отдельная сессия"
+NODE = shutil.which("node")
+# The whole local change surface: a patch outside this list is a change nobody declared.
+DECLARED_PATCHES = {
+    "core/asyncapi.yaml",
+    "core/src/messages.ts",
+    "webview-ui/src/App.tsx",
+    "webview-ui/src/components/BottomToolbar.tsx",
+    "webview-ui/src/components/ConnectionIndicator.tsx",
+    "webview-ui/src/components/SettingsModal.tsx",
+    "webview-ui/src/hooks/useExtensionMessages.ts",
+    "webview-ui/src/office/components/ToolOverlay.tsx",
+    "webview-ui/src/office/engine/characters.ts",
+}
 
 
 def digest_of(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def overlapping(first, second):
-    """True when two label boxes share pixels: a name covered by a neighbour is not readable."""
-    return (first["left"] < second["right"] and second["left"] < first["right"]
-            and first["top"] < second["bottom"] and second["top"] < first["bottom"])
-
-
-def stamp(offset_seconds):
-    moment = time.time() - offset_seconds
-    return time.strftime("%Y-%m-%dT%H:%M:%S.", time.gmtime(moment)) + "%03dZ" % int((moment % 1) * 1000)
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 class BuildProvenanceTest(unittest.TestCase):
-    """The shipped bundle must be traceable to the pinned upstream sources and to the page that loads it."""
+    """What the office is built from, and that its local changes are exactly the declared ones."""
 
-    def setUp(self):
-        self.manifest = json.loads((OFFICE / "vendor-manifest.json").read_text(encoding="utf-8"))
-        self.build = json.loads((OFFICE / "dist" / "build-manifest.json").read_text(encoding="utf-8"))
+    @classmethod
+    def setUpClass(cls):
+        cls.vendor = json.loads((OFFICE / "vendor-manifest.json").read_text(encoding="utf-8"))
+        cls.build = json.loads((OFFICE / "dist" / "build-manifest.json").read_text(encoding="utf-8"))
 
     def test_every_vendored_file_is_the_recorded_upstream_byte_for_byte(self):
-        self.assertEqual(self.manifest["commit"], "3537e140c2094761beae748592aeb92ece8edfdd")
-        self.assertIn("pixel-agents", self.manifest["repository"])
-        present = sorted(path.relative_to(OFFICE / "vendor").as_posix()
+        present = sorted(str(path.relative_to(OFFICE / "vendor")).replace(os.sep, "/")
                          for path in (OFFICE / "vendor").rglob("*") if path.is_file())
-        self.assertEqual(present, sorted(self.manifest["files"]))
-        for name, entry in self.manifest["files"].items():
+        self.assertEqual(present, sorted(self.vendor["files"]), "the vendor tree and its manifest disagree")
+        for name, entry in self.vendor["files"].items():
             path = OFFICE / "vendor" / name
-            self.assertEqual(digest_of(path), entry["sha256"], name)
-            self.assertEqual(path.stat().st_size, entry["bytes"], name)
-        licence = (OFFICE / "vendor" / "LICENSE").read_text(encoding="utf-8")
-        self.assertIn("MIT License", licence)
-        self.assertIn("Pablo De Lucca", licence)
-        # The original engine, room and characters are here, not a redrawing of them.
-        for name in ("webview-ui/src/office/engine/officeState.ts", "webview-ui/src/office/engine/renderer.ts",
-                     "webview-ui/src/office/engine/gameLoop.ts", "webview-ui/public/assets/default-layout-1.json",
-                     "webview-ui/public/assets/characters/char_0.png"):
-            self.assertIn(name, self.manifest["files"], name)
-        self.assertGreaterEqual(len([n for n in self.manifest["files"] if n.startswith("webview-ui/public/assets/")]), 80)
+            self.assertEqual((digest_of(path), path.stat().st_size), (entry["sha256"], entry["bytes"]), name)
+        self.assertEqual(self.vendor["commit"], "3537e140c2094761beae748592aeb92ece8edfdd")
+        self.assertIn("MIT", self.vendor["license"])
+        self.assertTrue((OFFICE / "vendor" / "LICENSE").is_file(), "the upstream licence travels with its sources")
+        # The originals the office is really made of, not just the engine it borrows.
+        for name in ("webview-ui/src/App.tsx", "webview-ui/src/main.tsx", "webview-ui/src/index.css",
+                     "webview-ui/src/office/engine/renderer.ts", "webview-ui/src/office/components/OfficeCanvas.tsx",
+                     "webview-ui/src/office/editor/EditorToolbar.tsx", "webview-ui/index.html",
+                     "webview-ui/public/fonts/FSPixelSansUnicode-Regular.ttf"):
+            self.assertIn(name, self.vendor["files"], name)
+
+    @unittest.skipUnless(shutil.which("git"), "git applies the patches")
+    def test_each_patch_applies_to_the_pinned_original_and_produces_the_recorded_result(self):
+        recorded = {entry["target"]: entry for entry in self.build["patches"]}
+        self.assertEqual(set(recorded), DECLARED_PATCHES, "the declared local change surface moved")
+        with tempfile.TemporaryDirectory(prefix="office-patches-") as temporary:
+            tree = Path(temporary) / "vendor"
+            shutil.copytree(OFFICE / "vendor", tree)
+            for target, entry in sorted(recorded.items()):
+                patch = OFFICE / "patches" / entry["patch"]
+                self.assertTrue(patch.is_file(), entry["patch"])
+                self.assertEqual(digest_of(patch), entry["sha256"], "the patch changed since the recorded build")
+                self.assertEqual(digest_of(tree / target), entry["original_sha256"],
+                                 "the patch is recorded against another original than the vendored one")
+                # git resolves patch paths against a repository root, so discovery is stopped at the tree.
+                applied = subprocess.run(["git", "apply", "-p1", str(patch)], cwd=tree, capture_output=True,
+                                         text=True, env={**os.environ, "GIT_CEILING_DIRECTORIES": temporary})
+                self.assertEqual(applied.returncode, 0, applied.stderr)
+                self.assertEqual(digest_of(tree / target), entry["patched_sha256"],
+                                 "applying the patch did not produce the recorded result")
+                self.assertNotEqual(entry["original_sha256"], entry["patched_sha256"],
+                                    "a patch that changes nothing would leave an unpatched original in the build")
+            for name in self.vendor["files"]:
+                if name not in recorded:
+                    self.assertEqual(digest_of(tree / name), self.vendor["files"][name]["sha256"],
+                                     "a patch changed a file outside its declared target: " + name)
+
+    def test_the_patches_change_state_transport_and_one_journal_entry_only(self):
+        """Every hunk is read: the local surface may not grow a second office or a new renderer."""
+        for path in sorted((OFFICE / "patches").glob("*.patch")):
+            body = path.read_text(encoding="utf-8")
+            added = "\n".join(line[1:] for line in body.splitlines() if line.startswith("+") and not line.startswith("+++"))
+            for forbidden in ("innerHTML", "document.write", "eval(", "fetch(", "XMLHttpRequest",
+                              "localStorage", "sessionStorage", "settings.json", "~/.claude", "~/.codex"):
+                self.assertNotIn(forbidden, added, "%s introduces %s" % (path.name, forbidden))
+        overlay = (OFFICE / "patches" / "webview-ui__src__office__components__ToolOverlay.tsx.patch").read_text(encoding="utf-8")
+        self.assertIn("pipelineStates", overlay, "the overlay renders the pipeline lifecycle")
+        toolbar = (OFFICE / "patches" / "webview-ui__src__components__BottomToolbar.tsx.patch").read_text(encoding="utf-8")
+        self.assertEqual(toolbar.count("<Button"), 1, "exactly one native entry is added to the toolbar")
+        self.assertIn("Journal", toolbar)
+        hooks = (OFFICE / "patches" / "webview-ui__src__hooks__useExtensionMessages.ts.patch").read_text(encoding="utf-8")
+        added = "\n".join(line[1:] for line in hooks.splitlines() if line.startswith("+") and not line.startswith("+++"))
+        for cue in ("os.showWaitingBubble(", "playDoneSound(", "showPermissionBubble("):
+            self.assertNotIn(cue, added, "no neutral state may play a finished-turn or approval cue")
+        self.assertIn("requestSnapshot", added, "a reconnected client asks for a fresh snapshot")
+        self.assertIn("os.setAgentActive(id, working)", added, "only an observed working state animates")
+        # This is a check of the declared change surface, not of engine behaviour: the presence of
+        # a call proves the patch contains it, nothing more. What the engine really does with a
+        # neutral actor is run for real in monitor/pixel-office/test/engine.test.mjs.
+        handler = added[added.index("const apply = (state: TransportState)"):]
+        for call in ("os.setAgentTool(id, null)", "os.setAgentActive(id, false)"):
+            self.assertIn(call, handler, "a lost socket must stop the animation, not only its caption")
+        engine = (OFFICE / "patches" / "webview-ui__src__office__engine__characters.ts.patch").read_text(encoding="utf-8")
+        added = "\n".join(line[1:] for line in engine.splitlines() if line.startswith("+") and not line.startswith("+++"))
+        self.assertIn("if (!ch.isActive)", added, "only an active character advances the typing frames")
+        for forbidden in ("wanderTimer", "seatTimer", "findPath", "CharacterState."):
+            self.assertNotIn(forbidden, added, "the engine patch touches the animation only, not the movement of the room")
+        settings = (OFFICE / "patches" / "webview-ui__src__components__SettingsModal.tsx.patch").read_text(encoding="utf-8")
+        for removed in ("Watch All Sessions", "Instant Detection (Hooks)", "Absolute asset directory path"):
+            self.assertIn("-", settings)
+            self.assertIn(removed, settings, "the inapplicable control is named in the patch that removes it")
 
     def test_dist_matches_its_recorded_build_inputs_and_outputs(self):
-        self.assertEqual(self.build["upstream"]["commit"], self.manifest["commit"])
+        for name, entry in self.build["outputs"].items():
+            path = (OFFICE / "dist" / "office" / name).resolve()
+            self.assertEqual((digest_of(path), path.stat().st_size), (entry["sha256"], entry["bytes"]), name)
+        for name, expected in self.build["adapterSources"].items():
+            self.assertEqual(digest_of(OFFICE / name), expected, name)
         self.assertEqual(self.build["vendorManifestSha256"], digest_of(OFFICE / "vendor-manifest.json"))
-        self.assertEqual(self.build["tools"], {"esbuild": "0.28.1", "pngjs": "7.0.0"})
-        for name, recorded in self.build["adapterSources"].items():
-            self.assertEqual(digest_of(OFFICE / name), recorded, name)
-        for name, recorded in self.build["outputs"].items():
-            path = OFFICE / "dist" / name
-            self.assertEqual(digest_of(path), recorded["sha256"], name)
-            self.assertEqual(path.stat().st_size, recorded["bytes"], name)
+        self.assertEqual(self.build["upstream"]["commit"], self.vendor["commit"])
+        self.assertIn("not", self.build["note"].lower())
+        self.assertIn("byte identical", self.build["note"], "the build never claims to be the published bundle")
 
-    def test_the_page_pins_the_bundle_it_is_served_with(self):
-        html = run_progress.PAGE.read_text(encoding="utf-8")
-        bundle = (OFFICE / "dist" / "office.js").read_bytes()
-        expected = "sha256-" + base64.b64encode(hashlib.sha256(bundle).digest()).decode("ascii")
-        tags = re.findall(r"<script ([^>]*)></script>", html)
-        self.assertEqual(len(tags), 1, tags)
-        attributes = dict(re.findall(r'(\w+)="([^"]*)"', tags[0]))
-        self.assertEqual(attributes, {"src": "/pixel-agents/office.js", "integrity": expected})
-        self.assertEqual(run_progress.sri(bundle), expected)
-        self.assertEqual(run_progress.OFFICE, OFFICE / "dist")
-
-    def test_the_browser_bundle_carries_the_engine_and_no_runtime_it_must_not_have(self):
-        source = (OFFICE / "dist" / "office.js").read_text(encoding="utf-8")
-        self.assertIn("Pixel Agents office engine, MIT, Copyright (c) 2026 Pablo De Lucca", source)
-        self.assertIn(self.manifest["commit"], source)
-        # Names that exist only in the original engine modules: the bundle really contains them.
-        for marker in ("getCharacterAt", "renderFrame", "startGameLoop", "buildDynamicCatalog", "overlayProjection"):
-            self.assertIn(marker, source, marker)
-        # And nothing that would make it a second application or a second source of truth.
-        for forbidden in ("WebSocket", "postMessage", "XMLHttpRequest", "eval(", "createElement(\"script\"",
-                          "react", "acquireVsCodeApi", "/ws"):
-            self.assertNotIn(forbidden, source, forbidden)
-        self.assertEqual(source.count("fetch("), 1, "the adapter fetches exactly one local asset payload")
+    def test_the_built_office_is_the_original_application(self):
+        index = (OFFICE / "dist" / "office" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('<div id="root">', index, "the original entry point is the office root element")
+        bundles = sorted((OFFICE / "dist" / "office" / "assets").glob("*.js"))
+        self.assertEqual(len(bundles), 1, bundles)
+        source = bundles[0].read_text(encoding="utf-8", errors="replace")
+        for present in ("Layout", "Settings", "Journal", "Reconnecting", "pipelineActorState", "requestSnapshot"):
+            self.assertIn(present, source, present)
+        for absent in ("Watch All Sessions", "Instant Detection (Hooks)", "Absolute asset directory path"):
+            self.assertNotIn(absent, source, "an inapplicable control is still in the built office: " + absent)
+        css = sorted((OFFICE / "dist" / "office" / "assets").glob("*.css"))
+        self.assertEqual(len(css), 1, css)
+        self.assertIn("FS Pixel Sans", css[0].read_text(encoding="utf-8"), "the original typography is built in")
 
     def test_the_decoded_assets_are_the_original_room_and_characters(self):
-        payload = json.loads((OFFICE / "dist" / "assets.json").read_bytes())
-        self.assertEqual(sorted(payload), ["carpets", "characters", "floors", "furniture", "layout", "walls"])
-        counts = self.build["assets"]
-        self.assertEqual(len(payload["characters"]), counts["characters"])
-        self.assertEqual(len(payload["floors"]), counts["floors"])
-        self.assertEqual(len(payload["furniture"]["catalog"]), counts["catalog"])
-        self.assertEqual(len(payload["furniture"]["sprites"]), counts["sprites"])
-        self.assertEqual((payload["layout"]["cols"], payload["layout"]["rows"]), (21, 22))
-        self.assertEqual(len(payload["layout"]["furniture"]), 36)
-        # Sprites are colour grids, not placeholders: every furniture asset of the catalog has painted pixels.
-        for entry in payload["furniture"]["catalog"]:
-            sprite = payload["furniture"]["sprites"].get(entry["id"])
-            self.assertTrue(sprite, entry["id"])
-            self.assertTrue(any(pixel for row in sprite for pixel in row), entry["id"])
-        for character in payload["characters"]:
-            for direction in ("down", "up", "right"):
-                self.assertTrue(character[direction])
-                self.assertTrue(any(pixel for row in character[direction][0] for pixel in row))
-        # The room the original ships with: mirrored furniture variants included.
-        types = {item["type"] for item in payload["layout"]["furniture"]}
-        self.assertIn("PC_SIDE:left", types)
+        assets = json.loads((OFFICE / "dist" / "assets.json").read_text(encoding="utf-8"))
+        self.assertEqual(sorted(assets), ["carpets", "characters", "floors", "furniture", "layout", "petNames", "pets", "walls"])
+        self.assertEqual(len(assets["characters"]), 6)
+        self.assertEqual(assets["petNames"], ["Claudio", "Gitcat"])
+        self.assertGreater(len(assets["furniture"]["catalog"]), 20)
+        layout = assets["layout"]
+        self.assertEqual((layout["version"], layout["cols"], layout["rows"]), (1, 21, 22))
+        self.assertGreater(len(layout["furniture"]), 20, "the shipped room, not an empty grid")
+        known = {entry["id"] for entry in assets["furniture"]["catalog"]}
+        for item in layout["furniture"]:
+            base = item["type"][:-len(":left")] if item["type"].endswith(":left") else item["type"]
+            self.assertIn(base, known, item["type"])
 
 
-@unittest.skipUnless(NODE, "node is required to run the page script against a stub DOM")
-class OfficeStateTest(unittest.TestCase):
-    """The three actors get their states from the page's own reducers, and only from observed records."""
+@unittest.skipUnless(NODE and (OFFICE / "dist" / "office" / "index.html").exists()
+                     and (OFFICE / "node_modules" / "ws").exists(),
+                     "the office needs node, its built bundle and its installed dependencies")
+class OfficeServeTest(unittest.TestCase):
+    """The documented entry point: one command, one URL, and no child left behind."""
 
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="pixel-office-")
-        self.addCleanup(temporary.cleanup)
-        self.directory = Path(temporary.name)
-        self.progress = self.directory / "progress"
-        html = run_progress.PAGE.read_text(encoding="utf-8")
-        self.script = self.directory / "page.js"
-        self.script.write_text(re.search("<script>(.*?)</script>", html, re.DOTALL).group(1), encoding="utf-8")
-        self.harness = self.directory / "harness.js"
-        self.harness.write_text(PAGE_HARNESS, encoding="utf-8")
-
-    def api(self, path):
-        server = run_progress.ProgressServer(self.progress, 0)
-        thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
-        thread.start()
-        try:
-            connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=10)
-            try:
-                connection.request("GET", path)
-                return json.loads(connection.getresponse().read())
-            finally:
-                connection.close()
-        finally:
-            server.shutdown()
-            server.server_close()
-            thread.join(5)
-
-    def view(self, actions=(), fail=None):
-        rounds = [{"events": self.api("/api/events?cursor=0&limit=2000"),
-                   "trace": self.api("/api/trace?cursor=0&limit=2000"), "actions": list(actions)}]
-        process = subprocess.run([NODE, str(self.harness), str(self.script)], input=json.dumps({"rounds": rounds, "fail": fail}),
-                                 capture_output=True, text=True, encoding="utf-8", timeout=30)
-        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        return json.loads(process.stdout)["office"]
-
-    @staticmethod
-    def actor(office, number):
-        """One actor control as three readable lines: name and duty, status, detail."""
-        return office["actors"][number - 1]
-
-    def journal(self, **overrides):
-        options = {"source": "launcher", "phase": "build", "step_base": "build-1", "unique_step": True,
-                   "first": ("run", "started", {"model": MODEL, "effort": "max"})}
-        options.update(overrides)
-        return run_progress.ProgressJournal.open(self.progress, **options)
-
-    def store(self, step_id, **overrides):
-        options = {"run_id": "office", "attempt": 1, "step_id": step_id, "source": "launcher", "tool": "test",
-                   "provider": "claude"}
-        options.update(overrides)
-        return run_trace.TraceStore.open(self.progress, **options)
-
-    def user_prompt(self, text="Собери офис.", title="Офис"):
-        # Registered by the manager, authored by the human: the record keeps role=user.
-        manager = self.store("user-prompt", source="manager", provider=None)
-        manager.message("user", "user_prompt", text, original=text.encode("utf-8"), title=title)
-        return manager
-
-    def running_worker(self):
-        journal = self.journal()
-        journal.record("init", "observed", source="native", model=MODEL)
-        journal.record("tool_call", "observed", source="native", tool="Read", call_id="c1")
-        captured = self.store(journal.step_id)
-        captured.record("status", state="cli_started", model=MODEL, effort="max")
-        captured.record("status", state="capture_started", model=MODEL, cli_version="1.0.0", session_id="sess-office", source="native")
-        captured.message("claude", "response", "Читаю исходники движка.", model=MODEL, message_id="m1", source="native")
-        return journal, captured
-
-    def test_live_work_animates_only_the_worker_and_names_its_observed_tool(self):
-        self.user_prompt()
-        self.running_worker()
-        office = self.view()
-        self.assertIn("сцена офиса не загрузилась", office["status"].lower())
-        self.assertEqual(office["statusClass"], "notice bad", "a missing scene is visible, not silent")
-        human, manager, worker = (self.actor(office, number) for number in (1, 2, 3))
-        self.assertEqual(human["parts"][0], "Пользователь · человек: автор запроса")
-        self.assertEqual(human["parts"][1], "1 запрос", "a prompt registered by the manager still belongs to the human")
-        self.assertIn("Офис", human["parts"][2])
-        self.assertEqual(manager["parts"][1], "записей менеджера нет")
-        self.assertIn("активность родительского менеджера не наблюдается", manager["parts"][2])
-        self.assertTrue(worker["parts"][1].startswith("работает: build-1"), worker)
-        self.assertIn("· Read", worker["parts"][1], "the observed tool of the unfinished call is shown")
-        self.assertIn("state-pending", worker["className"])
-        self.assertNotIn("state-pending", manager["className"])
-
-    def test_silence_is_not_work(self):
-        self.user_prompt()
-        # An invocation the CLI was seen in, whose last observation is ten minutes old:
-        # unconfirmed, never "working".
-        self.progress.mkdir(parents=True, exist_ok=True)
-        for line in (record_line(run_id="office", event_id="q" * 16, step_id="build-quiet",
-                                 model=MODEL, effort="max", time=stamp(660)),
-                     record_line(run_id="office", event_id="n" * 16, step_id="build-quiet", source="native",
-                                 event="tool_call", status="observed", tool="Read", call_id="c9", time=stamp(600))):
-            run_progress._append(self.progress / "progress.jsonl", line)
-        worker = self.actor(self.view(), 3)
-        self.assertTrue(worker["parts"][1].startswith("тишина 10 мин"), worker)
-        self.assertIn("состояние не подтверждено", worker["parts"][2])
-        self.assertIn("state-stale", worker["className"])
-
-    def test_a_recorded_launch_is_not_observed_work(self):
-        # The launcher writes run/started before it starts the process, so that record alone says
-        # "starting", never "working": nothing of the CLI has been seen yet.
-        self.user_prompt()
-        self.journal()
-        worker = self.actor(self.view(), 3)
-        self.assertEqual(worker["parts"][1], "запускается: build-1", worker)
-        self.assertEqual(worker["parts"][2], "запуск записан, наблюдений CLI еще нет (build-1, попытка 1)", worker)
-        self.assertNotIn("state-pending", worker["className"])
-        self.assertIn("state-wait", worker["className"])
-
-    def test_a_launch_without_any_cli_record_goes_unknown_not_working(self):
-        # The same launch left silent: unknown, and still not work.
-        self.user_prompt()
-        self.progress.mkdir(parents=True, exist_ok=True)
-        run_progress._append(self.progress / "progress.jsonl",
-                             record_line(run_id="office", event_id="s" * 16, step_id="build-mute",
-                                         model=MODEL, effort="max", time=stamp(600)))
-        worker = self.actor(self.view(), 3)
-        self.assertTrue(worker["parts"][1].startswith("запуск не подтвержден 10 мин"), worker)
-        self.assertIn("записей CLI нет: состояние не подтверждено", worker["parts"][2])
-        self.assertNotIn("state-pending", worker["className"])
-        self.assertIn("state-stale", worker["className"])
-
-    def test_a_completed_review_turn_is_not_running_work(self):
-        # The reviewer's turn finished; the process has not recorded its exit yet. Nothing is
-        # working, and after the silence threshold the state is no longer confirmed either.
-        self.user_prompt()
-        review = run_progress.ProgressJournal.open(self.progress, run_id="office", source="launcher", phase="review",
-                                                   step_id="review-1", attempt=1,
-                                                   first=("run", "started", {"model": "gpt-6-astra", "effort": "ultra"}))
-        review.record("cli_result", "success", source="native")
-        manager = self.actor(self.view(), 2)
-        self.assertEqual(manager["parts"][1], REVIEW_LABEL)
-        self.assertIn(REVIEW_LABEL + ": ход завершен, процесс закрывается", manager["parts"][2])
-        self.assertNotIn("state-pending", manager["className"])
-        self.assertIn("state-ok", manager["className"])
-        run_progress._append(self.progress / "progress.jsonl",
-                             record_line(run_id="office", event_id="r" * 16, step_id="review-old", phase="review",
-                                         model="gpt-6-astra", effort="ultra", time=stamp(660)))
-        run_progress._append(self.progress / "progress.jsonl",
-                             record_line(run_id="office", event_id="t" * 16, step_id="review-old", phase="review",
-                                         source="native", event="cli_result", status="success", time=stamp(600)))
-        stale = self.actor(self.view(), 2)
-        self.assertIn("выхода процесса нет 10 мин", stale["parts"][2])
-        self.assertIn("состояние не подтверждено", stale["parts"][2])
-        self.assertNotIn("state-pending", stale["className"])
-        self.assertIn("state-stale", stale["className"])
-
-    def test_a_finished_cli_is_not_manager_acceptance(self):
-        self.user_prompt()
-        journal = self.journal(step_base="build-done")
-        journal.record("cli_result", "success", source="native")
-        journal.record("cli_exit", "exited", exit_code=0)
-        office = self.view()
-        worker = self.actor(office, 3)
-        self.assertIn("CLI завершил успешно; приемка менеджером не записана", worker["parts"][2])
-        self.assertNotIn("state-pending", worker["className"])
-        self.assertEqual(self.actor(office, 2)["parts"][1], "записей менеджера нет",
-                         "a finished CLI is not a manager decision")
-        detail = self.view(actions=[["click", "office-actor-3"]])["details"]
-        self.assertTrue(any("успешный выход CLI не является приемкой задачи" in block["text"] for block in detail), detail)
-
-    def test_an_observed_review_sits_at_the_manager_desk_as_a_separate_session(self):
-        self.user_prompt()
-        self.running_worker()
-        review = run_progress.ProgressJournal.open(self.progress, source="launcher", phase="review", step_id="review-1",
-                                                   attempt=1, first=("run", "started", {"model": "gpt-6-astra", "effort": "ultra"}))
-        codex = self.store("review-1", provider="codex", phase="review")
-        codex.record("status", state="cli_started", model="gpt-6-astra", effort="ultra")
-        codex.record("status", state="thread_started", thread_id="thr-office", source="native")
-        codex.message("codex", "review", "Замечание 1: ...", model="gpt-6-astra", message_id="r1", source="native")
-        office = self.view()
-        manager = self.actor(office, 2)
-        self.assertEqual(manager["parts"][1], REVIEW_LABEL)
-        self.assertIn(REVIEW_LABEL + ": работает", manager["parts"][2])
-        self.assertIn("review-1", manager["parts"][2])
-        self.assertIn("state-pending", manager["className"])
-        self.assertTrue(self.actor(office, 3)["parts"][1].startswith("работает: build-1"),
-                        "the review does not replace the worker's own state")
-        self.assertEqual(review.step_id, "review-1")
-
-    def test_a_manager_decision_is_a_record_not_running_work(self):
-        self.user_prompt()
-        self.running_worker()
-        run_progress.ProgressJournal.open(self.progress, source="manager", phase="decision", attempt=1,
-                                          first=("decision", "retry", {}))
-        manager = self.actor(self.view(), 2)
-        self.assertEqual(manager["parts"][1], "решение: RETRY")
-        self.assertIn("попытка 1", manager["parts"][2])
-        self.assertNotIn("state-pending", manager["className"])
-
-    def test_imported_history_never_shows_as_a_live_session(self):
-        self.user_prompt()
-        imported = self.store("build-old", source="import")
-        imported.record("status", state="import_started", origin="/old/run", observed=stamp(86400), source="import")
-        imported.message("claude", "response", "Старый ответ", model=MODEL, message_id="old1", source="import",
-                         observed=stamp(86400))
-        worker = self.actor(self.view(), 3)
-        self.assertEqual(worker["parts"][1], "импорт истории")
-        self.assertIn("текущую сессию они не описывают", worker["parts"][2])
-        self.assertNotIn("state-pending", worker["className"])
-
-    def test_a_lost_feed_confirms_nothing_and_stops_every_busy_state(self):
-        self.user_prompt()
-        self.running_worker()
-        office = self.view(fail={"events": True}, actions=[["click", "office-actor-3"]])
-        for number in (1, 2, 3):
-            actor = self.actor(office, number)
-            self.assertEqual(actor["parts"][1], "нет связи", actor)
-            self.assertTrue(actor["parts"][2].startswith("нет связи с сервером; последнее известное: "), actor)
-            self.assertIn("state-bad", actor["className"])
-        self.assertTrue(any("состояние не подтверждено" in block["text"] for block in office["details"]), office["details"])
-
-    def test_selecting_an_actor_opens_its_records_with_their_provenance(self):
-        self.user_prompt(text="Собери офис Pixel Agents в мониторе.", title="Офис Pixel Agents")
-        journal, captured = self.running_worker()
-        captured.message("claude", "response", "Длинный ответ. " + "строка ответа. " * 40, model=MODEL,
-                         message_id="m2", source="native")
-        office = self.view(actions=[["click", "office-actor-3"]])
-        self.assertEqual([actor["pressed"] for actor in office["actors"]], ["false", "false", "true"])
-        blocks = office["details"]
-        self.assertEqual(blocks[0]["text"], "Claude · исполнитель Claude")
-        lines = " ".join(block["text"] for block in blocks)
-        self.assertIn("запрошено: " + MODEL + " / max (профиль запуска)", lines)
-        self.assertIn("наблюдается: " + MODEL, lines)
-        self.assertIn("сессия Claude sess-office, CLI 1.0.0", lines)
-        entries = [block for block in blocks if block["className"].startswith("entry ")]
-        self.assertEqual([block["className"] for block in entries], ["entry role-claude", "entry role-claude"])
-        self.assertIn("Claude", entries[0]["text"])
-        self.assertIn("попытка 1 · " + journal.step_id, entries[0]["text"])
-        self.assertIn("показано начало записи", " ".join(block["text"] for block in blocks),
-                      "a long record is cut with a marker, and the conversation stays the full text")
-        # The human's own records are shown under his own name, not merged into the worker's.
-        user = self.view(actions=[["click", "office-actor-1"]])
-        self.assertEqual(user["details"][0]["text"], "Пользователь · человек: автор запроса")
-        user_entries = [block for block in user["details"] if block["className"].startswith("entry ")]
-        self.assertEqual([block["className"] for block in user_entries], ["entry role-user"])
-        self.assertIn("Пользователь", user_entries[0]["text"])
-        self.assertIn("запрос пользователя: Офис Pixel Agents", user_entries[0]["text"])
-        # Clicking the same actor again clears the selection.
-        cleared = self.view(actions=[["click", "office-actor-1"], ["click", "office-actor-1"]])
-        self.assertEqual([actor["pressed"] for actor in cleared["actors"]], ["false", "false", "false"])
-        self.assertIn("выберите персонажа", cleared["details"][0]["text"])
-
-
-DRIVER = textwrap.dedent("""\
-    'use strict';
-    const { spawn } = require('child_process');
-    const fs = require('fs'), path = require('path');
-    const [chrome, url, workDir] = process.argv.slice(2);
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    const problems = [], ignored = [];
-    const browser = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + path.join(workDir, 'profile'),
-      '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--disable-extensions', '--disable-background-networking',
-      '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
-      '--disable-sync', '--window-size=1400,1000', 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stderr = '';
-    const endpoint = new Promise((resolve, reject) => {
-      browser.stderr.on('data', (chunk) => { stderr += chunk; const match = stderr.match(/DevTools listening on (ws:[^\\s]+)/); if (match) { resolve(match[1]); } });
-      browser.on('exit', (code) => reject(new Error('chrome exited ' + code + ': ' + stderr)));
-      setTimeout(() => reject(new Error('no DevTools endpoint: ' + stderr)), 20000);
-    });
-    let sequence = 0; const pending = {}; let session = null; let loaded = null; let socket;
-    function connect(address) {
-      return new Promise((resolve, reject) => {
-        const client = new WebSocket(address);
-        client.onopen = () => resolve(client);
-        client.onerror = (error) => reject(new Error('websocket error ' + (error && error.message)));
-        client.onmessage = (message) => {
-          const data = JSON.parse(message.data);
-          if (data.id && pending[data.id]) { const entry = pending[data.id]; delete pending[data.id]; data.error ? entry.reject(new Error(JSON.stringify(data.error))) : entry.resolve(data.result); return; }
-          if (data.method === 'Page.loadEventFired' && loaded) { loaded(); }
-          if (data.method === 'Runtime.exceptionThrown') { problems.push('exception: ' + JSON.stringify(data.params.exceptionDetails).slice(0, 500)); }
-          if (data.method === 'Runtime.consoleAPICalled' && (data.params.type === 'error' || data.params.type === 'warning')) {
-            problems.push('console.' + data.params.type + ': ' + JSON.stringify(data.params.args).slice(0, 500));
-          }
-          if (data.method === 'Log.entryAdded') {
-            const entry = data.params.entry;
-            if (entry.level === 'error' || entry.level === 'warning') {
-              // Poll failures after the server is stopped on purpose are the expected network errors.
-              (entry.url && entry.url.indexOf('favicon.ico') >= 0 ? ignored : (entry.source === 'network' && fs.existsSync(path.join(workDir, 'stopped')) ? ignored : problems))
-                .push('log.' + entry.level + ': ' + entry.text + ' ' + (entry.url || ''));
-            }
-          }
-        };
-      });
-    }
-    function send(method, params) {
-      return new Promise((resolve, reject) => {
-        const id = ++sequence, message = { id, method, params: params || {} };
-        if (session) { message.sessionId = session; }
-        pending[id] = { resolve, reject };
-        socket.send(JSON.stringify(message));
-      });
-    }
-    async function evaluate(expression) {
-      const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-      if (result.exceptionDetails) { throw new Error('evaluate failed: ' + JSON.stringify(result.exceptionDetails).slice(0, 800)); }
-      return result.result.value;
-    }
-    async function waitFor(file, timeoutMs) {
-      const deadline = Date.now() + timeoutMs;
-      while (!fs.existsSync(file)) { if (Date.now() > deadline) { throw new Error('timeout waiting for ' + file); } await sleep(100); }
-    }
-    async function waitUntil(what, expression, timeoutMs) {
-      const deadline = Date.now() + timeoutMs;
-      for (;;) {
-        if (await evaluate(expression)) { return; }
-        if (Date.now() > deadline) { throw new Error('timeout waiting for ' + what); }
-        await sleep(150);
-      }
-    }
-    const scene = () => evaluate(`(function () {
-      var canvas = document.getElementById('office-canvas');
-      var view = canvas.pixelOffice || null;
-      var rect = canvas.getBoundingClientRect();
-      var labels = Array.prototype.slice.call(document.querySelectorAll('.office-label'));
-      return { mounted: !!view, inspect: view ? view.inspect() : null,
-               status: document.getElementById('office-status').textContent,
-               statusClass: document.getElementById('office-status').className,
-               canvas: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-               stage: document.getElementById('office-stage').getBoundingClientRect().height,
-               labels: labels.map(function (node) { return { text: node.textContent, visible: node.checkVisibility(), rect: node.getBoundingClientRect().toJSON() }; }),
-               actors: [1, 2, 3].map(function (id) {
-                 var button = document.getElementById('office-actor-' + id);
-                 return { text: button.textContent, pressed: button.getAttribute('aria-pressed'), visible: button.checkVisibility(),
-                          parts: Array.prototype.slice.call(button.children).map(function (part) { return part.textContent; }) };
-               }),
-               details: Array.prototype.slice.call(document.getElementById('office-details').children).map(function (node) { return node.textContent; }),
-               inspector: { open: document.getElementById('inspector').open, contextHidden: document.getElementById('inspector-context').hidden,
-                            actorHidden: document.getElementById('office-details').hidden,
-                            focusInside: document.getElementById('inspector').contains(document.activeElement) },
-               focus: document.activeElement ? document.activeElement.id : null,
-               documentWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth };
-    })()`);
-    const frame = () => evaluate(`document.getElementById('office-canvas').toDataURL()`);
-    (async () => {
-      socket = await connect(await endpoint);
-      const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
-      session = (await send('Target.attachToTarget', { targetId, flatten: true })).sessionId;
-      await send('Runtime.enable'); await send('Log.enable'); await send('Page.enable');
-      const loadedPromise = new Promise((resolve) => { loaded = resolve; });
-      await send('Page.navigate', { url });
-      await loadedPromise;
-      await sleep(2200);
-      const initial = await scene();
-      // The engine really simulates: several frames apart the canvas differs.
-      const moving = [];
-      for (let index = 0; index < 5; index++) { moving.push(await frame()); await sleep(260); }
-      const animated = moving.some((shot) => shot !== moving[0]);
-      // A click on the worker sprite selects him, exactly like his button does. The scene is scrolled
-      // into view first and measured again, so the pointer lands on the sprite that is on screen now.
-      await sleep(500);
-      const aimed = await scene();
-      const worker = aimed.inspect.actors[2];
-      const point = { x: Math.round(aimed.canvas.left + worker.hitX), y: Math.round(aimed.canvas.top + worker.hitY) };
-      const onScreen = point.x > 0 && point.y > 0 && point.x < aimed.innerWidth && point.y < await evaluate('window.innerHeight');
-      for (const type of ['mousePressed', 'mouseReleased']) {
-        await send('Input.dispatchMouseEvent', { type, button: 'left', buttons: 1, clickCount: 1, x: point.x, y: point.y });
-      }
-      await sleep(400);
-      const clicked = await scene();
-      // The drawer the sprite opened is modal, so it is closed before the keyboard is used on the main screen.
-      for (const type of ['keyDown', 'keyUp']) {
-        await send('Input.dispatchKeyEvent', { type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
-      }
-      await sleep(500);
-      const afterSpriteEscape = await scene();
-      // Keyboard reaches the same selection and keeps the focus where the reader put it.
-      // Enter activates a native button on key down; a separate char event would activate it a second time.
-      await evaluate(`document.getElementById('office-actor-2').focus()`);
-      for (const type of ['keyDown', 'keyUp']) {
-        await send('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, text: '\\r', unmodifiedText: '\\r' });
-      }
-      await sleep(400);
-      const keyboard = await scene();
-      await sleep(1600);
-      const afterRefresh = await scene();
-      // The selection opens the one drawer; Escape closes it and returns the focus to the control that opened it.
-      for (const type of ['keyDown', 'keyUp']) {
-        await send('Input.dispatchKeyEvent', { type, key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
-      }
-      await sleep(500);
-      const afterEscape = await scene();
-      // Reduced motion freezes the simulation while the page keeps updating.
-      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-      await sleep(700);
-      const reducedStart = await scene();
-      const still = [];
-      for (let index = 0; index < 4; index++) { still.push(await frame()); await sleep(260); }
-      const frozen = still.every((shot) => shot === still[0]);
-      const reducedEnd = await scene();
-      await send('Emulation.setEmulatedMedia', { features: [] });
-      await sleep(500);
-      // Narrow and wide layouts.
-      const widths = {};
-      for (const width of [390, 1400]) {
-        await send('Emulation.setDeviceMetricsOverride', { width: width, height: 900, deviceScaleFactor: 1, mobile: false });
-        await sleep(700);
-        widths[width] = await scene();
-      }
-      await send('Emulation.clearDeviceMetricsOverride');
-      await sleep(400);
-      fs.writeFileSync(path.join(workDir, 'phase1.json'), 'ready');
-      await waitFor(path.join(workDir, 'stopped'), 30000);
-      // The scene is only read once the page itself has seen the feed die: a request already in flight to
-      // the killed server can take its own connect timeout to fail, so the budget here is the browser's,
-      // not the page's. The wait is on the connection indicator, never on the states under assertion.
-      await waitUntil('the lost connection to be reported', `document.getElementById('connection').textContent.indexOf('нет связи') === 0`, 60000);
-      await sleep(600);
-      const disconnected = await scene();
-      process.stdout.write(JSON.stringify({ initial, animated, aimed, point, onScreen, clicked, afterSpriteEscape, keyboard, afterRefresh, afterEscape,
-        reducedStart, reducedEnd, frozen, widths, disconnected, problems, ignored }));
-      await send('Target.closeTarget', { targetId }).catch(() => {});
-      socket.close();
-      browser.kill('SIGKILL');
-      process.exit(0);
-    })().catch((error) => { process.stderr.write(String(error && error.stack || error)); browser.kill('SIGKILL'); process.exit(2); });
-    """)
-
-
-PROBE = textwrap.dedent("""\
-    'use strict';
-    const { spawn } = require('child_process');
-    const path = require('path');
-    const [chrome, url, workDir] = process.argv.slice(2);
-    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-    const browser = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + path.join(workDir, 'profile'),
-      '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--disable-extensions', '--disable-background-networking',
-      '--disable-sync', '--window-size=1400,1000', 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stderr = '';
-    const endpoint = new Promise((resolve, reject) => {
-      browser.stderr.on('data', (chunk) => { stderr += chunk; const match = stderr.match(/DevTools listening on (ws:[^\\s]+)/); if (match) { resolve(match[1]); } });
-      browser.on('exit', (code) => reject(new Error('chrome exited ' + code + ': ' + stderr)));
-      setTimeout(() => reject(new Error('no DevTools endpoint: ' + stderr)), 20000);
-    });
-    let sequence = 0; const pending = {}; let session = null; let loaded = null; let socket;
-    function send(method, params) {
-      return new Promise((resolve, reject) => {
-        const id = ++sequence, message = { id, method, params: params || {} };
-        if (session) { message.sessionId = session; }
-        pending[id] = { resolve, reject };
-        socket.send(JSON.stringify(message));
-      });
-    }
-    function connect(address) {
-      return new Promise((resolve, reject) => {
-        const client = new WebSocket(address);
-        client.onopen = () => resolve(client);
-        client.onerror = (error) => reject(new Error('websocket error ' + (error && error.message)));
-        client.onmessage = (message) => {
-          const data = JSON.parse(message.data);
-          if (data.id && pending[data.id]) { const entry = pending[data.id]; delete pending[data.id]; data.error ? entry.reject(new Error(JSON.stringify(data.error))) : entry.resolve(data.result); return; }
-          if (data.method === 'Page.loadEventFired' && loaded) { loaded(); }
-        };
-      });
-    }
-    (async () => {
-      socket = await connect(await endpoint);
-      const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
-      session = (await send('Target.attachToTarget', { targetId, flatten: true })).sessionId;
-      await send('Runtime.enable'); await send('Page.enable');
-      const loadedPromise = new Promise((resolve) => { loaded = resolve; });
-      await send('Page.navigate', { url });
-      await loadedPromise;
-      await sleep(2500);
-      const result = await send('Runtime.evaluate', { expression: `(function () {
-        var status = document.getElementById('office-status');
-        return { mounted: !!document.getElementById('office-canvas').pixelOffice, status: status.textContent,
-                 statusClass: status.className,
-                 actors: [1, 2, 3].map(function (id) { return document.getElementById('office-actor-' + id).textContent; }) };
-      })()`, returnByValue: true, awaitPromise: true });
-      process.stdout.write(JSON.stringify(result.result.value));
-      browser.kill('SIGKILL');
-      process.exit(0);
-    })().catch((error) => { process.stderr.write(String(error && error.stack || error)); browser.kill('SIGKILL'); process.exit(2); });
-    """)
-
-
-@unittest.skipUnless(CHROME and node_has_websocket(), "a local Chrome and node with WebSocket are required for the office scene")
-class OfficeSceneTest(unittest.TestCase):
-    """The real scene in a real browser: original sprites, selection, motion, layout and a lost feed."""
-
-    def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="pixel-office-browser-")
+        temporary = tempfile.TemporaryDirectory(prefix="office-serve-")
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
         self.progress = self.directory / "progress"
         journal = run_progress.ProgressJournal.open(
-            self.progress, source="launcher", phase="build", step_base="build-1", unique_step=True,
-            first=("run", "started", {"model": MODEL, "effort": "max"}))
-        journal.record("init", "observed", source="native", model=MODEL)
-        journal.record("tool_call", "observed", source="native", tool="Read", call_id="c1")
-        manager = run_trace.TraceStore.open(self.progress, run_id="office", attempt=1, step_id="user-prompt",
-                                            source="manager", tool="test")
-        manager.message("user", "user_prompt", "Собери офис Pixel Agents в мониторе.", original=b"prompt",
-                        title="Офис Pixel Agents")
-        store = run_trace.TraceStore.open(self.progress, run_id="office", attempt=1, step_id=journal.step_id,
-                                          source="launcher", tool="test", provider="claude")
-        store.record("status", state="cli_started", model=MODEL, effort="max")
-        store.record("status", state="capture_started", model=MODEL, cli_version="1.0.0", session_id="sess-office", source="native")
-        store.message("claude", "response", "Читаю исходники движка.\n" + "строка\n" * 20, model=MODEL,
-                      message_id="m1", source="native")
-        self.step_id = journal.step_id
-        self.server = run_progress.ProgressServer(self.progress, 0)
-        self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
-        self.thread.start()
-        self.stopped = False
-        self.addCleanup(self.stop_server)
+            self.progress, source="launcher", phase="build", run_id="serve-test", attempt=1, step_id="build-1",
+            first=("run", "started", {"model": "claude-serve-test-model", "effort": "max"}))
+        journal.record("init", "observed", source="native", model="claude-serve-test-model")
+        self.process = subprocess.Popen(
+            [sys.executable, "-B", str(ROOT / "scripts" / "run_progress.py"), "serve",
+             "--progress-dir", str(self.progress), "--office-state-dir", str(self.directory / "state")],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.addCleanup(self.stop)
+        deadline = time.monotonic() + 90
+        self.url = None
+        while time.monotonic() < deadline and self.url is None:
+            if self.process.poll() is not None:
+                self.fail("serve exited %d: %s" % (self.process.returncode, self.process.stderr.read()))
+            line = self.process.stdout.readline()
+            if line.startswith("http://"):
+                self.url = line.strip()
+        self.assertIsNotNone(self.url, "serve printed no URL")
+        self.port = int(self.url.rsplit(":", 1)[1].rstrip("/"))
 
-    def stop_server(self):
-        if self.stopped:
-            return
-        self.stopped = True
-        self.server.shutdown()
-        self.server.server_close()
-        self.thread.join(5)
+    def stop(self):
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=10)
 
-    def test_the_original_scene_renders_selects_freezes_and_survives_a_lost_feed(self):
-        work = self.directory / "driver"
-        work.mkdir()
-        driver = work / "driver.js"
-        driver.write_text(DRIVER, encoding="utf-8")
-        process = subprocess.Popen([NODE, str(driver), CHROME, self.server.url, str(work)],
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+    def get(self, path, host=None, method="GET"):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=20)
         try:
-            phase1, deadline = work / "phase1.json", time.monotonic() + 120
-            while not phase1.exists() and process.poll() is None and time.monotonic() < deadline:
-                time.sleep(0.1)
-            self.assertTrue(phase1.exists(), "driver did not finish the first phase: "
-                            + (process.stderr.read() if process.poll() is not None else "still running"))
-            (work / "stopped").write_text("go", encoding="utf-8")
-            self.stop_server()
-            stdout, stderr = process.communicate(timeout=120)
+            connection.request(method, path, headers={"Host": host} if host else {})
+            response = connection.getresponse()
+            return response.status, dict(response.getheaders()), response.read()
         finally:
-            if process.poll() is None:
-                process.kill()
-        self.assertEqual(process.returncode, 0, stdout + stderr)
-        report = json.loads(stdout)
-        self.assertEqual(report["problems"], [], "the office must produce no console errors, exceptions or CSP reports")
+            connection.close()
 
-        initial = report["initial"]
-        self.assertTrue(initial["mounted"], "the pinned bundle loaded under the page's CSP and integrity")
-        self.assertIn("движение включено", initial["status"])
-        self.assertEqual(initial["statusClass"], "empty")
-        self.assertGreaterEqual(initial["inspect"]["frames"], 10, "the engine's own loop is drawing frames")
-        self.assertTrue(report["animated"], "the original simulation moves the scene")
-        seats = [actor["seatId"] for actor in initial["inspect"]["actors"]]
-        self.assertEqual(len(set(seats)), 3, seats)
-        self.assertTrue(all(seats), "every actor sits at a seat of the original room")
-        self.assertEqual([actor["active"] for actor in initial["inspect"]["actors"]], [False, False, True])
-        self.assertEqual(initial["inspect"]["actors"][2]["tool"], "Read")
-        self.assertEqual([label["visible"] for label in initial["labels"]], [True, True, True])
-        self.assertEqual([label["text"].startswith(name) for label, name in
-                          zip(initial["labels"], ["Пользователь", "Codex", "Claude"])], [True, True, True])
-        for label in initial["labels"]:
-            self.assertGreaterEqual(round(label["rect"]["left"]), round(initial["canvas"]["left"]) - 1, label)
-            self.assertLessEqual(round(label["rect"]["right"]), round(initial["canvas"]["left"] + initial["canvas"]["width"]) + 1, label)
+    def test_the_office_serves_its_own_routes_and_the_journal_behind_it(self):
+        status, headers, body = self.get("/")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", headers["Content-Type"])
+        self.assertIn(b'<div id="root">', body)
+        status, _, body = self.get("/details")
+        self.assertEqual(status, 200)
+        self.assertIn("Монитор конвейера", body.decode("utf-8"))
+        self.assertNotIn("office-canvas", body.decode("utf-8"), "the journal carries no second office")
+        self.assertNotIn("loop-node-build", body.decode("utf-8"), "the retired loop graph is gone")
+        status, _, body = self.get("/api/events?cursor=0&limit=10")
+        self.assertEqual(status, 200)
+        page = json.loads(body)
+        self.assertEqual([event["event"] for event in page["events"]], ["run", "init"])
+        self.assertEqual(self.get("/fonts/FSPixelSansUnicode-Regular.ttf")[0], 200)
+        self.assertEqual(self.get("/assets/characters/char_0.png")[0], 200)
 
-        clicked = report["clicked"]
-        self.assertTrue(report["onScreen"], report["point"])
-        self.assertEqual([actor["pressed"] for actor in clicked["actors"]], ["false", "false", "true"],
-                         "a click on the sprite selects that person")
-        self.assertEqual(clicked["inspect"]["selectedActorId"], 3)
-        self.assertTrue(any("сессия Claude sess-office" in line for line in clicked["details"]), clicked["details"])
-        # The selection opens the one on-demand drawer in this actor's context; the records moved there.
-        self.assertEqual((clicked["inspector"]["open"], clicked["inspector"]["contextHidden"], clicked["inspector"]["actorHidden"]),
-                         (True, False, False))
-        self.assertFalse(report["afterSpriteEscape"]["inspector"]["open"], "Escape closes the drawer a sprite opened")
-        self.assertEqual(report["afterSpriteEscape"]["focus"], "office-actor-3",
-                         "a sprite click hands the focus to that person's own control when the drawer closes")
-        keyboard = report["keyboard"]
-        self.assertEqual([actor["pressed"] for actor in keyboard["actors"]], ["false", "true", "false"],
-                         "Enter on the focused control selects the same way a click does")
-        self.assertTrue(keyboard["inspector"]["focusInside"], "opening the drawer moves the focus into it")
-        self.assertTrue(report["afterRefresh"]["inspector"]["focusInside"], "a refresh never steals the focus back")
-        self.assertTrue(report["afterRefresh"]["inspector"]["open"], "a refresh never closes the opened drawer")
-        self.assertEqual(report["afterRefresh"]["inspect"]["selectedActorId"], 2, "a refresh keeps the selection")
-        self.assertFalse(report["afterEscape"]["inspector"]["open"], "Escape closes the drawer")
-        self.assertEqual(report["afterEscape"]["focus"], "office-actor-2", "Escape returns the focus to the control")
-        self.assertEqual(report["afterEscape"]["inspect"]["selectedActorId"], 2,
-                         "closing the drawer hides the details, it does not undo the selection")
-        # Several seconds of identical snapshots arrived in between: repeating a state must not drive the
-        # engine again, because setAgentActive clears the character's path on every call.
-        self.assertEqual(report["afterRefresh"]["inspect"]["lifecycleCalls"], initial["inspect"]["lifecycleCalls"],
-                         "an unchanged snapshot must not be applied to the engine again")
+    def test_only_the_intended_routes_are_reachable(self):
+        for path in ("/nope", "/vendor/LICENSE", "/package.json", "/src/office-server.mjs",
+                     "/dist/assets.json", "/../scripts/run_progress.py", "/assets/index.html",
+                     "/api/artifact", "/api/events/extra"):
+            with self.subTest(path=path):
+                self.assertIn(self.get(path)[0], (400, 404), path)
+        self.assertEqual(self.get("/", host="example.com")[0], 403)
+        self.assertEqual(self.get("/", method="POST")[0], 405)
 
-        self.assertFalse(report["reducedStart"]["inspect"]["simulating"], "reduced motion stops the simulation")
-        self.assertTrue(report["frozen"], "with the simulation stopped the scene does not move")
-        self.assertIn("движение выключено", report["reducedStart"]["status"])
-        self.assertIn("уменьшить движение", report["reducedStart"]["status"])
-        self.assertGreater(report["reducedEnd"]["inspect"]["frames"], report["reducedStart"]["inspect"]["frames"],
-                           "the frozen scene still redraws when the page updates it")
-        self.assertEqual(report["reducedEnd"]["inspect"]["actors"][2]["active"], True,
-                         "freezing the motion does not change what is true about the work")
+    def test_stopping_the_launcher_stops_the_office_with_it(self):
+        listing = subprocess.run(["pgrep", "-f", "office-server.mjs"], capture_output=True, text=True)
+        self.assertIn(str(self.port), self.url)
+        self.assertNotEqual(listing.stdout.strip(), "", "the office runs as a child of this launcher")
+        self.stop()
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            probe = subprocess.run(["pgrep", "-f", "office-server.mjs --port %d" % self.port],
+                                   capture_output=True, text=True)
+            if probe.stdout.strip() == "":
+                break
+            time.sleep(0.2)
+        else:
+            self.fail("the office survived its launcher")
+        with self.assertRaises(OSError):
+            self.get("/")
 
-        for width, view in report["widths"].items():
-            self.assertLessEqual(view["documentWidth"], view["innerWidth"], "no horizontal overflow at %s px" % width)
-            self.assertTrue(all(actor["visible"] for actor in view["actors"]), width)
-            self.assertTrue(all(label["visible"] for label in view["labels"]), width)
-            self.assertGreater(view["canvas"]["width"], 200, "the room stays big enough to read at %s px" % width)
-            self.assertLessEqual(view["canvas"]["height"], view["stage"], width)
-            names = " ".join(part for actor in view["actors"] for part in actor["parts"])
-            for name in ("Пользователь", "Codex", "Claude"):
-                self.assertIn(name, names, width)
-            # Visible is not readable: at a narrow width the three floating labels must not cover each other.
-            for index, first in enumerate(view["labels"]):
-                for second in view["labels"][index + 1:]:
-                    self.assertFalse(overlapping(first["rect"], second["rect"]),
-                                     "labels %r and %r overlap at %s px: %r vs %r"
-                                     % (first["text"], second["text"], width, first["rect"], second["rect"]))
-                self.assertGreaterEqual(round(first["rect"]["left"]), round(view["canvas"]["left"]) - 1, width)
-                self.assertLessEqual(round(first["rect"]["right"]),
-                                     round(view["canvas"]["left"] + view["canvas"]["width"]) + 1, width)
-                # Stacking the labels must not push one out of the room either.
-                self.assertGreaterEqual(round(first["rect"]["top"]), round(view["canvas"]["top"]) - 1, width)
-                self.assertLessEqual(round(first["rect"]["bottom"]),
-                                     round(view["canvas"]["top"] + view["canvas"]["height"]) + 1, width)
 
-        self.assertTrue(any("выберите персонажа" in line for line in report["initial"]["details"]),
-                        "with nobody selected the panel says how to select")
-        disconnected = report["disconnected"]
-        self.assertEqual([actor["active"] for actor in disconnected["inspect"]["actors"]], [False, False, False],
-                         "a lost feed cannot keep a work animation alive")
-        self.assertEqual([actor["parts"][1] for actor in disconnected["actors"]], ["нет связи"] * 3)
-        self.assertGreater(disconnected["inspect"]["lifecycleCalls"], initial["inspect"]["lifecycleCalls"],
-                           "a real change is still applied to the engine")
-        self.assertTrue(all("последнее известное" in actor["parts"][2] for actor in disconnected["actors"]), disconnected)
+class SemanticPublicationTest(AcceptanceFixture):
+    """A captured check and a validated review record their own result, and never more than it."""
 
-    def test_a_missing_asset_payload_is_shown_and_never_a_silently_empty_office(self):
-        absent = self.directory / "absent-assets.json"
-        with mock.patch.dict(run_progress.OFFICE_FILES,
-                             {"/pixel-agents/assets.json": (absent, "application/json; charset=utf-8")}):
-            broken = run_progress.ProgressServer(self.progress, 0)
-            self.addCleanup(broken.server_close)
-            thread = threading.Thread(target=broken.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
-            thread.start()
-            self.addCleanup(thread.join, 5)
-            self.addCleanup(broken.shutdown)
-            work = self.directory / "probe"
-            work.mkdir()
-            probe = work / "probe.js"
-            probe.write_text(PROBE, encoding="utf-8")
-            process = subprocess.run([NODE, str(probe), CHROME, broken.url, str(work)],
-                                     capture_output=True, text=True, encoding="utf-8", timeout=180)
-        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        report = json.loads(process.stdout)
-        self.assertFalse(report["mounted"], "an incomplete asset payload must not mount a half-drawn office")
-        self.assertEqual(report["statusClass"], "notice bad")
-        self.assertIn("Сцена офиса не загрузилась", report["status"])
-        self.assertIn("HTTP 503", report["status"])
-        self.assertIn("monitor/pixel-office", report["status"], "the message says how to build it")
-        # The states themselves are still readable without the scene.
-        self.assertTrue(any("Пользователь" in actor for actor in report["actors"]), report["actors"])
-        self.assertTrue(any("build-1" in actor for actor in report["actors"]), report["actors"])
+    def setUp(self):
+        super().setUp()
+        self.progress = self.directory / "progress"
+
+    def records(self):
+        page = run_progress.read_events(self.progress / "progress.jsonl", limit=run_progress.MAX_LIMIT)
+        return page["events"]
+
+    def published(self):
+        return [record for record in self.records() if record["source"] == "receipt"]
+
+    def test_a_captured_check_publishes_its_own_result_with_its_receipt(self):
+        self.freeze()
+        summary = self.check("ok", progress=self.progress)
+        self.assertEqual(summary["stage"], "passed")
+        self.assertEqual(summary["progress"]["status"], "RECORDED")
+        records = self.published()
+        self.assertEqual(len(records), 1)
+        published = records[0]
+        self.assertEqual((published["source"], published["phase"], published["event"], published["status"]),
+                         ("receipt", "tests", "phase", "passed"))
+        self.assertEqual(published["evidence"], summary["receipt_id"])
+        self.assertEqual(published["component"], "ok")
+        self.assertEqual(published["run_id"], "acceptance-run")
+        self.assertEqual(published["count"], len(self.receipt(self.evidence / "plan.json")["declaration"]["commands"]),
+                         "the aggregate needs the number of checks the plan really declares")
+        receipt = self.receipt(summary["path"])
+        self.assertEqual(published["snapshot"], receipt["snapshot_after"]["digest"],
+                         "the record names the candidate tree the command really ran on")
+        self.assertIn("tests: этап PASS", run_progress.describe(published))
+
+    def test_a_failed_command_is_a_fail_and_an_unfinished_one_is_unverified(self):
+        self.freeze()
+        failed = self.check("fail", expect=1, progress=self.progress)
+        self.assertEqual(failed["stage"], "failed")
+        slow = self.check("slow", expect=1, progress=self.progress)
+        self.assertEqual(slow["stage"], "unverified", "a timeout says nothing about the code")
+        missing = self.check("missing", expect=1, progress=self.progress)
+        self.assertEqual(missing["stage"], "unverified", "a command that never launched is not a verdict")
+        touch = self.check("touch", expect=1, progress=self.progress)
+        self.assertEqual(touch["stage"], "unverified", "a tree that changed under the command is not a verdict")
+        self.assertEqual([record["status"] for record in self.published()],
+                         ["failed", "unverified", "unverified", "unverified"])
+
+    def test_a_verified_review_fail_is_published_as_a_fail_although_the_process_succeeded(self):
+        self.freeze()
+        check = self.check("ok", progress=self.progress)
+        process, _ = self.review({"model": MODEL,
+                                  "message": answer(overall="FAIL", criteria=(("C1", "FAIL"), ("C2", "PASS"), ("C3", "PASS")),
+                                                    findings=(("major", "C1"),))},
+                                 checks=[check["path"]], expect=0)
+        summary = json.loads(process.stdout.splitlines()[-1])["acceptance"]
+        self.assertEqual((summary["verified"], summary["verdict"]), (True, "FAIL"))
+        self.assertEqual(process.returncode, 0, "a validated review exits 0 whatever its verdict")
+        self.assertEqual(summary["progress"], {"status": "RECORDED", "error": None, "stage": "failed"})
+        review = [record for record in self.published() if record["phase"] == "review"]
+        self.assertEqual(len(review), 1)
+        self.assertEqual((review[0]["status"], review[0]["evidence"], review[0]["count"]),
+                         ("failed", summary["receipt_id"], 1))
+        self.assertEqual(review[0]["model"], MODEL, "the observed model of the reviewer, not the requested one")
+
+    def test_an_unobserved_model_is_left_out_rather_than_invented(self):
+        self.freeze()
+        check = self.check("ok", progress=self.progress)
+        # This fake reports no model in its stream, so the record carries none: the requested profile
+        # is not written into a field that means "observed".
+        self.review({"message": answer()}, checks=[check["path"]], expect=0)
+        review = [record for record in self.published() if record["phase"] == "review"]
+        self.assertEqual(review[0]["status"], "passed")
+        self.assertNotIn("model", review[0])
+
+    def test_an_unvalidated_review_is_unverified_and_never_a_pass(self):
+        self.freeze()
+        check = self.check("ok", progress=self.progress)
+        process, _ = self.review({"message": "PASS, всё отлично"}, checks=[check["path"]], expect=1)
+        summary = json.loads(process.stdout.splitlines()[-1])["acceptance"]
+        self.assertFalse(summary["verified"])
+        self.assertEqual(summary["progress"]["stage"], "unverified")
+        self.assertEqual([record["status"] for record in self.published() if record["phase"] == "review"], ["unverified"])
+
+    def test_a_receipt_record_must_name_the_receipt_it_came_from(self):
+        with self.assertRaises(ValueError):
+            run_progress.validate_event({"schema": 1, "event_id": "e1", "time": "2026-09-08T10:00:00.000Z",
+                                         "run_id": "r", "attempt": 1, "step_id": "s", "source": "receipt",
+                                         "phase": "tests", "event": "phase", "status": "passed"})
+        clean = run_progress.validate_event({"schema": 1, "event_id": "e1", "time": "2026-09-08T10:00:00.000Z",
+                                             "run_id": "r", "attempt": 1, "step_id": "s", "source": "receipt",
+                                             "phase": "tests", "event": "phase", "status": "passed",
+                                             "evidence": "a" * 64, "snapshot": "b" * 64})
+        self.assertEqual(clean["evidence"], "a" * 64)
+        for event in ("decision", "finding", "run", "cli_exit"):
+            with self.assertRaises(ValueError, msg=event):
+                run_progress.validate_event({"schema": 1, "event_id": "e1", "time": "2026-09-08T10:00:00.000Z",
+                                             "run_id": "r", "attempt": 1, "step_id": "s", "source": "receipt",
+                                             "phase": "decision", "event": event, "status": "complete",
+                                             "evidence": "a" * 64})
+
+    def test_a_journal_that_cannot_be_written_leaves_the_check_verdict_alone(self):
+        self.freeze()
+        blocked = self.directory / "blocked"
+        blocked.mkdir()
+        (blocked / "progress.jsonl").write_text("this is not a progress journal\n", encoding="utf-8")
+        summary = self.check("ok", progress=blocked)
+        self.assertEqual(summary["passed"], True, "the command passed; observation does not decide that")
+        self.assertEqual(summary["progress"]["status"], "UNVERIFIED")
+        self.assertIn("not a progress journal", summary["progress"]["error"])
+
+    def test_a_capture_aimed_at_another_runs_directory_publishes_nothing_and_still_passes(self):
+        """A monitoring target chosen wrongly costs the records, never the verdict of the command."""
+        self.freeze()
+        foreign = self.directory / "foreign"
+        run_progress.ProgressJournal.open(foreign, source="launcher", phase="build", run_id="another-run",
+                                          step_id="build-1", first=("run", "started", {}))
+        before = (foreign / "progress.jsonl").read_bytes()
+        summary = self.check("ok", progress=foreign)
+        self.assertEqual(summary["passed"], True, "the command passed; the wrong journal does not decide that")
+        self.assertEqual(summary["progress"]["status"], "UNVERIFIED")
+        self.assertIn("another-run", summary["progress"]["error"])
+        self.assertEqual((foreign / "progress.jsonl").read_bytes(), before,
+                         "no record of this run may land in another run's journal")
+        self.assertTrue(self.receipt(summary["path"])["passed"], "the sealed receipt is untouched")
+
+    def test_a_capture_without_a_progress_target_publishes_nothing(self):
+        self.freeze()
+        summary = self.check("ok")
+        self.assertNotIn("progress", summary)
+        self.assertEqual(summary["stage"], "passed")
+        self.assertFalse((self.progress / "progress.jsonl").exists())
+
+
+MODEL = importlib.import_module("test_run_acceptance").MODEL
 
 
 if __name__ == "__main__":

@@ -1,0 +1,111 @@
+diff --git a/core/asyncapi.yaml b/core/asyncapi.yaml
+index 644d362..a884c8b 100644
+--- a/core/asyncapi.yaml
++++ b/core/asyncapi.yaml
+@@ -118,6 +118,9 @@ components:
+         - $ref: '#/components/schemas/WorkspaceFolders'
+         # Diagnostics
+         - $ref: '#/components/schemas/AgentDiagnostics'
++        # Local pipeline extension (java_kotlin_harness monitor, not upstream)
++        - $ref: '#/components/schemas/PipelineActorState'
++        - $ref: '#/components/schemas/PipelineSourceState'
+       discriminator: type
+ 
+     ClientMessage:
+@@ -144,6 +147,8 @@ components:
+         - $ref: '#/components/schemas/SaveAreaMappings'
+         - $ref: '#/components/schemas/SetShowAreas'
+         - $ref: '#/components/schemas/RequestDiagnostics'
++        # Local pipeline extension (java_kotlin_harness monitor, not upstream)
++        - $ref: '#/components/schemas/RequestSnapshot'
+       discriminator: type
+ 
+     # ── Server message variants ────────────────────────────────────
+@@ -788,6 +793,68 @@ components:
+ 
+     # ── Client message variants ────────────────────────────────────
+ 
++    PipelineActorState:
++      description: |
++        Local pipeline extension. The truthful lifecycle of one workflow role actor,
++        published by the harness monitor adapter instead of agentStatus. It carries a
++        neutral state that never implies a completed turn: only `working` animates the
++        character, and no state produces the finished-turn checkmark or its sound.
++        `caption` is the observed activity or the recorded result, `short` its compact
++        form for the always-on label of an unselected actor, `role` the workflow role of
++        the actor, `provenance` the source, attempt and step the caption came from.
++        `toolName` is the actually observed tool of a `working` state and selects the
++        reading/typing pose; it is absent for every other state.
++      type: object
++      additionalProperties: false
++      required: [type, id, state, caption]
++      properties:
++        type:
++          const: pipelineActorState
++        id:
++          type: integer
++        state:
++          $ref: '#/components/schemas/PipelineActivityState'
++        caption:
++          type: string
++        short:
++          type: string
++        role:
++          type: string
++        provenance:
++          type: string
++        toolName:
++          type: string
++
++    PipelineActivityState:
++      description: |
++        Neutral lifecycle of a pipeline actor. `human` is a person whose work this
++        monitor does not observe; `idle` is an observed non-working state; `working` is
++        an actually observed operation; `waiting` is an observed pause such as a rate
++        limit retry; `unknown` is the absence of evidence; `error` an observed failure;
++        `stale` an observation older than the deadline; `offline` a lost feed or socket.
++      type: string
++      enum: [human, idle, working, waiting, unknown, error, stale, offline]
++
++    PipelineSourceState:
++      description: |
++        Local pipeline extension. Whether the adapter can currently read its journal and
++        trace source. While `available` is false no activity claim is fresh, so the UI
++        suppresses working states instead of showing the last one it saw. `note` is the
++        weaker case: the feed works, but something about it needs saying, such as records
++        of a run this office is not showing. Neither field is a verdict about the task.
++      type: object
++      additionalProperties: false
++      required: [type, available, detail]
++      properties:
++        type:
++          const: pipelineSourceState
++        available:
++          type: boolean
++        detail:
++          type: string
++        note:
++          type: string
++
+     WebviewReady:
+       description: Client signals it's ready to receive state.
+       type: object
+@@ -1064,6 +1131,18 @@ components:
+         type:
+           const: requestDiagnostics
+ 
++    RequestSnapshot:
++      description: |
++        Local pipeline extension. Ask the server for a complete current snapshot. The
++        client sends it on every reconnection, because the reconnect path of the
++        original transport only flushes queued messages and never repeats webviewReady.
++      type: object
++      additionalProperties: false
++      required: [type]
++      properties:
++        type:
++          const: requestSnapshot
++
+     # ── Supporting schemas ─────────────────────────────────────────
+ 
+     AgentSeatMeta:

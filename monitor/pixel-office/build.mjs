@@ -1,28 +1,36 @@
 /**
- * Reproducible build of the office bundle the monitor serves.
+ * Reproducible build of the original Pixel Agents office the monitor serves.
  *
- * 1. verify every vendored original file against vendor-manifest.json
- * 2. bundle and run the build-time asset decoder over the original PNG/JSON assets
- * 3. bundle the browser adapter together with the original engine modules
- * 4. check the real module graph (no React, server, transport or network module)
- * 5. record input and output digests in dist/build-manifest.json
+ * 1. verify every vendored original against vendor-manifest.json, byte for byte
+ * 2. copy that tree into build/ and apply the reviewable patches of patches/ there
+ * 3. decode the original PNG and manifest assets into dist/assets.json
+ * 4. build the original React frontend from the patched tree into dist/office/
+ * 5. check the real module graph: the original engine and UI are in it, the upstream
+ *    server, its Claude provider and the dev mock are not
+ * 6. record inputs, patches and outputs in dist/build-manifest.json
  *
- * A clean rerun must produce identical dist bytes. The Python monitor never runs
- * this file: it serves the checked-in dist/ as it is.
+ * The vendor tree is never edited; the patches carry every local change and are listed
+ * with the hash of the file they apply to and of the file they produce. A clean rerun
+ * produces identical dist bytes. The resulting JavaScript is built from the patched
+ * originals with a local toolchain: it is not, and is never claimed to be, byte
+ * identical to the published npm bundle.
  */
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as esbuild from 'esbuild';
+import { build as viteBuild } from 'vite';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const vendor = join(root, 'vendor');
+const patches = join(root, 'patches');
 const dist = join(root, 'dist');
 const work = join(root, 'build');
+const office = join(dist, 'office');
 const assetsDir = join(vendor, 'webview-ui/public/assets');
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
@@ -33,18 +41,20 @@ function fail(message) {
   process.exit(1);
 }
 
-// ── 1. vendored originals ────────────────────────────────────────────────────
-const manifest = JSON.parse(readFileSync(join(root, 'vendor-manifest.json'), 'utf8'));
-const present = [];
-(function walk(directory) {
+function walk(directory, base = directory, into = []) {
   for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory()) walk(path);
-    else present.push(relative(vendor, path).split('\\').join('/'));
+    if (entry.isDirectory()) walk(path, base, into);
+    else into.push(relative(base, path).split('\\').join('/'));
   }
-})(vendor);
+  return into;
+}
+
+// ── 1. vendored originals ────────────────────────────────────────────────────
+const manifest = JSON.parse(readFileSync(join(root, 'vendor-manifest.json'), 'utf8'));
+const present = walk(vendor).sort();
 const expected = Object.keys(manifest.files).sort();
-if (present.sort().join('\n') !== expected.join('\n')) {
+if (present.join('\n') !== expected.join('\n')) {
   fail('vendor tree does not match vendor-manifest.json file list');
 }
 for (const [name, entry] of Object.entries(manifest.files)) {
@@ -54,11 +64,48 @@ for (const [name, entry] of Object.entries(manifest.files)) {
   }
 }
 
-// ── 2. predecoded assets ─────────────────────────────────────────────────────
+// ── 2. patched build tree ────────────────────────────────────────────────────
 rmSync(work, { recursive: true, force: true });
 mkdirSync(work, { recursive: true });
-mkdirSync(dist, { recursive: true });
+cpSync(vendor, work, { recursive: true });
+const applied = [];
+for (const name of readdirSync(patches).sort()) {
+  if (!name.endsWith('.patch')) continue;
+  const path = join(patches, name);
+  const target = name.slice(0, -'.patch'.length).split('__').join('/');
+  const before = digestOf(join(work, target));
+  // GIT_CEILING_DIRECTORIES stops repository discovery at this package. Inside a
+  // repository `git apply` resolves patch paths against the repository root and then
+  // silently SKIPS everything outside the current subdirectory: it exits 0 and patches
+  // nothing. Stopping the search makes it treat the build tree as the root, which is
+  // what the patch paths mean. The digest comparison below is the second lock: a patch
+  // that changed no byte fails this build instead of shipping an unpatched original.
+  const result = spawnSync('git', ['apply', '--whitespace=nowarn', '-p1', path], {
+    cwd: work,
+    encoding: 'utf8',
+    env: { ...process.env, GIT_CEILING_DIRECTORIES: root },
+  });
+  if (result.status !== 0) fail('patch does not apply to the pinned original: ' + name + '\n' + (result.stderr || ''));
+  const after = digestOf(join(work, target));
+  if (after === before) fail('patch applied without changing its target, so nothing was patched: ' + name);
+  applied.push({
+    patch: name,
+    sha256: digestOf(path),
+    target,
+    original_sha256: before,
+    patched_sha256: after,
+  });
+}
+const patchedFiles = new Set(applied.map((entry) => entry.target));
+for (const name of walk(work)) {
+  if (patchedFiles.has(name)) continue;
+  if (digestOf(join(work, name)) !== manifest.files[name].sha256) {
+    fail('the build tree differs from the original outside the declared patches: ' + name);
+  }
+}
 
+// ── 3. predecoded assets ─────────────────────────────────────────────────────
+mkdirSync(dist, { recursive: true });
 await esbuild.build({
   entryPoints: [join(root, 'src/assets-build.ts')],
   bundle: true,
@@ -69,7 +116,6 @@ await esbuild.build({
   outfile: join(work, 'assets-build.cjs'),
   logLevel: 'warning',
 });
-
 const assetsPath = join(dist, 'assets.json');
 const decoded = spawnSync(process.execPath, [join(work, 'assets-build.cjs'), assetsDir, assetsPath], {
   encoding: 'utf8',
@@ -78,71 +124,71 @@ const decoded = spawnSync(process.execPath, [join(work, 'assets-build.cjs'), ass
 if (decoded.status !== 0) fail('asset decoding failed');
 const counts = JSON.parse(decoded.stdout);
 
-// ── 3. browser adapter ───────────────────────────────────────────────────────
-const bundle = await esbuild.build({
-  entryPoints: [join(root, 'src/office.ts')],
-  bundle: true,
-  platform: 'browser',
-  format: 'iife',
-  globalName: 'PixelOffice',
-  target: ['chrome120', 'firefox120', 'safari17'],
-  footer: { js: 'window.mountPixelOffice = PixelOffice.mountPixelOffice;' },
-  banner: {
-    js:
-      '/* Pixel Agents office engine, MIT, Copyright (c) 2026 Pablo De Lucca.\n' +
-      '   Original sources vendored from ' + manifest.repository + ' at ' + manifest.commit + '.\n' +
-      '   Bundled with a local monitor adapter; see monitor/pixel-office/vendor/LICENSE. */',
-  },
-  legalComments: 'inline',
-  metafile: true,
-  outfile: join(dist, 'office.js'),
-  logLevel: 'warning',
-});
+// ── 4. original frontend ─────────────────────────────────────────────────────
+rmSync(office, { recursive: true, force: true });
+const bundles = await viteBuild({ configFile: join(root, 'vite.config.mjs') });
+const output = (Array.isArray(bundles) ? bundles[0] : bundles).output;
 
-// ── 4. real module graph ─────────────────────────────────────────────────────
-const built = Object.values(bundle.metafile.outputs).filter((output) => output.entryPoint);
-if (built.length !== 1) fail('expected exactly one bundled output, got ' + built.length);
-const inputs = Object.keys(built[0].inputs).sort();
-const forbidden = inputs.filter((name) => /node_modules|react|fastify|\/transport\/|\/ws\/|OfficeCanvas|browserMock|main\.tsx|App\.tsx/i.test(name));
-if (forbidden.length) fail('unexpected modules in the browser bundle: ' + forbidden.join(', '));
+// ── 5. real module graph ─────────────────────────────────────────────────────
+const chunks = output.filter((item) => item.type === 'chunk');
+if (chunks.length !== 1) fail('expected exactly one JavaScript chunk, got ' + chunks.length);
+const modules = Object.keys(chunks[0].modules).map((id) => relative(work, id).split('\\').join('/'));
 const required = [
-  'vendor/webview-ui/src/office/engine/officeState.ts',
-  'vendor/webview-ui/src/office/engine/renderer.ts',
-  'vendor/webview-ui/src/office/engine/gameLoop.ts',
-  'vendor/webview-ui/src/office/engine/characters.ts',
-  'vendor/webview-ui/src/office/layout/furnitureCatalog.ts',
-  'vendor/webview-ui/src/office/projection.ts',
+  'webview-ui/src/main.tsx',
+  'webview-ui/src/App.tsx',
+  'webview-ui/src/office/components/OfficeCanvas.tsx',
+  'webview-ui/src/office/components/ToolOverlay.tsx',
+  'webview-ui/src/office/editor/EditorToolbar.tsx',
+  'webview-ui/src/office/engine/officeState.ts',
+  'webview-ui/src/office/engine/renderer.ts',
+  'webview-ui/src/office/engine/characters.ts',
+  'webview-ui/src/office/layout/layoutSerializer.ts',
+  'webview-ui/src/components/SettingsModal.tsx',
+  'webview-ui/src/transport/webSocketTransport.ts',
 ];
 for (const name of required) {
-  if (!inputs.some((input) => input.endsWith(name))) fail('the bundle misses an original engine module: ' + name);
+  if (!modules.includes(name)) fail('the office bundle misses an original module: ' + name);
 }
+const forbidden = modules.filter((name) => /browserMock|server\/src|fastify|\/hooks\/claude/i.test(name));
+if (forbidden.length) fail('unexpected modules in the office bundle: ' + forbidden.join(', '));
 
-// ── 5. provenance of this build ──────────────────────────────────────────────
-const officeDigest = digestOf(join(dist, 'office.js'));
-const assetsDigest = digestOf(assetsPath);
-const sources = ['src/office.ts', 'src/assets-build.ts', 'build.mjs', 'package.json', 'package-lock.json'];
+// ── 6. provenance of this build ──────────────────────────────────────────────
+const outputs = {};
+for (const name of walk(office)) {
+  outputs[name] = { sha256: digestOf(join(office, name)), bytes: statSync(join(office, name)).size };
+}
+outputs['../assets.json'] = { sha256: digestOf(assetsPath), bytes: statSync(assetsPath).size };
+const version = (name) => JSON.parse(readFileSync(join(root, 'node_modules', name, 'package.json'), 'utf8')).version;
+const sources = ['src/assets-build.ts', 'src/projection.mjs', 'src/office-server.mjs', 'src/office-state.mjs',
+                 'build.mjs', 'vite.config.mjs', 'package.json', 'package-lock.json'];
 const buildManifest = {
   upstream: { repository: manifest.repository, commit: manifest.commit, version: manifest.version },
+  note: 'Built from the pinned originals with the patches below and a local toolchain. The output is not '
+    + 'byte identical to the published npm bundle and is not presented as such.',
   vendorManifestSha256: digestOf(join(root, 'vendor-manifest.json')),
   vendorFiles: expected.length,
+  patches: applied,
   tools: {
-    esbuild: JSON.parse(readFileSync(join(root, 'node_modules/esbuild/package.json'), 'utf8')).version,
-    pngjs: JSON.parse(readFileSync(join(root, 'node_modules/pngjs/package.json'), 'utf8')).version,
+    node: process.version,
+    vite: version('vite'),
+    tailwindcss: version('tailwindcss'),
+    react: version('react'),
+    esbuild: version('esbuild'),
+    pngjs: version('pngjs'),
   },
   adapterSources: Object.fromEntries(sources.map((name) => [name, digestOf(join(root, name))])),
   assets: counts,
-  outputs: {
-    'office.js': { sha256: officeDigest, bytes: statSync(join(dist, 'office.js')).size },
-    'assets.json': { sha256: assetsDigest, bytes: statSync(assetsPath).size },
-  },
-  moduleGraph: { inputs: inputs.length },
+  moduleGraph: { modules: modules.length },
+  outputs,
 };
 writeFileSync(join(dist, 'build-manifest.json'), JSON.stringify(buildManifest, null, 2) + '\n', 'utf8');
 rmSync(work, { recursive: true, force: true });
 
 process.stdout.write(
-  'office.js  sha256 ' + officeDigest + '  ' + buildManifest.outputs['office.js'].bytes + ' bytes\n' +
-  'assets.json sha256 ' + assetsDigest + '  ' + buildManifest.outputs['assets.json'].bytes + ' bytes\n' +
-  'integrity   sha256-' + Buffer.from(officeDigest, 'hex').toString('base64') + '\n' +
-  'modules     ' + inputs.length + '\n',
+  'upstream    ' + manifest.commit + ' (' + manifest.version + ')\n' +
+  'patches     ' + applied.length + ' applied to ' + expected.length + ' vendored originals\n' +
+  'modules     ' + modules.length + ' in the office bundle\n' +
+  Object.entries(outputs)
+    .map(([name, entry]) => 'output      ' + name + '  sha256 ' + entry.sha256 + '  ' + entry.bytes + ' bytes\n')
+    .join(''),
 );

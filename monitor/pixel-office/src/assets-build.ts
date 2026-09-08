@@ -11,7 +11,7 @@
  * every console warning during decoding fails this build.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import { buildAssetIndex, buildFurnitureCatalog } from '../vendor/core/src/assets/build.js';
@@ -22,7 +22,8 @@ import {
   decodeAllFurniture,
   decodeAllWalls,
 } from '../vendor/core/src/assets/loader.js';
-import type { CatalogEntry } from '../vendor/core/src/assets/types.js';
+import { decodePetPng } from '../vendor/core/src/assets/pngDecoder.js';
+import type { CatalogEntry, PetManifest, PetSpriteFrames } from '../vendor/core/src/assets/types.js';
 
 type SpriteData = string[][];
 
@@ -49,6 +50,33 @@ function spriteFilled(sprite: SpriteData | undefined): boolean {
   );
 }
 
+/**
+ * Pets, the way the upstream server loads them: one directory per pet with a manifest
+ * and pet.png, sorted by name, decoded by the original decoder. core/src/assets exposes
+ * the decoder but no directory walk, so only the walk is local.
+ */
+function decodeAllPets(root: string): { pets: PetSpriteFrames[]; names: string[] } {
+  const petsDir = join(root, 'pets');
+  const pets: PetSpriteFrames[] = [];
+  const names: string[] = [];
+  if (!existsSync(petsDir)) {
+    return { pets, names };
+  }
+  for (const entry of readdirSync(petsDir, { withFileTypes: true })
+    .filter((item) => item.isDirectory())
+    .map((item) => item.name)
+    .sort()) {
+    const manifestPath = join(petsDir, entry, 'manifest.json');
+    const pngPath = join(petsDir, entry, 'pet.png');
+    if (!existsSync(manifestPath) || !existsSync(pngPath)) continue;
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Partial<PetManifest>;
+    if (!manifest.id || !manifest.name) continue;
+    pets.push(decodePetPng(readFileSync(pngPath)));
+    names.push(manifest.name);
+  }
+  return { pets, names };
+}
+
 const catalog: CatalogEntry[] = buildFurnitureCatalog(assetsDir);
 const index = buildAssetIndex(assetsDir);
 const characters = decodeAllCharacters(assetsDir);
@@ -56,6 +84,7 @@ const floors = decodeAllFloors(assetsDir);
 const walls = decodeAllWalls(assetsDir);
 const carpets = decodeAllCarpets(assetsDir);
 const sprites = decodeAllFurniture(assetsDir, catalog);
+const { pets, names: petNames } = decodeAllPets(assetsDir);
 
 console.warn = originalWarn;
 console.error = originalError;
@@ -87,6 +116,15 @@ for (const [position, character] of characters.entries()) {
   }
 }
 if (!floors.every(spriteFilled)) problems.push('a floor sprite is blank');
+if (pets.length === 0) problems.push('no pet sprites decoded');
+for (const [position, pet] of pets.entries()) {
+  for (const direction of ['walkDown', 'idleDown', 'walkUp', 'idleUp', 'walkRight'] as const) {
+    const frames = pet[direction];
+    if (!Array.isArray(frames) || frames.length === 0 || !frames.every(spriteFilled)) {
+      problems.push('pet ' + position + ' has no usable ' + direction + ' frames');
+    }
+  }
+}
 // Every furniture type the shipped room places must resolve, including the mirrored ":left"
 // variants that buildDynamicCatalog synthesises from mirrorSide members.
 const known = new Set(catalog.map((entry) => entry.id));
@@ -100,6 +138,8 @@ if (problems.length > 0) {
 
 const payload = {
   characters,
+  pets,
+  petNames,
   floors,
   walls,
   carpets,
@@ -111,6 +151,7 @@ writeFileSync(outputPath, JSON.stringify(payload), 'utf8');
 process.stdout.write(
   JSON.stringify({
     characters: characters.length,
+    pets: pets.length,
     floors: floors.length,
     walls: walls.length,
     carpets: carpets.length,

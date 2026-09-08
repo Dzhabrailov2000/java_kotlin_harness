@@ -1,9 +1,13 @@
 # Memory and handover between tasks
 
 One route, four layers. No layer copies another; each one only points at the
-previous. The paths in this document are placeholders: the manager writes the
-concrete local paths into their personal instructions on their own machine, and
-they never enter the portable harness.
+previous. Only the first layer is required: an installed checkout plus the
+sources the task names is enough to run a task on a machine you have never used.
+The private pointer of layer 2 and the handoff of layer 3 are conveniences of one
+person's setup; nothing in the harness fails without them, and no step of the
+process creates them as a prerequisite. The paths in this document are
+placeholders: the manager writes the concrete local paths into their personal
+instructions on their own machine, and they never enter the portable harness.
 
 This document is part of the internal pipeline, so it is written in English,
 like the task prompts, the reports and the review requests. The user still
@@ -14,21 +18,28 @@ quotations from project documents keep their own language.
 
 Architectural decisions, contracts, plans, meeting notes and instructions live
 in the repositories of their own projects (the ADR directory, `docs`, the
-project's CLAUDE.md or AGENTS.md, CONTRIBUTING). They are authoritative and
-stay where they are. The harness does not duplicate them, does not move them
+project's CLAUDE.md, AGENTS.md or README, CONTRIBUTING). They are authoritative
+and stay where they are. The harness does not duplicate them, does not move them
 and does not retell them; the `/adr`, `/epic`, `/meeting-notes` and
 `/meeting-prep` commands find them through the instructions of the project and
-its documentation index.
+its documentation index. This layer plus the task itself is what a new machine
+needs: the manager lists the relevant files by path, purpose and priority, and
+the implementer and the reviewer open them from those paths themselves. A
+Markdown note kept in an Obsidian vault is one such path and needs nothing
+special; a normative requirement or an ADR is never rewritten to match an
+implementation that turned out wrong.
 
-## 2. A short private pointer
+## 2. A short private pointer (optional)
 
 An ordinary Markdown file outside this repository, in the user's local memory
-directory. Both sessions (Claude Code and Codex) read it explicitly, because
-their personal instruction points at it (the user's CLAUDE.md and AGENTS.md).
-This is not synchronisation, not a shared database and not an automatic client
-feature: the file is read like any other document. The manager reads the
-pointer before composing the prompt; the implementer receives only the extracts
-the manager selected into that prompt.
+directory, on the machines where the user keeps one. Both sessions (Claude Code
+and Codex) read it explicitly, because their personal instruction points at it
+(the user's CLAUDE.md and AGENTS.md). This is not synchronisation, not a shared
+database and not an automatic client feature: the file is read like any other
+document. Where it exists, the manager reads it before composing the prompt, and
+the implementer receives the sources the manager selected into that prompt; where
+it does not, the task and the project documents of layer 1 are read directly and
+nothing is missing.
 
 The content is pointers, not documents:
 
@@ -56,10 +67,12 @@ Rules for keeping it:
 - A link to a document that is not at the given path is a defect of the
   pointer: replace it with an existing, verified path or delete it.
 
-## 3. The local handoff after a task
+## 3. The local handoff after a task (optional)
 
-After a COMPLETE or ESCALATE decision the manager appends a short entry to the
-local handoff (the same pointer or a neighbouring file in the same directory):
+After a COMPLETE or ESCALATE decision, where such a local handoff exists (the
+same pointer or a neighbouring file in the same directory), the manager appends
+a short entry to it. Without one, the same content is the final report of the
+run and no file is created for it:
 
 - the path and revision of the verified version, and the date of the check;
 - the confirmed fixes: what was changed and on what grounds;
@@ -88,11 +101,14 @@ copied into memory, not published and not turned into project documents.
 
 ## How the clients read this
 
-- Claude Code: the user's personal CLAUDE.md holds one line, "before a task,
-  read <path to the pointer>"; the client's native auto-memory stays for short
-  preferences and pointers, not for copies of documents.
+- Claude Code: where the user keeps a pointer, their personal CLAUDE.md holds
+  one line, "before a task, read <path to the pointer>"; the client's native
+  auto-memory stays for short preferences and pointers, not for copies of
+  documents.
 - Codex: the user's AGENTS.md holds the same line and routes implementation
-  tasks through the process of `skills/self-correct`.
+  tasks through the process of `shared/skills/dev-pipeline`.
+- Neither line is required to run a task: without it the manager reads the
+  project's own instructions and the documents the task names.
 - The instruction for Claude only points at the index and the role; it does not
   turn the implementer into a manager inside a helper call.
 
@@ -100,8 +116,10 @@ copied into memory, not published and not turned into project documents.
 
 Obsidian opens an ordinary Markdown folder as a vault and picks up external
 changes, so the existing documentation directories and the pointer can be
-opened in it without a migration and without a duplicate. This is a
-convenience for reading, not part of the process and not a requirement.
+opened in it without a migration and without a duplicate. A note the user
+supplies as a source is passed on as its ordinary Markdown path and read like
+any other file. This is a convenience for reading, not part of the process and
+not a requirement.
 
 ## What we do not do
 
@@ -109,9 +127,14 @@ convenience for reading, not part of the process and not a requirement.
   storage and no memory MCP server.
 - Project documents are not moved into the harness, and no shared document is
   assembled from copies of materials of different repositories.
-- Obsidian is not made mandatory.
+- Obsidian is not made mandatory, the vault is not maintained or reorganised by
+  the pipeline, and no write access to it is requested; a supplied note is read.
+- No multi-repository system is built around the sources: each project keeps its
+  own documents, and the task names the ones it needs.
 
-## Setting it up (the manager does this locally, after the review)
+## Keeping the optional pointer (the user's own machine, never the harness)
+
+Only for the setup that has one, and never as a step of a task:
 
 1. Create the pointer file in the local memory directory and fill it with
    existing, verified paths with their revision and date.

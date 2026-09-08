@@ -1,9 +1,11 @@
 """Smoke the served page in a real headless Chrome over the DevTools protocol; skipped where Chrome or node is absent.
 
-The driver is plain node with its built-in WebSocket: no npm package, no browser framework. It loads the
-page from the local server, reads real layout (scroll heights, clipped previews), expands an entry, scrolls
-up, waits for the test to append a record, checks that auto-follow left the reading position alone, then
-waits for the test to stop the server and checks that the page reports the lost connection.
+The page under test is the readable side of the office: the conversation, the sessions, the metrics and
+the journal. The driver is plain node with its built-in WebSocket: no npm package, no browser framework.
+It loads the page from the local server, reads real layout (scroll heights, clipped previews), expands an
+entry, scrolls up, waits for the test to append a record, checks that auto-follow left the reading
+position alone, then waits for the test to stop the server and checks that the page reports the lost
+connection. The office itself is driven by tests/check_original_office_browser.py.
 """
 
 import importlib
@@ -116,8 +118,6 @@ DRIVER = textwrap.dedent("""\
       await send('Page.navigate', { url });
       await loadedPromise;
       await sleep(1800);
-      await evaluate(`document.getElementById('details-open').click()`);
-      await sleep(600);
       // The entry under test is the first one whose collapsed preview is really clipped by layout: the long task prompt.
       const state = () => evaluate(`(function () {
         var box = document.getElementById('conversation');
@@ -141,6 +141,7 @@ DRIVER = textwrap.dedent("""\
                           contextDetail: document.getElementById('context-detail').textContent, limits: document.getElementById('limits').textContent, budget: document.getElementById('budget').textContent,
                           models: document.getElementById('models').textContent, connection: document.getElementById('connection').textContent, noticeClass: document.getElementById('notice').className,
                           notice: document.getElementById('notice').textContent, title: document.getElementById('title').textContent, decision: document.getElementById('decision').textContent },
+                 usageModels: Array.prototype.slice.call(document.querySelectorAll('#usage-rows tr')).map(function (row) { return row.children.length > 2 ? row.children[2].textContent : ''; }),
                  reducedMotion: getComputedStyle(document.querySelector('.stage.s-pending') || document.body).animationName,
                  unknownCells: Array.prototype.slice.call(document.querySelectorAll('#usage-rows td')).filter(function (td) { return td.textContent === 'неизвестно'; }).length };
       })()`);
@@ -179,7 +180,7 @@ DRIVER = textwrap.dedent("""\
       await sleep(300);
       fs.writeFileSync(path.join(workDir, 'phase1.json'), JSON.stringify({ initial, expanded, collapsed, expandedResponse, toggled }));
       await waitFor(path.join(workDir, 'release'), 30000);
-      await waitUntil('the appended records to arrive', `document.getElementById('decision').textContent === 'RETRY' && document.querySelectorAll('#conversation article.entry').length === 16`, 30000);
+      await waitUntil('the appended records to arrive', `document.getElementById('decision').textContent === 'RETRY' && document.querySelectorAll('#conversation article.entry').length === 17`, 30000);
       const afterAppend = await state();
       fs.writeFileSync(path.join(workDir, 'phase2.json'), JSON.stringify({ afterAppend }));
       // The test now stops the server: the page must say so instead of presenting stale states as confirmed.
@@ -188,16 +189,17 @@ DRIVER = textwrap.dedent("""\
       const disconnected = await state();
       const jumped = await evaluate(`(function () { document.getElementById('jump-latest').click(); var box = document.getElementById('conversation'); return { scrollTop: box.scrollTop, scrollHeight: box.scrollHeight, clientHeight: box.clientHeight, jump: document.getElementById('jump-latest').textContent }; })()`);
       const filtered = await evaluate(`(function () { var select = document.getElementById('filter-cycle'); select.value = '2'; select.dispatchEvent(new Event('change')); return { articles: document.querySelectorAll('#conversation article.entry').length, count: document.getElementById('conversation-count').textContent }; })()`);
-      // A filter, a reading position and an expanded entry survive closing and reopening the inspector.
+      // A filter, a reading position and an expanded entry survive leaving the conversation for
+      // another section and coming back to it.
       await evaluate(`(function () { var box = document.getElementById('conversation'); box.scrollTop = 0; box.dispatchEvent(new Event('scroll')); document.getElementById('follow').checked = false; document.getElementById('follow').dispatchEvent(new Event('change')); })()`);
       await sleep(300);
-      await evaluate(`document.getElementById('inspector-close').click()`);
+      await evaluate(`document.getElementById('tab-journal').click()`);
       await sleep(400);
-      await evaluate(`document.getElementById('details-open').click()`);
+      await evaluate(`document.getElementById('tab-talk').click()`);
       await sleep(600);
       const reopened = await evaluate(`(function () {
         var box = document.getElementById('conversation');
-        return { open: document.getElementById('inspector').open, scrollTop: box.scrollTop, articles: document.querySelectorAll('#conversation article.entry').length,
+        return { open: !document.getElementById('section-talk').hidden, scrollTop: box.scrollTop, articles: document.querySelectorAll('#conversation article.entry').length,
                  filter: document.getElementById('filter-cycle').value, follow: document.getElementById('follow').checked,
                  count: document.getElementById('conversation-count').textContent };
       })()`);
@@ -207,8 +209,6 @@ DRIVER = textwrap.dedent("""\
       await sleep(300);
       const cspReported = problems.slice(problemsBeforeProbe.length).some(function (line) { return line.indexOf('Content Security Policy') >= 0; });
       // Layout widths: the document itself must not overflow at a narrow desktop width or at the default one.
-      await evaluate(`document.getElementById('inspector-close').click()`);
-      await sleep(400);
       const widths = {};
       for (const width of [390, 1400]) {
         await send('Emulation.setDeviceMetricsOverride', { width: width, height: 900, deviceScaleFactor: 1, mobile: false });
@@ -291,6 +291,17 @@ class BrowserSmokeTest(unittest.TestCase):
         review.record("cli_result", "success", source="native")
         review.record("cli_exit", "exited", exit_code=0)
         codex.record("status", state="cli_exited", exit_code=0, count=0)
+        # A captured check publishing its own validated result, and a registered triage report:
+        # both are stage outcomes of this attempt that no manager typed by hand, and the page has
+        # to show them as what they are instead of leaving those stages looking unrecorded.
+        run_progress.ProgressJournal.open(self.progress, source="receipt", phase="tests", run_id="progress", attempt=1,
+                                          step_id="python",
+                                          first=("phase", "failed", {"evidence": "d" * 64, "snapshot": "e" * 64,
+                                                                     "component": "python", "count": 2}))
+        run_trace.TraceStore.open(self.progress, run_id="progress", attempt=1, step_id="triage-1", source="manager",
+                                  tool="test", phase="triage") \
+            .message("manager", "feedback", "Разбор попытки: одно замечание передано исполнителю.",
+                     original=b"triage", title="Разбор попытки 1")
         # A launcher that went quiet ten minutes ago, and one that timed out: stale and failed states.
         self.old_journal_line(600, step_id="verify-stale", phase="verify", model=self.MODEL, effort="max")
         self.old_journal_line(500, step_id="handoff-failed", phase="handoff", model=self.MODEL, effort="max")
@@ -352,9 +363,10 @@ class BrowserSmokeTest(unittest.TestCase):
         initial = report["initial"]
         self.assertGreater(initial["scrollHeight"], initial["clientHeight"], "the conversation is a scrollable region")
         self.assertGreaterEqual(initial["scrollTop"] + initial["clientHeight"], initial["scrollHeight"] - 2, "auto-follow starts at the latest entry")
-        # Twelve messages plus the unavailable placeholders of the steps without model messages: review-old (captured, no
-        # messages), verify-stale and handoff-failed (no capture at all).
-        self.assertEqual(initial["articles"], 15)
+        # Twelve messages, the registered triage report, and the unavailable placeholders of the steps
+        # without model messages: review-old (captured, no messages), verify-stale and handoff-failed
+        # (no capture at all).
+        self.assertEqual(initial["articles"], 16)
         heads = [entry["head"] for entry in initial["entries"]]
         self.assertEqual([head for head in heads if head.startswith("PREFIX DISTINCT")], ["PREFIX DISTINCT", "PREFIX DISTINCT SECOND"],
                          "two elements of one native content array are two entries; the first is not folded into the second")
@@ -370,10 +382,22 @@ class BrowserSmokeTest(unittest.TestCase):
         chips = {(chip["name"], chip["state"]): chip for chip in initial["chips"]}
         running = chips[("сборка", "работает, build-1")]
         self.assertIn("s-pending", running["className"])
-        idle = chips[("проверки", "не начат")]
+        # A stage nobody recorded anything about is unrecorded, not asserted as not started.
+        idle = chips[("решение", "нет записей")]
         self.assertNotEqual(running["background"], idle["background"], "running and idle stages differ in color, not only in text")
+        # The captured check published its own FAIL: the stage shows the validated outcome and
+        # names the receipt it came from, without anyone retyping it.
+        captured = chips[("проверки", "проверки: 0 PASS, 1 FAIL, из 2, 1 без результата (по распискам)")]
+        self.assertIn("s-bad", captured["className"])
+        # The registered triage report is shown as registered; its prose is not read for findings.
+        recorded = chips[("triage", "обратная связь зарегистрирована, состав замечаний неизвестен")]
+        self.assertIn("s-warn", recorded["className"])
         completed = chips[("ревью", "CLI завершил успешно; приемка менеджером не записана")]
         self.assertIn("s-ok", completed["className"])
+        # A model nobody observed keeps the qualifier even beside real counters.
+        self.assertIn("Codex gpt-6-astra (запрошена)", initial["usageModels"])
+        self.assertFalse([model for model in initial["usageModels"] if model == "Codex gpt-6-astra"],
+                         "a requested model must never be shown as the model of observed usage")
         stale = [chip for chip in initial["chips"] if chip["name"] == "verify"][0]
         self.assertTrue(stale["state"].startswith("тишина 10 мин"), stale)
         self.assertIn("s-stale", stale["className"])
@@ -417,7 +441,7 @@ class BrowserSmokeTest(unittest.TestCase):
         self.assertTrue(any(line.startswith("емкость окна gpt-6-astra: 272 000 (каталог моделей CLI 0.153.4") and "справочное значение, не наблюдение сессии" in line for line in toggled["lines"]), toggled["lines"])
         after = report["afterAppend"]
         self.assertEqual(after["scrollTop"], 0, "new entries must not steal the reading position")
-        self.assertEqual(after["articles"], 16)
+        self.assertEqual(after["articles"], 17)
         self.assertEqual(after["jump"], "к последнему (новых: 1)")
         updated = [entry for entry in after["entries"] if entry["head"].startswith("Ответ 5 (обновлено)")]
         self.assertEqual([entry["className"] for entry in updated], ["text"], "an entry the reader expanded stays expanded when its block is updated")
@@ -428,17 +452,17 @@ class BrowserSmokeTest(unittest.TestCase):
         self.assertTrue(disconnected["cards"]["connection"].startswith("нет связи, повтор через"), disconnected["cards"]["connection"])
         self.assertEqual(disconnected["cards"]["noticeClass"], "notice bad")
         self.assertIn("состояния этапов не подтверждены", disconnected["cards"]["notice"])
-        self.assertEqual(disconnected["articles"], 16, "already shown history survives the lost connection")
+        self.assertEqual(disconnected["articles"], 17, "already shown history survives the lost connection")
         jumped = report["jumped"]
         self.assertGreaterEqual(jumped["scrollTop"] + jumped["clientHeight"], jumped["scrollHeight"] - 2)
         self.assertEqual(jumped["jump"], "к последнему")
-        self.assertEqual((report["filtered"]["articles"], report["filtered"]["count"]), (1, "показано 1 из 13"))
-        # Closing and reopening the drawer keeps the reader's filter, follow setting and reading position.
+        self.assertEqual((report["filtered"]["articles"], report["filtered"]["count"]), (1, "показано 1 из 14"))
+        # Leaving the conversation and coming back keeps the reader's filter, follow setting and position.
         reopened = report["reopened"]
         self.assertTrue(reopened["open"])
         self.assertEqual((reopened["filter"], reopened["follow"]), ("2", False))
-        self.assertEqual((reopened["articles"], reopened["count"]), (1, "показано 1 из 13"))
-        self.assertEqual(reopened["scrollTop"], 0, "a reopened drawer restores the reading position, it does not jump")
+        self.assertEqual((reopened["articles"], reopened["count"]), (1, "показано 1 из 14"))
+        self.assertEqual(reopened["scrollTop"], 0, "returning to the conversation restores the reading position, it does not jump")
         for width, layout in report["widths"].items():
             self.assertLessEqual(layout["scrollWidth"], layout["innerWidth"], "no horizontal overflow at %s px: %s" % (width, layout))
 

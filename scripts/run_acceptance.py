@@ -32,7 +32,8 @@ import stat
 import subprocess
 import sys
 
-from claude_doctor import stop_group
+import run_progress
+from process_group import stop_group
 from run_progress import identifier, utc_now
 
 
@@ -449,6 +450,45 @@ def run_check(evidence_dir, check_id, attempt):
     return record
 
 
+def check_stage(record):
+    """The semantic status of a captured check, read off its own receipt and nothing else.
+
+    A command that did not run to a verdict on a stable tree is unverified, not failed: a timeout, an
+    interruption, a launcher error and a tree that changed under the command say nothing about the
+    code. Only a real non-zero exit of a completed run is a FAIL.
+    """
+    if record["passed"]:
+        return "passed"
+    if record["launch_error"] is not None or record["timed_out"] or record["interrupted"] or record["sources_changed"]:
+        return "unverified"
+    return "failed"
+
+
+def publish_check(progress_dir, plan, record):
+    """Record this captured check's own result in the shared progress journal.
+
+    Everything written here comes from the sealed receipt: the status derived above, the receipt id,
+    the candidate snapshot the command actually ran on and the number of checks the plan declares, so
+    a reader can tell one attempt's aggregate from another's without inventing a total. Nothing else
+    is claimed: no criterion is judged, no review is implied and no completion is recorded.
+
+    A journal that cannot be written is reported as an unverified publication and changes nothing:
+    observation never decides whether a command passed.
+    """
+    try:
+        journal = run_progress.ProgressJournal.open(
+            progress_dir, source="receipt", phase="tests", run_id=record["run_id"],
+            attempt=record["attempt"], step_id=record["check_id"],
+            first=("phase", check_stage(record),
+                   {"evidence": record["receipt_id"], "snapshot": record["snapshot_after"]["digest"],
+                    "component": record["check_id"], "count": len(plan["declaration"]["commands"]),
+                    "exit_code": record["exit_code"]}))
+    except (OSError, ValueError) as error:
+        return {"status": "UNVERIFIED", "error": "%s: %s" % (type(error).__name__, error)}
+    return {"status": "UNVERIFIED" if journal.error else "RECORDED", "error": journal.error,
+            "directory": str(journal.directory), "stage": check_stage(record)}
+
+
 def cell(value):
     """One markdown table cell: the literal text of the plan, escaped so that nothing is lost.
 
@@ -788,9 +828,13 @@ def command_plan(args):
 
 def command_check(args):
     record = run_check(args.evidence_dir, args.check_id, args.attempt)
-    print(json.dumps({key: record[key] for key in
-                      ("path", "receipt_id", "check_id", "attempt", "exit_code", "timed_out", "interrupted",
-                       "launch_error", "sources_changed", "passed")}, ensure_ascii=False), flush=True)
+    summary = {key: record[key] for key in
+               ("path", "receipt_id", "check_id", "attempt", "exit_code", "timed_out", "interrupted",
+                "launch_error", "sources_changed", "passed")}
+    summary["stage"] = check_stage(record)
+    if args.progress_dir is not None:
+        summary["progress"] = publish_check(args.progress_dir, load_plan(args.evidence_dir), record)
+    print(json.dumps(summary, ensure_ascii=False), flush=True)
     return 0 if record["passed"] else 1
 
 
@@ -821,6 +865,9 @@ def main():
     checker.add_argument("--evidence-dir", required=True, type=Path)
     checker.add_argument("--check-id", required=True)
     checker.add_argument("--attempt", required=True, type=int)
+    checker.add_argument("--progress-dir", type=Path,
+                         help="Shared pipeline journal this capture publishes its own result to, derived from the "
+                              "sealed receipt. Omitted: the receipt is written and nothing is published")
     completer = commands.add_parser("complete", help="Validate a COMPLETE claim and write its receipt")
     completer.add_argument("--evidence-dir", required=True, type=Path)
     completer.add_argument("--attempt", required=True, type=int)

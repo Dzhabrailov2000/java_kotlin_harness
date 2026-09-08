@@ -1193,8 +1193,8 @@ class CommandLineTest(unittest.TestCase):
                 stream.write(json.dumps(event, ensure_ascii=False) + "\n")
         return log
 
-    def import_args(self, log, step_id="review-1", attempt=1, prompt=None, progress_dir=None):
-        return SimpleNamespace(command="import-codex", progress_dir=progress_dir or self.progress, attempt=attempt, step_id=step_id, run_id="run-1",
+    def import_args(self, log, step_id="review-1", attempt=1, prompt=None, progress_dir=None, run_id="run-1"):
+        return SimpleNamespace(command="import-codex", progress_dir=progress_dir or self.progress, attempt=attempt, step_id=step_id, run_id=run_id,
                                phase=None, model=None, events=log, launcher_dir=None, prompt=prompt, last_message=None, observed_at=None)
 
     def seeded_history(self, progress=None):
@@ -1363,6 +1363,72 @@ class CommandLineTest(unittest.TestCase):
             run_trace.import_log(self.import_args(log, prompt=prompt, progress_dir=other))
         self.assertEqual(json.loads(stdout.getvalue())["resumed"], 3)
         self.assert_imported_once(other_trace, prefix, prompt=True)
+
+    def test_completing_a_killed_import_refuses_an_explicitly_different_run(self):
+        """The prefix decides the invocation of the completion, never its run.
+
+        A caller that names another run is publishing into the wrong directory: continuing under the
+        prefix's run would silently replace the target it asked for. Omitting the run and naming the
+        same one are the ordinary continuations and still work.
+        """
+        log = self.codex_log()
+        trace_path, before = self.seeded_history()
+        prefix = self.killed_publication(log, self.progress)
+        with self.assertRaises(run_progress.RunIdentityError) as refused:
+            run_trace.import_log(self.import_args(log, run_id="run-b"))
+        self.assertIn("run-1", str(refused.exception))
+        self.assertIn("run-b", str(refused.exception))
+        self.assertEqual(trace_path.read_bytes(), prefix, "a refused completion writes nothing")
+        self.assertFalse((self.progress / "progress.jsonl").exists(), "and publishes no journal of the refused run")
+        # It is a ValueError, so the CLI reports it as an observation failure exactly as it reports
+        # an ordinary conflicting import, without a verdict of its own.
+        self.assertIsInstance(refused.exception, ValueError)
+        with mock.patch.object(sys, "stdout", new_callable=io.StringIO) as stdout:
+            run_trace.import_log(self.import_args(log, run_id=None))
+        summary = json.loads(stdout.getvalue())
+        self.assertEqual((summary["run_id"], summary["attempt"], summary["step_id"], summary["resumed"]), ("run-1", 1, "review-1", 1))
+        records = self.assert_imported_once(trace_path, prefix)
+        self.assertEqual({record["run_id"] for record in records}, {"run-1"}, "one directory, one run")
+
+    def test_completing_a_killed_import_with_the_same_run_named_continues_it(self):
+        log = self.codex_log()
+        trace_path, before = self.seeded_history()
+        prefix = self.killed_publication(log, self.progress)
+        with mock.patch.object(sys, "stdout", new_callable=io.StringIO) as stdout:
+            run_trace.import_log(self.import_args(log, run_id="run-1"))
+        summary = json.loads(stdout.getvalue())
+        self.assertEqual((summary["run_id"], summary["resumed"], summary["records"]), ("run-1", 1, 8))
+        self.assert_imported_once(trace_path, prefix)
+
+    def test_a_journal_is_never_opened_for_another_run_than_the_trace_beside_it(self):
+        """A directory that holds only imported history already has an owner.
+
+        The trace refuses a second run, but it does so after the journal has been published: without
+        this the launcher wrote a whole journal of run-b beside a trace of run-a, and the reader was
+        left with two runs in one directory.
+        """
+        store = run_trace.TraceStore.open(self.progress, run_id="run-a", attempt=1, step_id="historical-review",
+                                          source="import", tool="test", provider="codex")
+        store.record("status", state="import_started", origin="fixture", sha256="0" * 64, provider="codex")
+        before = store.path.read_bytes()
+        with self.assertRaises(run_progress.RunIdentityError) as refused:
+            run_progress.ProgressJournal.open(self.progress, source="launcher", phase="review", run_id="run-b",
+                                              first=("run", "started", {}))
+        self.assertIn("run-a", str(refused.exception))
+        self.assertIn("run-b", str(refused.exception))
+        self.assertFalse((self.progress / "progress.jsonl").exists(), "a refused publication creates no journal")
+        self.assertEqual(store.path.read_bytes(), before, "and leaves the history it was aimed at untouched")
+        # An unspecified run continues the one the directory already holds instead of taking the
+        # directory's name; the same run is accepted as it always was.
+        for run_id in (None, "run-a"):
+            journal = run_progress.ProgressJournal.open(self.progress, source="launcher", phase="review", run_id=run_id,
+                                                        step_base="current-review", unique_step=True,
+                                                        first=("run", "started", {}))
+            self.assertEqual(journal.run_id, "run-a")
+        published = [json.loads(line) for line in (self.progress / "progress.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual({record["run_id"] for record in published}, {"run-a"})
+        run_trace.TraceStore.open(self.progress, run_id="run-a", attempt=1, step_id="current-review", source="launcher",
+                                  tool="test").record("status", state="cli_started")
 
     def test_two_completions_of_one_killed_import_racing_past_the_lookup_land_once(self):
         log = self.codex_log()

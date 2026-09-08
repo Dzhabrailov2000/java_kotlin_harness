@@ -19,26 +19,38 @@ import http.server
 import json
 import os
 from pathlib import Path
+import queue
 import re
+import signal
+import shutil
 import stat
+import subprocess
 import sys
 import threading
 import time
 import urllib.parse
 import uuid
 
-from harness_run_audit import component_for
+from process_group import stop_group
 
 
 SCHEMA = 1
 JOURNAL, LOG, LOCK = "progress.jsonl", "progress.log", ".progress.lock"
+# The trace beside the journal. It is named here, not only in run_trace.py, because the identity of a
+# progress directory is decided by both files: the journal owns it, and while the journal is still
+# empty the trace already written here says which run these files describe.
+TRACE = "trace.jsonl"
 PAGE = Path(__file__).resolve().with_name("run_progress.html")
-# The office scene: two files built once from the pinned Pixel Agents sources and checked in, so the
-# monitor runs with Python alone. Only these two exact paths are ever mapped to a file; the server has
-# no directory handler and never joins a request path onto a directory.
-OFFICE = Path(__file__).resolve().parents[1] / "monitor" / "pixel-office" / "dist"
-OFFICE_FILES = {"/pixel-agents/office.js": (OFFICE / "office.js", "application/javascript; charset=utf-8"),
-                "/pixel-agents/assets.json": (OFFICE / "assets.json", "application/json; charset=utf-8")}
+# The office in front of this API: the original Pixel Agents frontend built from the pinned upstream
+# sources, served by its own Node adapter together with the WebSocket it speaks. This server keeps the
+# journal, the trace and the registered artifacts and answers the office through /api and /details.
+OFFICE = Path(__file__).resolve().parents[1] / "monitor" / "pixel-office"
+OFFICE_ENTRY = OFFICE / "src" / "office-server.mjs"
+OFFICE_BUNDLE = OFFICE / "dist" / "office" / "index.html"
+OFFICE_RUNTIME = OFFICE / "node_modules" / "ws" / "package.json"
+# The office's own appearance is stored here and nowhere else: never in the Claude or Codex profile.
+OFFICE_STATE = Path(os.environ.get("XDG_STATE_HOME") or (Path.home() / ".local" / "state")) / "java-kotlin-harness" / "pixel-office"
+OFFICE_START_TIMEOUT = 60.0
 LOG_HEADER = "# progress.log v1: readable projection of progress.jsonl\n"
 MAX_LINE_BYTES = 16 * 1024
 MAX_NATIVE_LINE_BYTES = 16 * 1024 * 1024
@@ -52,6 +64,7 @@ CONSOLE_CAPACITY = 1000
 MALFORMED = (ValueError, TypeError, UnicodeError, RecursionError)
 
 IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
+COMPONENT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]*\Z")
 TIME = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\Z")
 PHASES = ("build", "tests", "review", "triage", "verify", "handoff", "decision")
 EVENTS = {
@@ -76,13 +89,19 @@ SOURCE_EVENTS = {
     "native": ("init", "tool_call", "tool_result", "hook", "task", "cli_result"),
     "launcher": ("run", "cli_exit", "doctor", "audit", "result", "observer"),
     "manager": ("phase", "finding", "decision"),
+    # A machine result read off a sealed acceptance receipt: the capture of a check and the validated
+    # review publish their own outcome instead of waiting for a manager to retype it. Such a record
+    # carries the receipt it was derived from and claims nothing beyond it: no finding is counted and
+    # no decision is taken, and COMPLETE stays an explicit manager event with a completion receipt.
+    "receipt": ("phase",),
 }
 MANAGER_EVENT_BY_PHASE = {"triage": "finding", "decision": "decision"}
 # A recorded pass and COMPLETE are claims about checked work: each needs the matching acceptance
 # receipt, whatever phase or event the emitter names. Everything else is recorded as before.
 EVIDENCE_BY_PHASE = {"review": "review"}
 REQUIRED = ("schema", "event_id", "time", "run_id", "attempt", "step_id", "source", "phase", "event", "status")
-OPTIONAL_TEXT = ("model", "effort", "tool", "component", "hook", "call_id", "parent_call_id", "task_id", "evidence")
+OPTIONAL_TEXT = ("model", "effort", "tool", "component", "hook", "call_id", "parent_call_id", "task_id",
+                 "evidence", "snapshot")
 OPTIONAL_NUMBER = ("duration_seconds", "exit_code", "count")
 KNOWN_FIELDS = frozenset(REQUIRED + OPTIONAL_TEXT + OPTIONAL_NUMBER)
 LABELS = {
@@ -203,6 +222,10 @@ def validate_event(record):
             raise ValueError("invalid " + key)
         else:
             clean[key] = value
+    # A machine record exists because a receipt was sealed; without naming it, it would be a claim of
+    # checked work with nothing behind it, which is exactly what the manager source already forbids.
+    if source == "receipt" and "evidence" not in clean:
+        raise ValueError("a receipt record must name the receipt it was derived from")
     return clean
 
 
@@ -233,12 +256,34 @@ def describe(record):
         details.append("n=" + str(record["count"]))
     if record.get("evidence"):
         details.append("evidence " + record["evidence"][:16])
+    if record.get("snapshot"):
+        details.append("snapshot " + record["snapshot"][:16])
     return label + (" [" + ", ".join(details) + "]" if details else "")
 
 
 def format_line(record):
     return "%s #%d %s %-8s %s" % (record["time"], record["attempt"], record["step_id"],
                                   record["source"], describe(record))
+
+
+def component_for(name, tool_input):
+    """Which harness component a native tool call names; identifiers only, never its arguments.
+
+    The journal and the selection gate of the implementer launcher decide "which component is this"
+    the same way, so a call recorded as a skill is the same call the gate weighed.
+    """
+    if name == "Skill":
+        value = tool_input.get("skill")
+        component = value.strip().split()[0] if isinstance(value, str) and value.strip() else None
+        return "skills", component if component and COMPONENT_NAME.fullmatch(component) else None
+    if name in ("Agent", "Task"):
+        value = tool_input.get("subagent_type")
+        return "agents", value if isinstance(value, str) and COMPONENT_NAME.fullmatch(value) else None
+    if name.startswith("mcp__"):
+        parts = name.split("__", 2)
+        component = parts[1] if len(parts) == 3 and parts[2] else None
+        return "mcp_servers", component if component and COMPONENT_NAME.fullmatch(component) else None
+    return "builtin", None
 
 
 def open_plain(path):
@@ -332,6 +377,26 @@ def first_line(path):
         return stream.read(MAX_LINE_BYTES + 1).split(b"\n", 1)[0]
 
 
+def directory_run_id(directory, summary=None):
+    """The run that already owns a progress directory and the file that says so, or (None, None).
+
+    A directory whose journal has no records yet is not free: an import or a helper that got there
+    first may already have written a trace, and that trace names the run these files describe.
+    Resolving the identity from both files is what keeps a second run from being published beside
+    the first and a reader from joining two runs by attempt and step.
+    """
+    directory = Path(directory)
+    summary = journal_summary(directory / JOURNAL) if summary is None else summary
+    if summary["run_id"] is not None:
+        return summary["run_id"], directory / JOURNAL
+    try:
+        record = json.loads(first_line(directory / TRACE).decode("utf-8"))
+    except (OSError,) + MALFORMED:
+        return None, None
+    run_id = identifier(record.get("run_id")) if isinstance(record, dict) else None
+    return (run_id, directory / TRACE) if run_id is not None else (None, None)
+
+
 def check_target(path, kind):
     """Adopt an existing progress file only when it is a plain single-link file that starts as ours.
 
@@ -356,6 +421,18 @@ def check_target(path, kind):
     elif head + b"\n" == LOG_HEADER.encode("utf-8"):
         return
     raise ValueError("Existing file is not a progress %s: %s" % (kind, path))
+
+
+class RunIdentityError(ValueError):
+    """A publisher named another run than the one this progress directory already holds.
+
+    One progress directory is one run. Records of two runs in it would be well formed and
+    still describe nothing: a reader that joins them by attempt and step would show one
+    run's exit under the other run's launch. The publication is refused here, before a
+    single record is written; that is a monitoring failure and never a verdict, so the
+    callers turn it into progress UNVERIFIED and leave the command, the receipt and the
+    task alone.
+    """
 
 
 class ProgressJournal:
@@ -392,7 +469,15 @@ class ProgressJournal:
             check_target(directory / JOURNAL, "journal")
             check_target(directory / LOG, "log")
             summary = journal_summary(directory / JOURNAL)
-            run_id = run_id or summary["run_id"] or slug(directory.name, "run")
+            # The run already recorded here owns this directory: an explicit identity that
+            # disagrees with it is a publication aimed at the wrong journal, refused whole. The
+            # owner is read from the trace too, so a directory that holds only imported history
+            # cannot acquire a journal of a second run before its trace refuses the same records.
+            owner, owner_path = directory_run_id(directory, summary)
+            if run_id is not None and owner is not None and run_id != owner:
+                raise RunIdentityError("This progress directory belongs to run %s, not to %s: %s"
+                                       % (owner, run_id, owner_path))
+            run_id = run_id or owner or slug(directory.name, "run")
             attempt = attempt or summary["attempt"] or 1
             if step_id is None:
                 base = step_id = slug(step_base or phase, "step")
@@ -872,24 +957,18 @@ def stop_observer(thread, observer, stop, timeout=JOIN_TIMEOUT):
             "oversized_lines": observer.oversized_lines, "records": journal.records}
 
 
-def sri(data):
-    """The subresource integrity form of a digest: the same value the page pins in its script tag."""
-    return "sha256-" + base64.b64encode(hashlib.sha256(data).digest()).decode()
+def csp_for(page):
+    """Hash the page's own inline script and style so nothing else can run on it.
 
-
-def csp_for(page, scripts=()):
-    """Hash the bundled inline script and style so nothing else can run on the page.
-
-    A local built script is authorized by the digest of its own bytes; the page carries the same digest
-    as integrity metadata, which is what makes a hash source usable for an external script at all.
+    The details page carries no external script: everything it executes is the block below, named by
+    the digest of its exact bytes. Anything injected later matches no hash and never runs.
     """
     def hashes(tag):
         return " ".join("'sha256-" + base64.b64encode(hashlib.sha256(block.encode("utf-8")).digest()).decode() + "'"
                         for block in re.findall("<%s>(.*?)</%s>" % (tag, tag), page, re.DOTALL))
-    script_src = " ".join(["'%s'" % sri(data) for data in scripts] + [hashes("script")]).strip()
     return ("default-src 'none'; script-src %s; style-src %s; connect-src 'self'; "
             "img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-            % (script_src or "'none'", hashes("style") or "'none'"))
+            % (hashes("script") or "'none'", hashes("style") or "'none'"))
 
 
 class ProgressHandler(http.server.BaseHTTPRequestHandler):
@@ -918,8 +997,6 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
         if parsed.path == "/":
             return self.send(200, self.server.page, "text/html; charset=utf-8",
                              (("Content-Security-Policy", self.server.csp),))
-        if parsed.path in OFFICE_FILES:
-            return self.office(parsed.path)
         query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
         if parsed.path == "/api/artifact":
             return self.artifact(query)
@@ -942,13 +1019,6 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
                 record["label"] = describe(record)
             page.update(now=utc_now(), log=str(self.server.log))
         self.send(200, json.dumps(page, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
-
-    def office(self, path):
-        """Serve one of the two built office files from the snapshot read at startup, or say it is missing."""
-        body = self.server.office.get(path)
-        if body is None:
-            return self.send(503, b"office bundle is not built\n", "text/plain; charset=utf-8")
-        return self.send(200, body, OFFICE_FILES[path][1])
 
     def artifact(self, query):
         """Serve one registered artifact as inert text; nothing outside the artifact store is reachable."""
@@ -979,15 +1049,7 @@ class ProgressServer(http.server.ThreadingHTTPServer):
         import run_trace
         self.trace_module, self.trace = run_trace, directory / run_trace.TRACE
         self.page = PAGE.read_bytes()
-        # Page and bundle are read once together: the authorized digest always describes the bytes served.
-        self.office = {}
-        for path, (source, _) in OFFICE_FILES.items():
-            try:
-                self.office[path] = source.read_bytes()
-            except OSError:
-                self.office[path] = None
-        bundle = self.office["/pixel-agents/office.js"]
-        self.csp = csp_for(self.page.decode("utf-8"), [bundle] if bundle is not None else [])
+        self.csp = csp_for(self.page.decode("utf-8"))
         super().__init__(("127.0.0.1", port), ProgressHandler)
 
     @property
@@ -1046,16 +1108,90 @@ def emit(args):
     return 0
 
 
+class Office:
+    """The Node office in front of this API: started with it, stopped with it.
+
+    It is a child process, not a service: it is launched in its own session so a Ctrl-C in this
+    terminal reaches only the launcher, and it is stopped here deliberately. Everything it needs is
+    on its command line, so no state of this process leaks into it.
+    """
+
+    def __init__(self, port, api_url, state_dir):
+        self.port, self.api_url, self.state_dir = port, api_url, Path(state_dir).resolve()
+        self.process, self.url = None, None
+
+    def start(self):
+        node = shutil.which("node")
+        if node is None:
+            raise ValueError("Node is required to serve the office: install Node ^20.19.0 || >=22.12.0 "
+                             "(the range the pinned build toolchain supports), then run "
+                             "npm ci --prefix monitor/pixel-office")
+        for path, hint in ((OFFICE_ENTRY, "the office adapter is missing"),
+                           (OFFICE_BUNDLE, "the office is not built: run npm --prefix monitor/pixel-office run build"),
+                           (OFFICE_RUNTIME, "the office dependencies are not installed: run npm ci --prefix monitor/pixel-office")):
+            if not path.exists():
+                raise ValueError("%s (%s)" % (hint, path))
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        argv = [node, str(OFFICE_ENTRY), "--port", str(self.port), "--api-origin", self.api_url,
+                "--state-dir", str(self.state_dir)]
+        self.process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=None, text=True,
+                                        start_new_session=True)
+        # The office prints one line with the URL it actually bound. Reading it in a thread keeps the
+        # wait bounded: a child that never answers is stopped instead of hanging the launcher.
+        answers = queue.Queue(maxsize=1)
+        reader = threading.Thread(target=lambda: answers.put(self.process.stdout.readline()),
+                                  name="office-url", daemon=True)
+        reader.start()
+        try:
+            line = answers.get(timeout=OFFICE_START_TIMEOUT)
+        except queue.Empty:
+            self.stop()
+            raise ValueError("the office did not report its URL within %.0f s" % OFFICE_START_TIMEOUT)
+        try:
+            self.url = json.loads(line)["url"]
+        except (ValueError, KeyError, TypeError):
+            self.stop()
+            raise ValueError("the office did not report a usable URL: " + line.strip()[:200])
+        return self.url
+
+    def stop(self):
+        if self.process is None or self.process.poll() is not None:
+            return
+        stop_group(self.process)
+
+
 def serve(args):
-    server = ProgressServer(args.progress_dir, args.port)
-    print(server.url, flush=True)
-    print("tail -f " + str(server.log), file=sys.stderr, flush=True)
+    """Serve the office on the requested port and this journal API behind it, on 127.0.0.1 only."""
+    server = ProgressServer(args.progress_dir, 0)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.5},
+                              name="progress-api", daemon=True)
+    thread.start()
+    office = Office(args.port, server.url, args.office_state_dir or OFFICE_STATE)
     try:
-        server.serve_forever(poll_interval=0.5)
+        url = office.start()
+    except (OSError, ValueError):
+        server.shutdown()
+        server.server_close()
+        raise
+    print(url, flush=True)
+    print("журнал: " + url.rstrip("/") + "/details", file=sys.stderr, flush=True)
+    print("tail -f " + str(server.log), file=sys.stderr, flush=True)
+    # A terminated launcher must not leave its office behind: SIGTERM is turned into the same
+    # interrupt Ctrl-C raises, so the one shutdown path below runs for both.
+    def interrupt(*_):
+        raise KeyboardInterrupt
+    previous = signal.signal(signal.SIGTERM, interrupt)
+    try:
+        while office.process.poll() is None:
+            time.sleep(0.2)
     except KeyboardInterrupt:
         pass
     finally:
+        signal.signal(signal.SIGTERM, previous)
+        office.stop()
+        server.shutdown()
         server.server_close()
+        thread.join(JOIN_TIMEOUT)
     return 0
 
 
@@ -1081,9 +1217,12 @@ def main():
                          help="Acceptance receipt of run_acceptance.py: a captured check for a passed phase, a "
                               "validated review for review passed, a completion receipt for decision complete; "
                               "the record is written under the explicit --run-id and --attempt of that receipt")
-    server = commands.add_parser("serve", help="Serve the page and the event API on 127.0.0.1")
+    server = commands.add_parser("serve", help="Serve the office and the journal API on 127.0.0.1")
     server.add_argument("--progress-dir", required=True, type=Path)
     server.add_argument("--port", type=int, default=0, help="0 selects a free port; the URL is printed")
+    server.add_argument("--office-state-dir", type=Path,
+                        help="Local runtime storage of the office layout, seats and settings; "
+                             "default: %s. Never a Claude or Codex profile" % OFFICE_STATE)
     args = parser.parse_args()
     try:
         return emit(args) if args.command == "emit" else serve(args)

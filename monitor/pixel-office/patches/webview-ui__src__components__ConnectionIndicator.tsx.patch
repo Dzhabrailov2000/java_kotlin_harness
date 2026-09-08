@@ -1,0 +1,29 @@
+diff --git a/webview-ui/src/components/ConnectionIndicator.tsx b/webview-ui/src/components/ConnectionIndicator.tsx
+index 5e65654..6ef2766 100644
+--- a/webview-ui/src/components/ConnectionIndicator.tsx
++++ b/webview-ui/src/components/ConnectionIndicator.tsx
+@@ -15,7 +15,7 @@ const STATE_LABELS: Partial<Record<TransportState, string>> = {
+  * it is invisible unless the WebSocket drops in standalone mode. Modeled on
+  * VersionIndicator's absolute-overlay + pixel-panel convention.
+  */
+-export function ConnectionIndicator() {
++export function ConnectionIndicator({ sourceProblem }: { sourceProblem?: string | null }) {
+   const [state, setState] = useState<TransportState>(transport.state);
+ 
+   useEffect(() => {
+@@ -24,9 +24,13 @@ export function ConnectionIndicator() {
+     return transport.onStateChange(setState);
+   }, []);
+ 
+-  if (state === 'connected') return null;
++  // Local pipeline extension: a live socket to a monitor that cannot read its own
++  // journal is not a working feed either. The badge says which of the two is missing,
++  // in the same place and the same style as the transport states above.
++  if (state === 'connected' && !sourceProblem) return null;
+ 
+-  const label = STATE_LABELS[state] ?? 'Disconnected';
++  const label =
++    state === 'connected' ? (sourceProblem as string) : (STATE_LABELS[state] ?? 'Disconnected');
+   const dotClass = state === 'connecting' ? 'bg-status-permission' : 'bg-status-error';
+ 
+   return (

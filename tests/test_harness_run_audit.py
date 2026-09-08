@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "harness_run_audit.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "claude" / "scripts" / "harness_run_audit.py"
 SPEC = importlib.util.spec_from_file_location("harness_run_audit", SCRIPT)
 AUDIT = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(AUDIT)
