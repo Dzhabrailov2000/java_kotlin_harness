@@ -1,180 +1,161 @@
 ---
 name: epic-decomposition
-description: Метод нарезки эпика на истории и подзадачи по локальным правилам команды. Три шкалы (сложность эпика по калькулятору с округлением к Фибоначчи и порогом резки 21; история в SP по Фибоначчи; подзадача строго 3 или 5 SP), сумма подзадач равна оценке истории, слот разработчика в спринте 8 SP = 5 + 3. Применять при разборе эпика перед грумингом, при заведении задач в трекер и при квартальной раскладке; пороги, калькулятор и форматы документов сверять с материалами конкретного проекта.
+description: The team's method for cutting an epic into stories and subtasks. Three scales (epic complexity from the calculator, rounded to Fibonacci, with the split threshold at 21; a story in SP by Fibonacci; a subtask strictly 3 or 5 SP), the subtasks sum to the story estimate, and a developer slot in a sprint is 8 SP = 5 + 3. Apply it when preparing an epic for grooming, when creating tickets and in quarterly planning; check the thresholds, the calculator and the document formats against the materials of the concrete project.
 ---
 
-# Нарезка эпика на истории и подзадачи
+# Cutting an epic into stories and subtasks
 
-Каркас разбора эпика до состояния, в котором его можно грумить и заводить в
-трекер. Цель: вертикальные срезы вместо слоев; каждое число привязано к своей
-шкале и воспроизводимо по пунктам; сумма после дробления не раздувается;
-обязательная работа не растворяется молча между эпиками.
+A frame for taking an epic to the state where it can be groomed and entered into the tracker. The
+goal: vertical slices instead of layers; every number tied to its own scale and reproducible point
+by point; the sum does not inflate after splitting; mandatory work does not silently dissolve
+between epics.
 
-Это локальная конвенция команды, снятая с ее рабочих документов, а не
-отраслевой стандарт. Числа ниже (порог резки, размеры подзадач, слот спринта)
-действуют, пока их не переопределяют материалы конкретного проекта: шаблоны,
-инструкции репозитория, действующий калькулятор, уже заведенная нарезка в
-трекере. Если проект задает свои значения или форматы, они главнее примеров
-отсюда; расхождение называй явно, а не сглаживай.
+This is a local convention of the team, taken from its working documents, not an industry standard.
+The numbers below (the split threshold, the subtask sizes, the sprint slot) hold until the materials
+of the concrete project override them: templates, repository instructions, the calculator in force,
+the decomposition already in the tracker. If the project sets its own values or formats, they
+outrank the examples here; name the divergence explicitly instead of smoothing it over.
 
-## Когда применять
+The documents themselves are written in Russian, as the team keeps them; the examples below are kept
+in the form the tracker and the backlog use.
 
-- Эпик оценен на квартальной раскладке, и его надо превратить в истории и задачи.
-- Готовится материал к грумингу или к заведению тикетов.
-- Раскладка историй по спринтам и людям под капасити.
-- Проверка чужой нарезки перед встречей.
+## When to apply
 
-## Когда НЕ применять
+- The epic is estimated in quarterly planning and has to become stories and tasks.
+- Material is being prepared for grooming or for creating tickets.
+- Stories are being laid out across sprints and people against capacity.
+- Someone else's decomposition is being checked before a meeting.
 
-- Архитектурное решение еще не принято. Сначала `system-design-tradeoffs` и
-  ADR (Architecture Decision Record), нарезка идет после.
-- Реализация одной уже нарезанной задачи. Это агент `code-architect`.
-- Верхнеуровневая квартальная оценка портфеля эпиков. Там работает только
-  шкала 1 из раздела ниже, истории не нужны.
+## When NOT to apply
 
-## Три шкалы и как они соотносятся
+- The architectural decision is not taken yet. First `system-design-tradeoffs` and the ADR
+  (Architecture Decision Record); the decomposition comes after.
+- Implementing one task that is already cut. That is the `code-architect` agent.
+- A top level quarterly estimate of a portfolio of epics. There only scale 1 from the section below
+  is in play, and stories are not needed.
 
-Путаница шкал - самая частая ошибка в документах нарезки, поэтому это первый
-раздел.
+## Three scales and how they relate
 
-| Шкала | Единица | На что ставится | Диапазон |
+Confusing the scales is the most common error in decomposition documents, so it comes first.
+
+| Scale | Unit | What it is put on | Range |
 |---|---|---|---|
-| 1. Сложность эпика | балл калькулятора, округленный к Фибоначчи | эпик целиком | 5, 8, 13, 21, 34 (верх диапазона сверить с калькулятором проекта) |
-| 2. Story points | SP | история | Фибоначчи при первичной оценке (3, 5, 8, 13); после нарезки - сумма подзадач, может не быть числом Фибоначчи |
-| 3. Размер подзадачи | SP | подзадача | только 3 или 5 |
+| 1. Epic complexity | a calculator score rounded to Fibonacci | the whole epic | 5, 8, 13, 21, 34 (check the top of the range against the project calculator) |
+| 2. Story points | SP | a story | Fibonacci at the first estimate (3, 5, 8, 13); after the cut, the sum of the subtasks, which need not be a Fibonacci number |
+| 3. Subtask size | SP | a subtask | only 3 or 5 |
 
-Шкалы 1 и 2 напрямую не сравниваются. Один и тот же эпик может иметь
-сложность 13 (шкала 1) и больше сотни SP после нарезки (шкала 2), и это не
-противоречие. Везде, где в одном документе встречаются оба числа, оговорка
-про разные шкалы обязательна.
+Scales 1 and 2 are not compared directly. The same epic can have complexity 13 (scale 1) and more
+than a hundred SP after the cut (scale 2), and that is not a contradiction. Wherever both numbers
+appear in one document, the note about the two scales is mandatory.
 
-Шкалы 2 и 3 связаны жестко: сумма подзадач равна оценке истории.
+Scales 2 and 3 are tied rigidly: the subtasks sum to the story estimate.
 
-### Калькулятор сложности эпика
+### The epic complexity calculator
 
-Сумма баллов по отмеченным критериям, итог округляется к ближайшему числу
-Фибоначчи. Точные формулировки критериев, веса, верх диапазона и правило
-округления при равном расстоянии берутся из действующего калькулятора
-проекта (инструмент или документ, на который ссылаются материалы проекта),
-а не из памяти. Перед использованием найди этот калькулятор в материалах
-проекта; если найти не удалось, скажи об этом и покажи, какой список
-применил.
+The sum of the scores of the criteria you ticked, rounded to the nearest Fibonacci number. The exact
+wording of the criteria, the weights, the top of the range and the rounding rule at an equal
+distance come from the project calculator in force (the tool or document the project materials point
+at), not from memory. Find that calculator in the project materials before using it; if you cannot
+find it, say so and show which list you applied.
 
-Структура критериев ниже - пример, восстановленный из прошлых разборов, а не
-копия инструмента:
+The structure of the criteria below is an example reconstructed from past decompositions, not a copy
+of the tool:
 
-- **Проработка требований:** локальные уточнения +1; существенная проработка +3;
-  новый домен для команды +2.
-- **Зависимости и команды:** одна внутренняя зависимость +1; две и более +2;
-  задействованы две команды +2; внешняя зависимость на критическом пути +3.
-- **Системы и интеграции:** 2-3 системы +2; 4 и более +5; новая интеграция +3;
-  существенная переработка интеграционной логики +3.
-- **Технологии и архитектура:** новая технология +3; существенные
-  архитектурные изменения +5.
-- **Данные и безопасность:** повышенные требования к целостности данных +3;
-  чувствительные данные +3; формальные требования ИБ (информационная
-  безопасность) +5.
-- **Операционное:** регресс существующего флоу +2; E2E (end-to-end, сквозной
-  сценарий) через несколько систем +3; спецстенды, тестовые устройства или
-  данные +2; сложный rollout +2; операционная готовность +2; повышенные NFR
-  (нефункциональные требования) +2.
-- **Красный флаг:** production-риск, необратимое решение, нужен spike или PoC
-  (Proof of Concept) +5.
+- **Requirements work:** local clarifications +1; substantial work +3; a domain new to the team +2.
+- **Dependencies and teams:** one internal dependency +1; two or more +2; two teams involved +2; an
+  external dependency on the critical path +3.
+- **Systems and integrations:** 2-3 systems +2; 4 or more +5; a new integration +3; substantial
+  rework of the integration logic +3.
+- **Technology and architecture:** a new technology +3; substantial architectural changes +5.
+- **Data and security:** raised data integrity requirements +3; sensitive data +3; formal
+  information security requirements +5.
+- **Operations:** a regression of an existing flow +2; E2E (end-to-end) across several systems +3;
+  special test benches, test devices or data +2; a complex rollout +2; operational readiness +2;
+  raised NFRs (non-functional requirements) +2.
+- **Red flag:** a production risk, an irreversible decision, a spike or a PoC (Proof of Concept)
+  is needed +5.
 
-Отмеченные чекбоксы выписывать списком рядом с оценкой: так оценку можно
-оспорить по пунктам и пересчитать при изменении вводных. Если округление при
-равном расстоянии влияет на решение резать или не резать, скажи об этом
-прямо, не прячь.
+Write the ticked boxes out as a list next to the estimate: that way the estimate can be contested
+point by point and recomputed when the input changes. If rounding at an equal distance decides
+whether to split or not, say so directly instead of hiding it.
 
-## Жесткие правила размеров
+## Hard rules of size
 
-1. **Подзадача только 3 или 5 SP.** Других размеров не существует.
-2. **Сумма подзадач равна оценке истории.** Разбиение не раздувает объем. То
-   же правило действует уровнем выше: если эпик режется на два, сумма
-   сложностей кусков совпадает с исходной оценкой, и это признак корректного
-   разреза.
-3. **Пятерка - лист.** Резать ее нечем: 5 = 3 + 3 дает 6 и нарушает правило
-   суммы. Если пятерка не влезает в спринт, неверна оценка истории, а не
-   размер подзадачи.
-4. **Допустимый размер истории - любое целое от 3, кроме 4 и 7.** Только эти
-   два числа не собираются из троек и пятерок. Первичная оценка ставится по
-   Фибоначчи, но после нарезки оценка истории равна сумме подзадач и Фибоначчи
-   быть не обязана. Примеры разбиения: 8 = 5+3; 11 = 5+3+3; 13 = 5+5+3;
-   21 = 5+5+5+3+3; 22 = 5+5+3+3+3+3.
-5. **Слот разработчика в спринте - 8 SP = ровно 5 + 3.** Других точных упаковок
-   нет: 3+3 = 6 это недобор на четверть, 5+5 = 10 это перебор на четверть.
-6. **Следствие для нарезки: троек и пятерок должно быть примерно поровну.**
-   Если эпик дал девять пятерок и две тройки, спринт без потерь не собирается
-   никаким распределением. Это требование к нарезке, проверяется на ходе 9,
-   а не всплывает на планировании.
-7. **Мощность команды = 8 SP на каждого поинтуемого разработчика.** Кто входит
-   в пул и кто считается отдельно (например инфраструктура) проверяется перед
-   каждой раскладкой по актуальному источнику проекта, а не берется из старого
-   файла или из памяти.
-8. **Сезонность.** На квартал с отпусками закладывать минус 20-25 процентов
-   мощности. Это локальное допущение, уточняй у команды.
+1. **A subtask is only 3 or 5 SP.** No other sizes exist.
+2. **The subtasks sum to the story estimate.** Splitting does not inflate the volume. The same rule
+   applies one level up: when an epic is split in two, the complexities of the pieces sum to the
+   original estimate, and that is a sign of a correct cut.
+3. **A five is a leaf.** There is nothing to cut it with: 5 = 3 + 3 gives 6 and breaks the sum rule.
+   If a five does not fit into the sprint, the story estimate is wrong, not the subtask size.
+4. **A valid story size is any integer from 3 upwards except 4 and 7.** Only those two numbers
+   cannot be built from threes and fives. The first estimate is made by Fibonacci, but after the cut
+   the story estimate equals the sum of the subtasks and need not be Fibonacci. Examples: 8 = 5+3;
+   11 = 5+3+3; 13 = 5+5+3; 21 = 5+5+5+3+3; 22 = 5+5+3+3+3+3.
+5. **A developer slot in a sprint is 8 SP = exactly 5 + 3.** There is no other exact packing:
+   3+3 = 6 is a quarter short, 5+5 = 10 is a quarter over.
+6. **A consequence for the cut: threes and fives must be roughly equal in number.** If the epic
+   produced nine fives and two threes, no distribution packs a sprint without waste. This is a
+   requirement on the decomposition, checked at move 9, instead of surfacing at planning.
+7. **Team capacity = 8 SP per pointed developer.** Who is in the pool and who is counted separately
+   (infrastructure, for example) is checked before every layout against the current source of the
+   project, not taken from an old file or from memory.
+8. **Seasonality.** For a quarter with holidays, plan for 20-25 percent less capacity. This is a
+   local assumption; confirm it with the team.
 
-## Метод: 10 ходов
+## The method: 10 moves
 
-Идти по порядку. Каждый ход оставляет след в документе нарезки.
+Go through them in order. Every move leaves a trace in the decomposition document.
 
-1. **Зафиксируй вход и границы.** Название эпика, документ-основание (ADR,
-   спека, строка квартальной матрицы), цель одним предложением, пользователи.
-   **Out of scope пишется здесь, до историй**, иначе он выродится в список
-   того, что не успели. Отдельной строкой - чем документ не является.
+1. **Fix the input and the boundaries.** The name of the epic, the source document (an ADR, a spec,
+   a row of the quarterly matrix), the goal in one sentence, the users. **Out of scope is written
+   here, before the stories**, otherwise it degenerates into a list of what was not finished. In a
+   separate line: what the document is not.
 
-2. **Оцени эпик калькулятором и проверь порог.** Выше 21 - режь эпик (как
-   трактовать ровно 21, задает проект; если не задано, спроси). Границу
-   разреза выбирай по одной оси, а не по всему сразу: по среде выполнения
-   (стенд против production), по фазе, по зоне ответственности. Сумма кусков
-   обязана совпасть с исходной оценкой.
+2. **Estimate the epic with the calculator and check the threshold.** Above 21, split the epic (how
+   to treat exactly 21 is set by the project; if it is not set, ask). Choose the split boundary along
+   one axis, not along everything at once: by runtime environment (test bench against production),
+   by phase, by area of responsibility. The pieces must sum to the original estimate.
 
-3. **Выпиши инвентарь наблюдаемых изменений.** Не компоненты, а то, что
-   станет видно снаружи: новые операции API, новые исходы (коды, статусы),
-   новые фоновые эффекты (записи в реестр, события, метрики), новые режимы
-   деградации, новые операционные возможности. Это кандидаты в истории.
-   Архитектор по привычке режет по слоям - здесь этому надо сопротивляться
-   сознательно.
+3. **Write out the inventory of observable changes.** Not components, but what becomes visible from
+   the outside: new API operations, new outcomes (codes, statuses), new background effects (registry
+   records, events, metrics), new degradation modes, new operational capabilities. These are the
+   candidates for stories. An architect cuts by layers out of habit; resist that consciously here.
 
-4. **Собери истории вертикальными срезами.** Каждая история проходит контур
-   насквозь на узком случае и дает наблюдаемое изменение поведения. "Сделать
-   адаптер кеша" - не история: снаружи ничего не изменилось.
+4. **Assemble the stories as vertical slices.** Every story goes through the whole contour on a
+   narrow case and produces an observable change of behaviour. "Build a cache adapter" is not a
+   story: nothing changed from the outside.
 
-5. **Найди ходячий скелет и поставь его первым.** Минимальная цепочка,
-   проходящая систему целиком: например "клиент регистрируется и отдает
-   базовые параметры на тестовом стенде".
+5. **Find the walking skeleton and put it first.** The minimal chain that goes through the whole
+   system: "the client registers and returns its basic parameters on the test bench", for example.
 
-6. **Напиши "Готово, если" на каждую историю.** Критерий проверяется снаружи
-   и не ссылается на реализацию. Форму критерия бери из существующих карточек
-   проекта и переноси в карточку без изменений.
+6. **Write a "Готово, если" criterion for every story.** The criterion is checked from the outside
+   and does not refer to the implementation. Take the form of the criterion from the existing cards
+   of the project and carry it into the card unchanged.
 
-7. **Построй граф зависимостей и разложи на волны.** Волна - набор историй,
-   которые могут стартовать одновременно. Проставь MVP-флаг (да / вторая
-   волна) и тип (backend, infra, client, test), если проект их использует.
-   Отметь истории, заблокированные внешне, и назови блокировку поименно.
+7. **Build the dependency graph and lay it out in waves.** A wave is a set of stories that can start
+   at the same time. Set the MVP flag (yes / second wave) and the type (backend, infra, client,
+   test) if the project uses them. Mark the stories blocked externally and name the blocker.
 
-8. **Нарежь истории на подзадачи по 3 и 5.** Именование - буквой от истории:
-   история `S3` расходится в `S3a`, `S3b`, `S3c`. Каждая подзадача вливается
-   в основную ветку самостоятельно.
+8. **Cut the stories into subtasks of 3 and 5.** Naming follows the story with a letter: story `S3`
+   becomes `S3a`, `S3b`, `S3c`. Every subtask merges into the main branch on its own.
 
-9. **Сбалансируй и проверь упаковку.** Соотношение троек и пятерок близко к
-   1:1. Нагрузка считается **по людям**, а не только общей суммой: если у
-   одного человека выходит несколько спринтов подряд без слака, это проблема
-   до старта, а не после. Слот в 10 SP (5 + 5) - перебор, его надо
-   переразложить.
+9. **Balance it and check the packing.** The ratio of threes to fives is close to 1:1. The load is
+   counted **per person**, not only as a total: if one person ends up with several sprints in a row
+   without slack, that is a problem before the start, not after. A slot of 10 SP (5 + 5) is over
+   capacity and has to be laid out again.
 
-10. **Прогони чек-лист и вынеси лишнее.** Все, что всплыло по ходу разбора и
-    не входит в нарезку, идет в отдельный раздел "Что всплыло по ходу, завести
-    отдельно". Обязательная работа, которую решили не выделять эпиком,
-    фиксируется явно в Out of scope или во входных критериях соседнего эпика,
-    но не растворяется молча.
+10. **Run the checklist and move out what does not belong.** Everything that surfaced during the
+    analysis and is not part of the decomposition goes into a separate section "Что всплыло по ходу,
+    завести отдельно". Mandatory work that was deliberately not made an epic of its own is recorded
+    explicitly in Out of scope or in the entry criteria of a neighbouring epic, never dissolved in
+    silence.
 
-## Форма карточек
+## The form of the cards
 
-Точную форму (заголовки, блоки, метки) бери из существующих документов
-проекта; ниже - каркас, который они обычно наполняют.
+Take the exact form (headings, blocks, labels) from the existing documents of the project; below is
+the frame those documents usually fill.
 
-### История (формат бэклога)
+### A story (backlog format)
 
 ```
 **S-03. Применение параметра на одно устройство + статус applied** - 5 SP
@@ -182,10 +163,10 @@ description: Метод нарезки эпика на истории и под�
 Зависит: S-01, N-09. Тип: backend. MVP: да.
 ```
 
-Плюс сводная таблица по всем историям: `ID | История | SP | Зависит от | MVP`,
-под ней итог и объем тонкого MVP-ядра отдельной строкой.
+Plus a summary table over all the stories: `ID | История | SP | Зависит от | MVP`, with the total
+under it and the size of the thin MVP core on a separate line.
 
-### Задача под заведение (формат нарезки)
+### A task ready for the tracker (decomposition format)
 
 ```
 ## T-C. Отзыв постоянного ключа (3 SP)
@@ -199,108 +180,105 @@ description: Метод нарезки эпика на истории и под�
 **Готово, когда.** Критерий, проверяемый снаружи.
 ```
 
-Раздел **Ловушка** не декоративный: именно он удерживает задачу от неверного
-дробления. Типичный пример: миграция и код обязаны уехать одним деплоем,
-поэтому задача не режется на "миграцию" и "код".
+The **Ловушка** section is not decorative: it is what keeps the task from being split wrongly. A
+typical example: the migration and the code must ship in one deploy, so the task is not cut into
+"the migration" and "the code".
 
-## Оси нарезки
+## Axes of the cut
 
-**Эпик на истории:**
-- по среде: тестовый стенд против production;
-- по сценарию: happy path отдельно от каждой ветки отказа;
-- по типу операции: чтение, запись, выполнение, подписка;
-- по режиму доставки: синхронный online, очередь, фон;
-- по потребителю: внутренний вызов, внешний API, админский путь;
-- по данным: один тип клиента, один проект, одна категория параметров;
-- по качеству: сначала корректность, отдельно идемпотентность, отдельно
-  лимиты и деградация, отдельно наблюдаемость;
-- по контракту: контракт и заглушка отдельно от реализации, это
-  распараллеливает потребителя и поставщика;
-- по риску: спайк отдельной единицей, с таймбоксом и с вопросом, на который
-  он отвечает;
-- по операционной готовности: миграция, откат, нагрузочный прогон.
+**An epic into stories:**
+- by environment: test bench against production;
+- by scenario: the happy path separately from each failure branch;
+- by type of operation: read, write, execute, subscribe;
+- by delivery mode: synchronous online, queue, background;
+- by consumer: an internal call, an external API, the admin path;
+- by data: one client type, one project, one category of parameters;
+- by quality: correctness first, idempotency separately, limits and degradation separately,
+  observability separately;
+- by contract: the contract and a stub separately from the implementation, which parallelises the
+  consumer and the provider;
+- by risk: a spike as its own unit, with a timebox and with the question it answers;
+- by operational readiness: migration, rollback, a load run.
 
-**История на подзадачи по 3 и 5:**
-- по этапу: каркас и happy path, затем ветки отказа, затем интеграционные тесты;
-- по слою, но с явным контрактом между кусками;
-- по среде: код, конфиг и деплой, дашборды и алерты;
-- функциональность отдельно от оптимизации: если в одной подзадаче смешаны
-  новая функция и оптимизация, разноси.
+**A story into subtasks of 3 and 5:**
+- by stage: the skeleton and the happy path, then the failure branches, then the integration tests;
+- by layer, but with an explicit contract between the pieces;
+- by environment: code, configuration and deployment, dashboards and alerts;
+- functionality separately from optimisation: if one subtask mixes a new function with an
+  optimisation, split them.
 
-## Признаки пятерки против тройки
+## Signs of a five against a three
 
-**5 SP**, если есть хотя бы один признак:
-- незнакомая библиотека, протокол или механизм;
-- меняется контракт между сервисами или публичный API;
-- нужна инфраструктура в тестах: Testcontainers, эмуляция клиента,
-  многоузловой сценарий;
-- поведение под отказами входит в требование (таймауты, повторы, гонка);
-- затрагиваются три и более компонента;
-- есть миграция данных или обратно несовместимое изменение.
+**5 SP** when at least one sign is present:
+- an unfamiliar library, protocol or mechanism;
+- a contract between services or a public API changes;
+- infrastructure is needed in the tests: Testcontainers, client emulation, a multi-node scenario;
+- behaviour under failures is part of the requirement (timeouts, retries, a race);
+- three or more components are touched;
+- there is a data migration or a backwards incompatible change.
 
-**Два и более признака сразу - это не пятерка, а две подзадачи.**
+**Two or more signs at once is not a five but two subtasks.**
 
-**3 SP** - объем и способ решения понятны заранее, механизм знакомый, один-два
-компонента, результат проверяется локально.
+**3 SP**: the volume and the way to solve it are clear in advance, the mechanism is familiar, one or
+two components, and the result is checked locally.
 
-**Меньше тройки отдельной подзадачей не заводится.** Мелочь приклеивается к
-соседней подзадаче или собирается в пакет до тройки. Как оформлять
-непоинтуемые и прикидочные задачи, задает проект; если не задано, спроси.
+**Anything smaller than a three does not become a subtask of its own.** Small work is attached to a
+neighbouring subtask or packed together up to a three. How to record unpointed and rough tasks is
+set by the project; if it is not set, ask.
 
-## Чек-лист перед грумингом
+## Checklist before grooming
 
-- [ ] У каждой истории сумма подзадач равна ее оценке
-- [ ] Все подзадачи 3 или 5, других чисел в документе нет
-- [ ] Троек и пятерок примерно поровну
-- [ ] У каждой истории есть "Готово, если", проверяемое снаружи
-- [ ] Первая история проходит контур насквозь
-- [ ] Граф зависимостей построен, волны размечены, MVP-флаг и тип проставлены (если проект их ведет)
-- [ ] Out of scope написан явно и не пуст
-- [ ] Нагрузка посчитана по людям, ни у кого слак не ноль, ни один слот не больше 8 SP
-- [ ] Сумма после разреза эпика совпала с оценкой до разреза
-- [ ] Лишнее вынесено в "Что всплыло по ходу"
-- [ ] У каждого числа указано, по какой оно шкале
-- [ ] Оформление по конвенциям проекта: расшифровка аббревиатур, пунктуация, ссылки
+- [ ] For every story the subtasks sum to its estimate
+- [ ] Every subtask is 3 or 5, and no other number appears in the document
+- [ ] Threes and fives are roughly equal in number
+- [ ] Every story has a "Готово, если" criterion that is checked from the outside
+- [ ] The first story goes through the whole contour
+- [ ] The dependency graph is built, the waves are marked, the MVP flag and the type are set (if the project keeps them)
+- [ ] Out of scope is written explicitly and is not empty
+- [ ] The load is counted per person, nobody has zero slack, no slot is above 8 SP
+- [ ] The sum after splitting the epic matches the estimate before the split
+- [ ] What does not belong is moved into "Что всплыло по ходу"
+- [ ] Every number says which scale it is on
+- [ ] The formatting follows the project conventions: abbreviations spelled out, punctuation, links
 
-## Анти-паттерны
+## Anti-patterns
 
-- **Слоеная история.** "Сделать адаптер кеша", "написать DTO". Снаружи ничего
-  не изменилось, проверить нечем.
-- **Подзадача "написать тесты".** Тесты входят в "Готово, когда" своей задачи.
-  То же с код-ревью и деплоем.
-- **Дробление пятерки.** 5 = 3 + 3 раздувает объем до 6. Если пятерка не
-  влезает - переоценивай историю, а не режь подзадачу.
-- **Все подзадачи по 5.** Округление вверх вместо нарезки. Капасити перестает
-  упаковываться: 5 + 5 это перебор на четверть.
-- **Все подзадачи по 3.** Дробление ради формы, обычно с потерей вертикальности.
-- **Союз "и" между двумя разными результатами в названии.** Это две подзадачи.
-  Типичный случай: "проксирование и оптимизация сериализации".
-- **Спайк без таймбокса и без вопроса**, на который он отвечает.
-- **Смешение шкал в одном числе.** "Эпик стоит 13" и "эпик стоит 135 SP" верны
-  оба, но это разные шкалы. Без оговорки документ вводит в заблуждение.
-- **Разрез, раздувающий сумму.** Если после дробления сумма выросла, резали не
-  по границе, а по живому.
-- **Обязательная работа без дома.** Работа, обязательная по документам фазы
-  (например валидация отказоустойчивости), выпала из квартальной матрицы и
-  ни в одном эпике не названа. Если работу решили не выделять эпиком, ее
-  место называется явно.
-- **Зависимость на подзадачу другого человека внутри того же спринта** без
-  зафиксированного контракта (интерфейс или схема) отдельной подзадачей.
-- **Оценка в часах с последующим переводом в SP.** SP относительны и
-  сравниваются с эталоном, а не с календарем.
-- **Оценка без выписанных чекбоксов калькулятора.** Такую оценку нельзя
-  оспорить по пунктам и нельзя пересчитать при изменении вводных.
+- **A layered story.** "Build a cache adapter", "write the DTOs". Nothing changed from the outside,
+  there is nothing to check.
+- **A "write the tests" subtask.** Tests belong to the "Готово, когда" of their own task. The same
+  goes for code review and deployment.
+- **Splitting a five.** 5 = 3 + 3 inflates the volume to 6. If a five does not fit, re-estimate the
+  story instead of cutting the subtask.
+- **All subtasks of 5.** Rounding up instead of cutting. Capacity stops packing: 5 + 5 is a quarter
+  over.
+- **All subtasks of 3.** Splitting for the form of it, usually losing verticality.
+- **The word "and" between two different results in the title.** That is two subtasks. The typical
+  case: "proxying and serialisation optimisation".
+- **A spike without a timebox and without the question** it answers.
+- **Mixing scales in one number.** "The epic costs 13" and "the epic costs 135 SP" are both true,
+  but they are different scales. Without the note the document misleads.
+- **A cut that inflates the sum.** If the sum grew after the split, the cut went through living
+  tissue rather than along a boundary.
+- **Mandatory work with no home.** Work that the phase documents require (validating fault tolerance,
+  for example) fell out of the quarterly matrix and is named in no epic. If the work was deliberately
+  not made an epic, its place is named explicitly.
+- **A dependency on another person's subtask inside the same sprint** without a contract (an
+  interface or a schema) fixed as a subtask of its own.
+- **An estimate in hours converted into SP.** SP are relative and compared with a reference, not with
+  the calendar.
+- **An estimate with no calculator checkboxes written out.** Such an estimate cannot be contested
+  point by point and cannot be recomputed when the input changes.
 
-## Связь с обвязкой
+## Relation to the harness
 
-- `system-design-tradeoffs` - принятие самого архитектурного решения. Нарезка
-  начинается после того, как решение принято и записано.
-- `architecture-decision-records` - источник входа и границ для хода 1.
-- `evidence-before-claim` - блок "Технически" в карточке: путь к файлу, имя
-  класса, вывод команды, а не память.
-- `scope-fence` - раздел "Что всплыло по ходу": найденное за границей задачи
-  фиксируется, но не делается молча.
-- `lead-with-outcome` - форма отчета по готовой нарезке: главный вывод первым,
-  дальше таблица и волны.
-- Команда `/epic` находит каталог результатов, форматы и индекс конкретного
-  проекта; этот skill задает только метод.
+- `system-design-tradeoffs` is where the architectural decision itself is taken. The decomposition
+  starts after the decision is taken and recorded.
+- `architecture-decision-records` is the source of the input and boundaries for move 1.
+- `evidence-before-claim` governs the "Технически" block of a card: the path to the file, the class
+  name, the command output, not memory.
+- `scope-fence` governs the "Что всплыло по ходу" section: what is found outside the task is
+  recorded but not done in silence.
+- `lead-with-outcome` governs the form of the report on a finished decomposition: the main
+  conclusion first, then the table and the waves.
+- The `/epic` command finds the result directory, the formats and the index of the concrete project;
+  this skill fixes only the method.

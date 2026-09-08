@@ -13,6 +13,8 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_HOME="$HOME"
 SHARED_SKILLS="self-correct epic-decomposition system-design-tradeoffs"
+# Компоненты, которых в обвязке больше нет: снимается только своя ссылка на них.
+OBSOLETE_HOOKS="harness-reminder.js"
 
 usage() {
   echo "Использование: $0 [--target-home <каталог>]" >&2
@@ -67,6 +69,24 @@ for name in $SHARED_SKILLS; do
   fi
 done
 
+# Удаляем только ссылку, которую поставила эта установка из этого репозитория:
+# чужой файл, чужая ссылка и посторонний компонент остаются на месте.
+unlink_obsolete() {
+  local src="$1"
+  local dest="$2"
+  if [ -L "$dest" ]; then
+    if [ "$(readlink "$dest")" = "$src" ]; then
+      rm -f "$dest"
+      echo "  удален устаревший компонент: $dest"
+      OBSOLETE_REMOVED=1
+    else
+      echo "  пропуск (чужая ссылка): $dest"
+    fi
+  elif [ -e "$dest" ]; then
+    echo "  пропуск (уже существует и не симлинк): $dest"
+  fi
+}
+
 link_item() {
   local src="$1"
   local dest="$2"
@@ -80,6 +100,11 @@ link_item() {
 }
 
 echo "Ставлю обвязку из $REPO_DIR в $CLAUDE_DIR"
+
+OBSOLETE_REMOVED=0
+for name in $OBSOLETE_HOOKS; do
+  unlink_obsolete "$REPO_DIR/hooks/$name" "$CLAUDE_DIR/hooks/$name"
+done
 
 # Скиллы: каждый каталог отдельным симлинком, чтобы не скрыть чужие скиллы.
 for dir in "$REPO_DIR"/skills/*/; do
@@ -117,3 +142,8 @@ done
 echo ""
 echo "Готово. settings.json не трогаю намеренно."
 echo "Сверь его вручную с settings.reference.json (модель, effort, тема, хуки)."
+if [ "$OBSOLETE_REMOVED" = "1" ]; then
+  echo "Каталог обвязки больше не подмешивается в каждый запрос: он выдается командой /harness."
+  echo "Если в settings.json остался блок UserPromptSubmit с hooks/harness-reminder.js, удали"
+  echo "только этот блок; остальные настройки и хуки не трогай."
+fi

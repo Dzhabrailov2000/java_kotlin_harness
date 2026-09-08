@@ -1,0 +1,46 @@
+{
+  "upstream": {
+    "repository": "https://github.com/pixel-agents-hq/pixel-agents",
+    "commit": "3537e140c2094761beae748592aeb92ece8edfdd",
+    "version": "v1.4.1"
+  },
+  "vendorManifestSha256": "1c071ee73b5885b501c22c2547d5ebc3127bcab2db8d181755299a177a6efc5f",
+  "vendorFiles": 122,
+  "tools": {
+    "esbuild": "0.28.1",
+    "pngjs": "7.0.0"
+  },
+  "adapterSources": {
+    "src/office.ts": "05b0f70bf74aa89c8ebf28de17f9c9dca14ce3bf40bc39747456ad51153d4ec8",
+    "src/assets-build.ts": "9914ccf25cf55fe72d807e3356806b1fc038933afacc081f7be4fb119e4c46be",
+    "build.mjs": "8686faa809f634a3abae2a8e5946b2e9170eccd997671fd9f9e7cb5b23f9faf6",
+    "package.json": "655687b9563701d4ae62d0cdc52e69d6533a920f209b4af57d2ea92567220676",
+    "package-lock.json": "9744c9e1854a7a8740a25312ef34d5b4a622c453ffa46b0f576dd9a85f26d634"
+  },
+  "assets": {
+    "characters": 6,
+    "floors": 9,
+    "walls": 1,
+    "carpets": 3,
+    "catalog": 38,
+    "sprites": 38,
+    "layout": {
+      "cols": 21,
+      "rows": 22,
+      "furniture": 36
+    }
+  },
+  "outputs": {
+    "office.js": {
+      "sha256": "cc0165722604833e0fb4c8ce58c48fa25f25d887fce54cbd85a929e07f98cbf9",
+      "bytes": 150285
+    },
+    "assets.json": {
+      "sha256": "540e2897beb11dc8c7ea69a8ffe3efe3f1ed6c34b4d808de0d3de950e41c5467",
+      "bytes": 860281
+    }
+  },
+  "moduleGraph": {
+    "inputs": 27
+  }
+}

@@ -11,18 +11,27 @@
   --done: #d8f3df; --done-text: #1a6b35; --warn: #ffe2c2; --warn-text: #8a4a00; --bad: #ffd9d9; --bad-text: #9b1c1c;
   --wait: #f3ecff; --wait-text: #5b2d9c; --stale: #ececec; --stale-text: #555c66;
   --user: #2f6f4f; --manager: #5b2d9c; --claude: #1a4f9c; --codex: #8a4a00; --import: #555c66;
+  --accent: #3a7bd5; --loop-line: #b6c1d0;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 code, .mono, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
-header.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 24px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-header h1 { margin: 0; font-size: 18px; font-weight: 600; }
-header .meta { color: var(--muted); margin-top: 2px; }
-main { padding: 16px 24px 32px; max-width: 1500px; margin: 0 auto; }
-.notice { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
+header.top { display: flex; justify-content: space-between; align-items: center; gap: 6px 20px; padding: 7px 20px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+/* Заголовок держится в одну строку: длинный запрос пользователя сюда не выносится целиком, */
+/* его полный текст и авторство остаются в разделе "Разговор" под кнопкой "Подробности". */
+header h1 { margin: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .meta { color: var(--muted); margin-top: 1px; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .head-run { flex: 1 1 240px; min-width: 0; }
+header .head-now { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.head-stage { font-weight: 600; max-width: 42vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#details-open { font: inherit; font-weight: 600; padding: 5px 14px; border: 1px solid var(--accent); border-radius: 8px; background: var(--ok); color: var(--ok-text); cursor: pointer; }
+#details-open:focus-visible, .inspector-tab:focus-visible, .loop-node:focus-visible, .loop-chip:focus-visible, #inspector-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+main { padding: 12px 20px 10px; max-width: 1500px; margin: 0 auto; }
+.notice { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); }
 .notice.warn { background: var(--warn); color: var(--warn-text); border-color: transparent; }
 .notice.bad { background: var(--bad); color: var(--bad-text); border-color: transparent; }
 .hidden { display: none; }
+[hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-height: 96px; }
@@ -117,99 +126,275 @@ pre.text.collapsed { max-height: 9.8em; overflow: hidden; }
 .invocation h3 { margin: 8px 0 2px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 .invocation .line { margin: 2px 0 0 8px; overflow-wrap: anywhere; }
 .invocation .line.muted { color: var(--muted); }
-footer { color: var(--muted); padding: 0 24px 24px; max-width: 1500px; margin: 0 auto; }
-footer code { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
-footer details { margin-top: 8px; }
-footer pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-footer, header .meta, .kind, .flag { overflow-wrap: anywhere; }
+.inspector-note code { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; overflow-wrap: anywhere; }
+.reading details { margin-top: 8px; }
+.reading pre { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+footer, .kind, .flag { overflow-wrap: anywhere; }
 details.diagnostics summary { cursor: pointer; padding: 4px 0; }
+.office-stage { position: relative; display: flex; align-items: center; justify-content: center; height: clamp(200px, 56vh, 620px); padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+#office-canvas { display: block; width: 100%; height: 100%; background: #171b22; border-radius: 6px; image-rendering: pixelated; }
+.office-labels { position: absolute; pointer-events: none; }
+.office-label { position: absolute; transform: translate(-50%, -100%); padding: 1px 6px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255, 255, 255, .93); font-size: 11px; line-height: 1.3; text-align: center; white-space: nowrap; }
+.office-label.selected { border-color: #3a7bd5; box-shadow: 0 0 0 2px rgba(58, 123, 213, .35); }
+.office-label-name { display: block; font-weight: 700; }
+.office-label-short { display: block; color: var(--muted); }
+.office-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; margin-top: 6px; }
+.office-bar .empty, .office-status { padding: 0; color: var(--muted); }
+.office-bar .notice { margin: 0; flex: 1 1 100%; }
+.office-controls { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin-left: auto; }
+.office-controls label, .office-controls button, .office-controls .kind { font-size: 12.5px; }
+.office-controls button { font: inherit; padding: 2px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer; }
+.office-controls button:focus-visible, .office-controls input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.office-actors { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.office-actor { flex: 1 1 240px; padding: 5px 10px; border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer; overflow: hidden; }
+.office-actor:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.office-actor[aria-pressed="true"] { border-color: var(--accent); background: var(--ok); }
+.office-actor.role-user { border-left-color: var(--user); }
+.office-actor.role-manager { border-left-color: var(--manager); }
+.office-actor.role-claude { border-left-color: var(--claude); }
+.office-actor-name { display: block; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.office-actor-status { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.office-actor-detail { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.office-details h3, .loop-details h3 { margin: 10px 0 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.office-details h3:first-child, .loop-details h3:first-child { margin-top: 0; }
+.office-line { margin: 2px 0 0; overflow-wrap: anywhere; }
+.office-line.muted { color: var(--muted); }
+.office-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Инженерный цикл: пять узлов основного пути, соединители и дуга возврата. Соединители - */
+/* статичная топология и намеренно скрыты от программ чтения: смысл несут сами кнопки. */
+.loop { position: relative; margin-top: 12px; }
+.loop-track { display: flex; align-items: stretch; }
+.loop-node { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px;
+             min-height: 46px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 10px;
+             background: var(--panel); color: var(--text); font: inherit; text-align: center; cursor: pointer; }
+.loop-node[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(58, 123, 213, .35); border-color: var(--accent); }
+.loop-node-name { font-weight: 600; font-size: 13px; }
+.loop-node-state { font-size: 11.5px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loop-node.s-pending { background: var(--pending); color: var(--pending-text); border-color: #e0b100; }
+.loop-node.s-ok { background: var(--ok); color: var(--ok-text); }
+.loop-node.s-done { background: var(--done); color: var(--done-text); }
+.loop-node.s-warn { background: var(--warn); color: var(--warn-text); }
+.loop-node.s-bad { background: var(--bad); color: var(--bad-text); }
+.loop-node.s-wait { background: var(--wait); color: var(--wait-text); border-style: dashed; }
+.loop-node.s-stale { background: var(--stale); color: var(--stale-text); border-style: dotted; }
+.loop-node.s-neutral { color: var(--muted); }
+.loop-link { flex: 0 0 26px; align-self: center; height: 2px; background: var(--loop-line); position: relative; }
+.loop-link::after { content: ""; position: absolute; right: -1px; top: -4px; border: 5px solid transparent; border-left-color: var(--loop-line); border-right-width: 0; }
+/* Дуга и ее подпись живут в одной обертке: подпись позиционируется от нее, а не от самой дуги, */
+/* поэтому в мобильной раскладке она уходит в поток и не ложится поверх строки состояния. */
+.loop-graph { position: relative; }
+.loop-return { position: relative; height: 22px; margin: 0 9%; border: 2px solid var(--loop-line); border-top: 0; border-radius: 0 0 14px 14px; }
+.loop-return::after { content: ""; position: absolute; left: -4px; top: -9px; border: 5px solid transparent; border-bottom-color: var(--loop-line); border-top-width: 0; }
+.loop-return.active { border-color: var(--accent); }
+.loop-return.active::after { border-bottom-color: var(--accent); }
+.loop-return.traversed { border-color: #8a9099; }
+.loop-return.traversed::after { border-bottom-color: #8a9099; }
+.loop-return-label { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); padding: 0 8px; background: var(--bg); color: var(--muted); font-size: 11.5px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.loop-return.active + .loop-return-label { color: var(--ok-text); }
+.loop-state { margin: 14px 0 0; overflow-wrap: anywhere; }
+.loop-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.loop-chip { padding: 2px 12px; border: 1px dashed var(--line); border-radius: 999px; background: var(--panel); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
+.loop-chip[aria-pressed="true"] { border-style: solid; border-color: var(--accent); background: var(--ok); }
+.loop-chip-state { color: var(--muted); }
+
+/* Один инспектор по требованию: overlay поверх страницы, чтобы канвас не перемонтировался. */
+dialog.inspector { width: min(720px, 100%); max-width: 100%; height: 100%; max-height: 100%; margin: 0 0 0 auto;
+                   padding: 0; border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--text);
+                   flex-direction: column; }
+dialog.inspector[open] { display: flex; }
+dialog.inspector::backdrop { background: rgba(18, 24, 32, .45); }
+.inspector-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.inspector-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+#inspector-close { font: inherit; padding: 4px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); cursor: pointer; }
+.inspector-context { padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--bg); max-height: 42vh; overflow: auto; }
+.inspector-tabs { display: flex; gap: 6px; padding: 8px 16px 0; flex-wrap: wrap; }
+.inspector-tab { font: inherit; font-size: 13px; padding: 5px 12px; border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; background: var(--bg); color: var(--muted); cursor: pointer; }
+.inspector-tab.current { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: inset 0 2px 0 var(--accent); }
+.inspector-body { flex: 1 1 auto; overflow: auto; padding: 10px 16px 20px; border-top: 1px solid var(--line); }
+.inspector-body .panel { border: 0; padding: 0; margin-bottom: 18px; background: transparent; }
+.inspector-body .cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.inspector-note { color: var(--muted); margin: 0 0 10px; }
+footer { color: var(--muted); padding: 0 20px 12px; max-width: 1500px; margin: 0 auto; font-size: 12.5px; }
 @media (max-width: 900px) {
   header.top, main, footer { padding-left: 12px; padding-right: 12px; }
+  /* Узкий экран - обычный вертикальный поток: этап показывается целиком, а не обрезком. */
+  .head-stage { max-width: 100%; white-space: normal; }
   .entry-head .meta { margin-left: 0; white-space: normal; }
   .stage { min-width: 0; flex: 1 1 40%; }
   .conversation { max-height: 60vh; }
+}
+@media (max-width: 600px) {
+  .loop-graph { padding-left: 26px; }
+  .loop-track { flex-direction: column; }
+  .loop-node { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 10px; text-align: left; min-height: 44px; }
+  .loop-node-state { flex: 0 1 auto; }
+  .loop-link { flex: 0 0 14px; width: 2px; height: 14px; align-self: flex-start; margin-left: 22px; }
+  .loop-link::after { left: -4px; right: auto; top: auto; bottom: -1px; border: 5px solid transparent; border-top-color: var(--loop-line); border-left-color: transparent; border-bottom-width: 0; }
+  .loop-return { position: absolute; left: 0; top: 8px; bottom: 0; width: 18px; height: auto; margin: 0; border: 2px solid var(--loop-line); border-right: 0; border-radius: 12px 0 0 12px; }
+  .loop-return::after { left: auto; right: -6px; top: -4px; border: 5px solid transparent; border-bottom-color: var(--loop-line); border-top-width: 0; }
+  /* Подпись возврата занимает собственное место в потоке: поверх строки состояния она не ложится. */
+  .loop-return-label { position: static; display: block; margin-top: 8px; padding: 0; transform: none;
+                       background: none; white-space: normal; overflow: visible; }
+  .loop-state { margin-top: 8px; }
+  dialog.inspector { width: 100%; border-left: 0; }
+  .inspector-context { max-height: 38vh; }
 }
 </style>
 </head>
 <body>
 <header class="top">
-  <div>
+  <div class="head-run">
     <h1 id="title">Монитор конвейера</h1>
-    <div class="meta"><span id="run">run: -</span> · <span id="attempt">попытка: -</span> · <span id="records">записей: 0</span> · <span id="updated">обновлено: -</span></div>
+    <div class="meta"><span id="run">run: -</span> · <span id="attempt">попытка: -</span> · <span id="updated">обновлено: -</span></div>
   </div>
-  <div><span id="connection" class="pill">подключение...</span> <span id="status-text" class="sr-only" role="status" aria-live="polite"></span></div>
+  <div class="head-now">
+    <span id="stage" class="head-stage">-</span>
+    <span id="connection" class="pill">подключение...</span>
+    <button type="button" id="details-open" aria-haspopup="dialog" aria-expanded="false">Подробности</button>
+    <span id="status-text" class="sr-only" role="status" aria-live="polite"></span>
+  </div>
 </header>
 <main>
   <div id="notice" class="notice hidden" role="alert"></div>
-  <section class="cards">
-    <article id="card-stage" class="card state-neutral"><h2>Этап</h2><div id="stage" class="value">-</div><div id="stage-detail" class="sub">событий еще нет</div><div id="next-action" class="sub">следующий шаг: неизвестен</div></article>
-    <article id="card-model" class="card state-neutral"><h2>Активные модели</h2><div id="model" class="value">-</div><div id="model-detail" class="sub">модель не наблюдалась</div><div id="models" class="sub"></div></article>
-    <article id="card-usage" class="card state-neutral"><h2>Токены</h2><div id="usage" class="value">неизвестно</div><div id="usage-detail" class="sub">данных об использовании нет</div><div id="usage-cost" class="sub"></div></article>
-    <article id="card-context" class="card state-neutral"><h2>Контекст и лимиты</h2><div id="context" class="value">-</div><div id="context-detail" class="sub">-</div><div id="limits" class="sub">-</div><div id="budget" class="sub">-</div></article>
-    <article id="card-decision" class="card state-neutral"><h2>Решение менеджера</h2><div id="decision" class="value">не принято</div><div id="decision-detail" class="sub">COMPLETE только по явному событию менеджера</div></article>
-  </section>
-  <section class="panel">
-    <h2>Этапы по попыткам</h2>
-    <div id="stages" class="stages"></div>
-    <div id="stages-empty" class="empty">этапов пока нет</div>
-  </section>
-  <section class="panel">
-    <div class="panel-head"><h2>Разговор</h2><span id="conversation-count" class="kind"></span></div>
-    <div class="toolbar">
-      <label>цикл <select id="filter-cycle"><option value="">все</option></select></label>
-      <label>шаг <select id="filter-step"><option value="">все</option></select></label>
-      <label><input type="checkbox" id="show-user" checked> пользователь</label>
-      <label><input type="checkbox" id="show-manager" checked> менеджер</label>
-      <label><input type="checkbox" id="show-claude" checked> Claude</label>
-      <label><input type="checkbox" id="show-codex" checked> Codex</label>
-      <label><input type="checkbox" id="show-subagents"> субагенты</label>
-      <label><input type="checkbox" id="show-activity"> активность инструментов</label>
-      <label><input type="checkbox" id="follow" checked> следить за концом</label>
-      <button type="button" id="expand-all">развернуть все</button>
-      <button type="button" id="collapse-all">свернуть все</button>
-      <button type="button" id="jump-latest">к последнему</button>
+  <section class="office" aria-label="Офис конвейера">
+    <div id="office-stage" class="office-stage">
+      <canvas id="office-canvas" role="img" aria-label="Пиксельный офис: три персонажа конвейера. Их состояния и выбор доступны кнопками ниже."></canvas>
     </div>
-    <div id="conversation" class="conversation" tabindex="0" aria-label="Разговор конвейера"></div>
-    <div id="conversation-empty" class="empty">сообщений пока нет: промпт задачи появится с запуском исполнителя, запрос пользователя регистрирует менеджер</div>
+    <div class="office-bar">
+      <div id="office-status" class="office-status">сцена офиса загружается</div>
+      <div class="office-controls">
+        <label><input type="checkbox" id="office-motion" checked> движение</label>
+        <button type="button" id="office-zoom-out">мельче</button>
+        <button type="button" id="office-zoom-in">крупнее</button>
+        <span id="office-zoom" class="kind">масштаб: вписан</span>
+      </div>
+    </div>
+    <div id="office-actors" class="office-actors">
+      <button type="button" class="office-actor role-user" id="office-actor-1" aria-pressed="false"></button>
+      <button type="button" class="office-actor role-manager" id="office-actor-2" aria-pressed="false"></button>
+      <button type="button" class="office-actor role-claude" id="office-actor-3" aria-pressed="false"></button>
+    </div>
   </section>
-  <section class="panel">
-    <h2>Использование токенов</h2>
-    <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Модель</th><th>Статус</th><th class="num">Вход всего</th><th class="num">Вход без кеша</th><th class="num">Создание кеша</th><th class="num">Чтение кеша</th><th class="num">Из кеша (Codex)</th><th class="num">Выход</th><th class="num">Рассуждения</th><th class="num">Оценка $</th></tr></thead><tbody id="usage-rows"></tbody></table></div>
-    <div id="usage-empty" class="empty">использование токенов не наблюдалось</div>
+  <section class="loop" aria-label="Инженерный цикл">
+    <div class="loop-graph">
+    <div class="loop-track">
+      <button type="button" class="loop-node s-neutral" id="loop-node-build" aria-pressed="false"></button>
+      <span class="loop-link" aria-hidden="true"></span>
+      <button type="button" class="loop-node s-neutral" id="loop-node-tests" aria-pressed="false"></button>
+      <span class="loop-link" aria-hidden="true"></span>
+      <button type="button" class="loop-node s-neutral" id="loop-node-review" aria-pressed="false"></button>
+      <span class="loop-link" aria-hidden="true"></span>
+      <button type="button" class="loop-node s-neutral" id="loop-node-triage" aria-pressed="false"></button>
+      <span class="loop-link" aria-hidden="true"></span>
+      <button type="button" class="loop-node s-neutral" id="loop-node-decision" aria-pressed="false"></button>
+    </div>
+    <div id="loop-return" class="loop-return" aria-hidden="true"></div>
+    <span id="loop-return-label" class="loop-return-label">Исправления</span>
+    </div>
+    <p id="loop-state" class="loop-state">записей о фазах пока нет</p>
+    <div id="loop-chips" class="loop-chips">
+      <button type="button" class="loop-chip" id="loop-chip-verify" aria-pressed="false" hidden></button>
+      <button type="button" class="loop-chip" id="loop-chip-handoff" aria-pressed="false" hidden></button>
+    </div>
   </section>
-  <section class="panel">
-    <div class="panel-head"><h2>Вызовы LLM: обвязка и контекст сессий</h2><span class="kind">одна строка на запуск Claude или Codex; подробности раскрываются</span></div>
-    <div id="invocations" class="invocations"></div>
-    <div id="invocations-empty" class="empty">запусков LLM пока нет</div>
+</main>
+<footer>
+  Сцена и персонажи - Pixel Agents (MIT, Pablo De Lucca) · лицензия и провенанс - в monitor/pixel-office/
+</footer>
+<dialog id="inspector" class="inspector" aria-labelledby="inspector-title">
+  <div class="inspector-head">
+    <h2 id="inspector-title">Подробности</h2>
+    <button type="button" id="inspector-close">закрыть</button>
+  </div>
+  <div id="inspector-context" class="inspector-context" hidden>
+    <div id="office-details" class="office-details"></div>
+    <div id="loop-details" class="loop-details" hidden></div>
+  </div>
+  <div class="inspector-tabs" role="tablist" aria-label="Разделы подробностей">
+    <button type="button" role="tab" class="inspector-tab current" id="tab-talk" aria-controls="section-talk" aria-selected="true">Разговор</button>
+    <button type="button" role="tab" class="inspector-tab" id="tab-sessions" aria-controls="section-sessions" aria-selected="false">Сессии</button>
+    <button type="button" role="tab" class="inspector-tab" id="tab-metrics" aria-controls="section-metrics" aria-selected="false">Метрики</button>
+    <button type="button" role="tab" class="inspector-tab" id="tab-journal" aria-controls="section-journal" aria-selected="false">Журнал</button>
+  </div>
+  <div class="inspector-body">
+  <section id="section-talk" role="tabpanel" aria-labelledby="tab-talk">
+    <div class="panel">
+      <div class="panel-head"><h2>Разговор</h2><span id="conversation-count" class="kind"></span></div>
+      <div class="toolbar">
+        <label>цикл <select id="filter-cycle"><option value="">все</option></select></label>
+        <label>шаг <select id="filter-step"><option value="">все</option></select></label>
+        <label><input type="checkbox" id="show-user" checked> пользователь</label>
+        <label><input type="checkbox" id="show-manager" checked> менеджер</label>
+        <label><input type="checkbox" id="show-claude" checked> Claude</label>
+        <label><input type="checkbox" id="show-codex" checked> Codex</label>
+        <label><input type="checkbox" id="show-subagents"> субагенты</label>
+        <label><input type="checkbox" id="show-activity"> активность инструментов</label>
+        <label><input type="checkbox" id="follow" checked> следить за концом</label>
+        <button type="button" id="expand-all">развернуть все</button>
+        <button type="button" id="collapse-all">свернуть все</button>
+        <button type="button" id="jump-latest">к последнему</button>
+      </div>
+      <div id="conversation" class="conversation" tabindex="0" aria-label="Разговор конвейера"></div>
+      <div id="conversation-empty" class="empty">сообщений пока нет: промпт задачи появится с запуском исполнителя, запрос пользователя регистрирует менеджер</div>
+    </div>
   </section>
-  <details class="diagnostics panel">
-    <summary>Диагностика метаданных: шаги, агенты, инструменты, журнал событий</summary>
+  <section id="section-sessions" role="tabpanel" aria-labelledby="tab-sessions" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>Вызовы LLM: обвязка и контекст сессий</h2><span class="kind">одна строка на запуск Claude или Codex; подробности раскрываются</span></div>
+      <div id="invocations" class="invocations"></div>
+      <div id="invocations-empty" class="empty">запусков LLM пока нет</div>
+    </div>
+  </section>
+  <section id="section-metrics" role="tabpanel" aria-labelledby="tab-metrics" hidden>
+    <section class="cards">
+      <article id="card-stage" class="card state-neutral"><h2>Этап</h2><div id="stage-detail" class="value">событий еще нет</div><div id="next-action" class="sub">следующий шаг: неизвестен</div></article>
+      <article id="card-model" class="card state-neutral"><h2>Активные модели</h2><div id="model" class="value">-</div><div id="model-detail" class="sub">модель не наблюдалась</div><div id="models" class="sub"></div></article>
+      <article id="card-usage" class="card state-neutral"><h2>Токены</h2><div id="usage" class="value">неизвестно</div><div id="usage-detail" class="sub">данных об использовании нет</div><div id="usage-cost" class="sub"></div></article>
+      <article id="card-context" class="card state-neutral"><h2>Контекст и лимиты</h2><div id="context" class="value">-</div><div id="context-detail" class="sub">-</div><div id="limits" class="sub">-</div><div id="budget" class="sub">-</div></article>
+      <article id="card-decision" class="card state-neutral"><h2>Решение менеджера</h2><div id="decision" class="value">не принято</div><div id="decision-detail" class="sub">COMPLETE только по явному событию менеджера</div></article>
+    </section>
+    <div class="panel">
+      <h2>Использование токенов</h2>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Модель</th><th>Статус</th><th class="num">Вход всего</th><th class="num">Вход без кеша</th><th class="num">Создание кеша</th><th class="num">Чтение кеша</th><th class="num">Из кеша (Codex)</th><th class="num">Выход</th><th class="num">Рассуждения</th><th class="num">Оценка $</th></tr></thead><tbody id="usage-rows"></tbody></table></div>
+      <div id="usage-empty" class="empty">использование токенов не наблюдалось</div>
+    </div>
+  </section>
+  <section id="section-journal" role="tabpanel" aria-labelledby="tab-journal" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>Этапы по попыткам</h2><span id="records" class="kind">записей: 0</span></div>
+      <div id="stages" class="stages"></div>
+      <div id="stages-empty" class="empty">этапов пока нет</div>
+    </div>
     <section class="cards">
       <article id="card-time" class="card state-neutral"><h2>Время</h2><div id="elapsed" class="value">-</div><div id="last-age" class="sub">-</div></article>
       <article id="card-journal" class="card state-neutral"><h2>Журнал прогресса</h2><div id="journal" class="value">-</div><div id="journal-detail" class="sub">-</div></article>
       <article id="card-trace" class="card state-neutral"><h2>Трассировка</h2><div id="trace" class="value">-</div><div id="trace-detail" class="sub">-</div></article>
     </section>
-    <h2>Шаги</h2>
-    <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Начало</th><th>Модель CLI</th><th>Последнее состояние</th><th>Вызовы</th></tr></thead><tbody id="steps"></tbody></table></div>
-    <div id="steps-empty" class="empty">шагов пока нет</div>
-    <h2>Агенты и фоновые задачи</h2>
-    <div class="table-wrap"><table><thead><tr><th>Шаг</th><th>Вызов</th><th>Компонент</th><th>Родитель</th><th>Задача</th><th>Состояние</th><th>Обновлено</th></tr></thead><tbody id="agents"></tbody></table></div>
-    <div id="agents-empty" class="empty">вызовов Agent/Task не наблюдалось</div>
-    <h2>Инструменты</h2>
-    <div id="tools" class="chips"></div>
-    <div id="tools-empty" class="empty">вызовов инструментов не наблюдалось</div>
-    <div class="panel-head"><h2>События</h2><label><input type="checkbox" id="follow-events" checked> следить за концом</label></div>
-    <div id="events-scroll" class="scroll">
-      <table><thead><tr><th>Время</th><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Событие</th><th>Статус</th></tr></thead><tbody id="events"></tbody></table>
-    </div>
-    <div id="events-empty" class="empty">журнал пока пуст</div>
-  </details>
-</main>
-<footer>
-  Тот же журнал в консоли: <code id="tail">tail -f progress.log</code>
-  <details>
+    <p class="inspector-note">тот же журнал в консоли: <code id="tail">tail -f progress.log</code></p>
+    <details class="diagnostics panel">
+      <summary>Диагностика метаданных: шаги, агенты, инструменты, журнал событий</summary>
+      <h2>Шаги</h2>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Начало</th><th>Модель CLI</th><th>Последнее состояние</th><th>Вызовы</th></tr></thead><tbody id="steps"></tbody></table></div>
+      <div id="steps-empty" class="empty">шагов пока нет</div>
+      <h2>Агенты и фоновые задачи</h2>
+      <div class="table-wrap"><table><thead><tr><th>Шаг</th><th>Вызов</th><th>Компонент</th><th>Родитель</th><th>Задача</th><th>Состояние</th><th>Обновлено</th></tr></thead><tbody id="agents"></tbody></table></div>
+      <div id="agents-empty" class="empty">вызовов Agent/Task не наблюдалось</div>
+      <h2>Инструменты</h2>
+      <div id="tools" class="chips"></div>
+      <div id="tools-empty" class="empty">вызовов инструментов не наблюдалось</div>
+      <div class="panel-head"><h2>События</h2><label><input type="checkbox" id="follow-events" checked> следить за концом</label></div>
+      <div id="events-scroll" class="scroll">
+        <table><thead><tr><th>Время</th><th>#</th><th>Шаг</th><th>Источник</th><th>Фаза</th><th>Событие</th><th>Статус</th></tr></thead><tbody id="events"></tbody></table>
+      </div>
+      <div id="events-empty" class="empty">журнал пока пуст</div>
+    </details>
+    <div class="reading">
+    <details>
     <summary>Как читать страницу и что записывает менеджер</summary>
-    <pre>Этапы: работает (желтый), ожидает менеджера (сиреневый пунктир), тишина без подтверждения (серый точечный), CLI завершил успешно без приемки (синий), завершен или принят (зеленый), ошибка (красный), не начат (серый).
+    <pre>Цикл: Код - Тесты - Ревью - Разбор - Решение, дуга возврата "Исправления" ведет от решения обратно к коду. Топология нарисована статически и сама по себе ничего не утверждает: работой считается только наблюдаемая запись CLI текущей попытки. Verify и handoff показываются отдельными фишками только при наличии собственных записей этой фазы.
+Сцена и персонажи - Pixel Agents (MIT, Copyright (c) 2026 Pablo De Lucca); спрайты восходят к пакету MetroCity. Движок и ассеты скопированы байт в байт из закрепленной ревизии и собраны заранее: запуск монитора остается запуском Python. Состояния берутся из тех же журналов, что и остальная страница.
+Этапы: работает (желтый), ожидает менеджера (сиреневый пунктир), тишина без подтверждения (серый точечный), CLI завершил успешно без приемки (синий), завершен или принят (зеленый), ошибка (красный), не начат (серый).
 Тишина не означает завершения: состояние шага подтверждают только записи helper и менеджера. Активность считается по обоим потокам: журналу метаданных и трассировке сообщений.
 Успешный выход CLI не является приемкой задачи: приемку записывает только менеджер.
 Токены: итог по завершенным вызовам, промежуточные снимки помечены; неизвестное показано как неизвестное, не как ноль; "не менее" означает, что часть вызовов счетчик не сообщила.
@@ -226,8 +411,12 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
   python3 scripts/run_codex_review.py --workspace WS --prompt review-1.md --output-dir RUN/review-1 --progress-dir DIR
   python3 scripts/run_trace.py import-claude --progress-dir DIR --launcher-dir RUN/build-1 --attempt 1 --step-id build-1
   python3 scripts/run_trace.py budget --progress-dir DIR --tokens N</pre>
-  </details>
-</footer>
+    </details>
+    </div>
+  </section>
+  </div>
+</dialog>
+<script src="/pixel-agents/office.js" integrity="sha256-zAFlciYEgz4PtMjOWMSPol8l2If85Uy9hakp4H+Yy/k="></script>
 <script>
 (function () {
   'use strict';
@@ -236,10 +425,18 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
     trace: { cursor: 0, discard: false, list: [], seen: {}, invalid: 0, journal: null },
     failures: 0, connected: false, serverNow: null, receivedAt: null, timer: null, feed: 'events',
     ui: { cycle: '', step: '', subagents: false, activity: false, expanded: {}, forceExpanded: null,
-          renderedKey: '', atBottom: true, unread: 0, cycleOptions: '', stepOptions: '', opened: {} }
+          renderedKey: '', atBottom: true, unread: 0, cycleOptions: '', stepOptions: '', opened: {},
+          inspectorOpen: false, section: 'talk', opener: null, savedScroll: 0 },
+    office: { view: null, error: null, pending: null, motion: true, zoomStep: 1, selected: null, nodes: {},
+              detailKey: '', detailNodes: null },
+    loop: { selected: null, nodes: {}, detailKey: '' }
   };
   var AGENT_TOOLS = { Agent: true, Task: true };
   var STALE_SECONDS = 120;
+  // How long one request to our own loopback server may take before the page stops believing it. A page of
+  // the API is bounded by 500 records, so on this machine an honest answer is milliseconds away; five poll
+  // intervals leave room for a loaded machine without letting an unanswered request pass as a connection.
+  var FEED_DEADLINE = 5000;
   var CLASS_BY_STATUS = {
     error: 'bad', failed: 'bad', timeout: 'bad', interrupted: 'bad', launch_error: 'bad', escalate: 'bad', cancelled: 'bad',
     unverified: 'warn', blocked: 'warn', stopped: 'warn', verify: 'warn', retry: 'warn', incomplete: 'warn',
@@ -322,13 +519,24 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
     state.timer = setTimeout(poll, delay);
   }
   function fetchPage(feed) {
-    var box = state[feed];
-    return fetch('/api/' + feed + '?cursor=' + box.cursor + '&limit=500&discard=' + (box.discard ? 1 : 0), { cache: 'no-store' })
+    var box = state[feed], control = new AbortController(), expired = false;
+    // Our own deadline over the whole observation, headers and body alike. A local request that never
+    // answers otherwise neither succeeds nor fails: the header would keep showing the previous poll as
+    // current evidence of a connection, and the next poll, scheduled only when this one settles, would
+    // never be queued. Expiry rejects, so the loss becomes visible and the usual backoff recovers.
+    var deadline = setTimeout(function () { expired = true; control.abort(); }, FEED_DEADLINE);
+    var release = function (value) { clearTimeout(deadline); return value; };
+    var releaseFailure = function (error) { clearTimeout(deadline); throw error; };
+    return fetch('/api/' + feed + '?cursor=' + box.cursor + '&limit=500&discard=' + (box.discard ? 1 : 0),
+                 { cache: 'no-store', signal: control.signal })
       .then(function (response) {
         if (!response.ok) { throw new Error('HTTP ' + response.status); }
         return response.json();
       })
       .then(function (page) {
+        // An answer to an observation we already gave up on describes a moment we stopped trusting: it is
+        // history, not a confirmation, so it moves neither the cursor, nor the clock, nor the shown records.
+        if (expired) { throw new Error('ответ пришел после истечения ожидания'); }
         state.receivedAt = Date.now();
         state.serverNow = Date.parse(page.now) || Date.now();
         if (page.reset) {
@@ -351,7 +559,8 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
         box.cursor = page.cursor;
         box.discard = !!page.discard;
         return !!page.more;
-      });
+      })
+      .then(release, releaseFailure);
   }
   function poll() {
     var more = false;
@@ -1273,6 +1482,632 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
     $('invocations-empty').className = count ? 'empty hidden' : 'empty';
   }
 
+  // ── Офис конвейера ────────────────────────────────────────────────────────────
+  // Сцену рисует оригинальный движок Pixel Agents, а состояния приходят из тех же
+  // summarize() и summarizeTrace(), что и вся остальная страница: ни своего опроса,
+  // ни своего разбора журнала здесь нет. Канвас - только представление; тексты,
+  // авторство и происхождение записей остаются за страницей.
+  var OFFICE_ACTORS = [
+    { id: 1, name: 'Пользователь', role: 'user', duty: 'человек: автор запроса' },
+    { id: 2, name: 'Codex', role: 'manager', duty: 'менеджер конвейера' },
+    { id: 3, name: 'Claude', role: 'claude', duty: 'исполнитель Claude' }
+  ];
+  var REVIEW_LABEL = 'независимое ревью · отдельная сессия';
+  var OFFICE_ZOOM_NAMES = { 1: 'вписан', 2: 'крупнее, ×2', 3: 'крупнее, ×3' };
+
+  function officeSteps(summary, trace, provider) {
+    // Запуски одного провайдера в порядке журнала. Провайдер берется из трассировки, а без нее -
+    // из записанной лаунчером фазы: ревью запускает ревьюера, остальные шаги - исполнителя.
+    // Шаг без захвата не приписывается исполнителю только потому, что поток недоступен.
+    return summary.stepOrder.map(function (k) { return summary.steps[k]; }).filter(function (step) {
+      if (!step.run) { return false; }
+      var captured = trace.steps[step.key];
+      var seen = captured && captured.provider ? captured.provider : step.phase === 'review' ? 'codex' : 'claude';
+      return seen === provider;
+    });
+  }
+  function officeObserved(step, captured) {
+    // Наблюдением считаются только записи самого CLI: run/started и cli_started лаунчер пишет
+    // до запуска процесса, поэтому запуск работой не является.
+    if (step && (step.lastNative || step.init)) { return true; }
+    if (!captured) { return false; }
+    return captured.modelMessages > 0 || !!captured.sessionId || !!captured.threadId
+      || !!captured.observedModel || !!captured.lastRetry || !!captured.exited;
+  }
+
+  function officeEntry(step, captured, moment) {
+    // Состояние для сцены: те же записи и тот же редьюсер, что и у остальной страницы, но работой
+    // здесь считается только наблюдаемая работа. Записанный запуск без единой записи CLI и уже
+    // завершенный ход анимацию не включают, а после тишины перестают быть подтвержденными.
+    var entry = stepState(step, captured, moment);
+    if (!entry.active) { return entry; }
+    var age = (moment - Date.parse(entry.time)) / 1000, stale = age > STALE_SECONDS;
+    if (step.cliResult && !step.exit && !step.result) {
+      var done = step.cliResult.status === 'success' ? 'ход завершен, процесс закрывается' : 'ход завершился ошибкой, процесс закрывается';
+      return stale
+        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'выход CLI не подтвержден ' + span(age),
+            label: done + '; выхода процесса нет ' + span(age) + ': состояние не подтверждено' }
+        : { kind: step.cliResult.status === 'success' ? 'ok' : 'bad', active: false, time: entry.time,
+            shortText: officeShort(done), label: done };
+    }
+    // Импортированная запись описывает прошлый запуск, поэтому наблюдением настоящего она не является:
+    // такой шаг остается историей и в подписи, и в состоянии, а не только в снятом флаге работы.
+    if (captured && captured.imported) {
+      return stale
+        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'история, тишина',
+            label: 'записи CLI импортированы, тишина ' + span(age) + ': текущая работа не наблюдается' }
+        : { kind: 'wait', active: false, time: entry.time, shortText: 'история: ' + step.id,
+            label: 'записи CLI импортированы: они описывают прошлый запуск, текущая работа не наблюдается' };
+    }
+    if (!officeObserved(step, captured)) {
+      return stale
+        ? { kind: 'stale', active: false, time: entry.time, age: age, shortText: 'запуск не подтвержден ' + span(age),
+            label: 'запуск записан ' + span(age) + ' назад, записей CLI нет: состояние не подтверждено' }
+        : { kind: 'wait', active: false, time: entry.time, shortText: 'запускается: ' + step.id,
+            label: 'запуск записан, наблюдений CLI еще нет' };
+    }
+    return entry;
+  }
+
+  function officeTool(summary, step) {
+    // Инструмент последнего вызова этого шага, который еще не вернул результат.
+    var current = null;
+    summary.callOrder.forEach(function (callKey) {
+      var call = summary.calls[callKey];
+      if (call.attempt !== step.attempt || call.step !== step.id) { return; }
+      if (call.result || call.taskStatus === 'completed' || call.taskStatus === 'failed') { return; }
+      if (!current || call.updated >= current.updated) { current = call; }
+    });
+    return current ? current.tool : null;
+  }
+  function officeShort(text, limit) {
+    var value = String(text == null ? '' : text);
+    return value.length > (limit || 34) ? value.slice(0, (limit || 34) - 1) + '…' : value;
+  }
+  function officeSession(step, captured) {
+    var lines = [];
+    lines.push('запрошено: ' + ((step && step.run && step.run.model) || (captured && captured.requestedModel) || 'модель не задана')
+      + ' / ' + ((step && step.run && step.run.effort) || (captured && captured.requestedEffort) || '?') + ' (профиль запуска)');
+    var observed = step && step.init ? step.init.model : captured ? captured.observedModel : null;
+    lines.push('наблюдается: ' + (observed || 'модель в потоке не сообщена'));
+    if (captured) {
+      lines.push((captured.sessionId ? 'сессия Claude ' + captured.sessionId : captured.threadId ? 'поток Codex ' + captured.threadId
+        : 'идентификатор сессии не наблюдался') + (captured.cliVersion ? ', CLI ' + captured.cliVersion : ''));
+      var selected = captured.harness.selected;
+      if (selected) {
+        lines.push('обвязка: ' + plural((selected.skills || []).length, 'скилл', 'скилла', 'скиллов')
+          + ', агентов ' + ((selected.agents || []).length || 'нет') + ', MCP ' + ((selected.mcp_servers || []).length || 'нет')
+          + '; подробности - в разделе "Вызовы LLM"');
+      }
+      if (captured.imported) { lines.push('запись импортирована: текущую сессию она не описывает'); }
+    } else if (step) {
+      lines.push('поток не захвачен: сообщения и usage этого шага недоступны');
+    }
+    return lines;
+  }
+
+  function officeUser(trace) {
+    var actor = { kind: 'neutral', short: 'запросов нет', active: false, tool: null,
+                  detail: 'запрос пользователя регистрирует менеджер; записей пока нет',
+                  lines: ['роль: человек. Запись создает менеджер (source=manager), авторство остается пользовательским.'] };
+    var prompts = trace.messages.filter(function (item) { return item.record.role === 'user'; });
+    if (!prompts.length) { return actor; }
+    var last = prompts[prompts.length - 1].record;
+    actor.kind = 'ok';
+    actor.short = plural(prompts.length, 'запрос', 'запроса', 'запросов');
+    actor.detail = 'последний запрос ' + clock(when(last)) + (last.title ? ': ' + last.title : '');
+    actor.lines.push('человек не является наблюдаемым процессом: работа за него не показывается.');
+    return actor;
+  }
+
+  function officeManager(summary, trace, moment) {
+    var actor = { kind: 'neutral', short: 'записей менеджера нет', active: false, tool: null,
+                  detail: 'активность родительского менеджера не наблюдается: состояние неизвестно', lines: [] };
+    var reviews = officeSteps(summary, trace, 'codex');
+    var running = reviews.filter(function (step) { return !step.exit && !step.result; });
+    if (running.length) {
+      var step = running[running.length - 1], captured = trace.steps[step.key];
+      var entry = officeEntry(step, captured, moment);
+      var live = !(captured && captured.imported);
+      actor.active = live && entry.kind === 'pending' && entry.active === true;
+      actor.kind = entry.kind;
+      actor.short = REVIEW_LABEL;
+      actor.detail = REVIEW_LABEL + ': ' + entry.label + ' (' + step.id + ', попытка ' + step.attempt + ')';
+      actor.lines.push('за столом показана отдельная сессия ревьюера, а не работа менеджера: провенанс записей сохранен.');
+      actor.lines = actor.lines.concat(officeSession(step, captured));
+      return actor;
+    }
+    if (summary.decision) {
+      actor.kind = statusClass(summary.decision.status);
+      actor.short = 'решение: ' + (DECISIONS[summary.decision.status] || summary.decision.status);
+      actor.detail = 'решение ' + (DECISIONS[summary.decision.status] || summary.decision.status) + ', попытка '
+        + summary.decision.attempt + ', ' + clock(summary.decision.time);
+    } else if (summary.manager.length) {
+      var last = summary.manager[summary.manager.length - 1];
+      actor.kind = statusClass(last.status);
+      actor.short = officeShort(last.label);
+      actor.detail = 'последняя запись менеджера: ' + last.label + ', ' + clock(last.time);
+    }
+    actor.lines.push('записи менеджера - это события, а не наблюдаемая работа: между ними состояние неизвестно.');
+    if (reviews.length && !running.length) {
+      var finished = reviews[reviews.length - 1];
+      actor.lines.push(REVIEW_LABEL + ': ' + officeEntry(finished, trace.steps[finished.key], moment).label
+        + ' (' + finished.id + ', попытка ' + finished.attempt + ')');
+    }
+    return actor;
+  }
+
+  function officeWorker(summary, trace, moment) {
+    var actor = { kind: 'neutral', short: 'вызовов не было', active: false, tool: null,
+                  detail: 'запуск исполнителя не зафиксирован', lines: [] };
+    var steps = officeSteps(summary, trace, 'claude');
+    if (!steps.length) {
+      var historical = trace.stepOrder.map(function (k) { return trace.steps[k]; })
+        .filter(function (captured) { return captured.provider === 'claude'; });
+      if (historical.length && historical.every(function (captured) { return captured.imported; })) {
+        actor.short = 'импорт истории';
+        actor.detail = 'только импортированные записи: текущую сессию они не описывают';
+        actor.lines.push('историческая запись не является наблюдением настоящего.');
+      }
+      return actor;
+    }
+    var running = steps.filter(function (step) { return !step.exit && !step.result; });
+    var step = running.length ? running[running.length - 1] : steps[steps.length - 1];
+    var captured = trace.steps[step.key];
+    var entry = officeEntry(step, captured, moment);
+    // Работой считается только наблюдаемое "идет прямо сейчас": запись о запуске, тишина, ожидание
+    // API, импорт и завершенный ход работой не являются.
+    actor.active = !!running.length && !(captured && captured.imported) && entry.kind === 'pending' && entry.active === true;
+    actor.kind = entry.kind;
+    actor.short = actor.active ? 'работает: ' + step.id
+      : entry.shortText ? entry.shortText
+      : entry.kind === 'wait' ? 'ждет ответа API'
+      : entry.kind === 'stale' ? 'тишина ' + span(entry.age)
+      : officeShort(entry.label);
+    actor.detail = entry.label + ' (' + step.id + ', попытка ' + step.attempt + ')';
+    actor.tool = actor.active ? officeTool(summary, step) : null;
+    if (actor.tool) { actor.lines.push('наблюдаемый инструмент: ' + actor.tool); }
+    actor.lines = actor.lines.concat(officeSession(step, captured));
+    if (entry.kind === 'ok' && step.exit) { actor.lines.push('успешный выход CLI не является приемкой задачи: ее записывает менеджер.'); }
+    return actor;
+  }
+
+  function officeActors(summary, trace, moment) {
+    var byRole = { user: officeUser(trace), manager: officeManager(summary, trace, moment), claude: officeWorker(summary, trace, moment) };
+    var lost = !state.connected && state.failures > 0;
+    return OFFICE_ACTORS.map(function (base) {
+      var derived = byRole[base.role];
+      var actor = { id: base.id, name: base.name, role: base.role, duty: base.duty, kind: derived.kind, short: derived.short,
+                    detail: derived.detail, active: derived.active, tool: derived.tool, lines: derived.lines.slice() };
+      if (lost) {
+        // Связи нет: последнее известное состояние остается видимым, но подтвержденным не считается.
+        actor.active = false;
+        actor.tool = null;
+        actor.kind = 'bad';
+        actor.short = 'нет связи';
+        actor.detail = 'нет связи с сервером; последнее известное: ' + actor.detail;
+        actor.lines.unshift('данные не обновляются: состояние не подтверждено.');
+      }
+      return actor;
+    });
+  }
+
+  function officeRecords(actor, trace) {
+    var roles = actor.role === 'manager' ? { manager: true, codex: true } : actor.role === 'claude' ? { claude: true } : { user: true };
+    return trace.messages.filter(function (item) { return roles[item.record.role]; }).slice(-6);
+  }
+
+  function officeRecordEntry(item, trace) {
+    var record = item.record, entry = node('article', 'entry role-' + record.role);
+    var head = node('div', 'entry-head');
+    var who = ROLE_NAMES[record.role] || record.role;
+    if (record.thread) { who += ' (субагент)'; }
+    head.appendChild(node('span', 'who who-' + record.role, who));
+    head.appendChild(node('span', 'kind', (KIND_NAMES[record.message_kind] || record.message_kind) + (record.title ? ': ' + record.title : '')));
+    if (record.model) { head.appendChild(node('span', 'mono', record.model)); }
+    if (isFinal(record, trace)) { head.appendChild(node('span', 'flag final', 'итоговый ответ')); }
+    if (item.versions > 1) { head.appendChild(node('span', 'flag', 'обновлялось: ' + item.versions + ' версии, показана последняя')); }
+    if (record.truncated) { head.appendChild(node('span', 'flag cut', 'усечено при записи')); }
+    if (record.source === 'import') { head.appendChild(node('span', 'flag', 'импорт старого журнала')); }
+    if (record.thread) { head.appendChild(node('span', 'flag mono', 'вызов ' + record.thread)); }
+    if (record.artifact_id && trace.artifacts[record.artifact_id]) {
+      var link = artifactLink(record.artifact_id, 'оригинал', false);
+      if (link) { head.appendChild(link); }
+    }
+    var moment = record.source === 'import'
+      ? (record.observed ? 'после запуска ' + clock(record.observed) + ' (импорт)' : 'записано ' + clock(record.time))
+      : clock(record.time);
+    head.appendChild(node('span', 'meta', 'попытка ' + record.attempt + ' · ' + record.step_id + ' · ' + moment));
+    entry.appendChild(head);
+    var body = String(record.text == null ? '' : record.text);
+    var cut = body.length > 220;
+    entry.appendChild(node('pre', 'office-excerpt', cut ? body.slice(0, 220) + '…' : body));
+    if (cut) { entry.appendChild(node('div', 'office-line muted', 'показано начало записи; полный текст, фильтры и история - в разделе "Разговор"')); }
+    return entry;
+  }
+
+  function renderOfficeDetails(actors, trace) {
+    var box = $('office-details'), selected = state.office.selected;
+    var actor = null;
+    actors.forEach(function (item) { if (item.id === selected) { actor = item; } });
+    var records = actor ? officeRecords(actor, trace) : [];
+    var identity = records.map(function (item) { return item.record.record_id || item.id; }).join(',');
+    // Ключ намеренно не включает сами тексты: отсчет тишины меняет их каждую секунду, а пересборка
+    // блока унесла бы фокус со ссылки на артефакт. Меняющийся текст обновляется на месте.
+    var key = (actor ? actor.id + '|' + actor.lines.length : '') + '|' + identity;
+    if (key !== state.office.detailKey) {
+      state.office.detailKey = key;
+      state.office.detailNodes = null;
+      box.textContent = '';
+      if (!actor) {
+        box.appendChild(node('div', 'empty', 'выберите персонажа: клик по фигуре в офисе или кнопка выше; откроются его записи с сохранением авторства и происхождения'));
+        return;
+      }
+      var nodes = { detail: node('div', 'office-line'), lines: [] };
+      box.appendChild(node('h3', null, actor.name + ' · ' + actor.duty));
+      box.appendChild(nodes.detail);
+      actor.lines.forEach(function () {
+        var line = node('div', 'office-line muted');
+        nodes.lines.push(line);
+        box.appendChild(line);
+      });
+      box.appendChild(node('h3', null, records.length ? 'последние записи' : 'записи'));
+      if (records.length) {
+        records.forEach(function (item) { box.appendChild(officeRecordEntry(item, trace)); });
+      } else {
+        box.appendChild(node('div', 'empty', 'записей этого участника пока нет'));
+      }
+      state.office.detailNodes = nodes;
+    }
+    if (actor && state.office.detailNodes) {
+      state.office.detailNodes.detail.textContent = actor.detail;
+      actor.lines.forEach(function (line, index) {
+        var target = state.office.detailNodes.lines[index];
+        if (target) { target.textContent = line; }
+      });
+    }
+  }
+
+  function officeStatus() {
+    var office = state.office, line = $('office-status');
+    if (office.error) {
+      line.className = 'notice bad';
+      line.textContent = 'Сцена офиса не загрузилась: ' + office.error
+        + '. Состояния участников ниже остаются доступны текстом; соберите monitor/pixel-office (npm ci --ignore-scripts && npm run build).';
+      return;
+    }
+    if (!office.view) {
+      line.className = 'empty';
+      line.textContent = 'сцена офиса загружается';
+      return;
+    }
+    line.className = 'empty';
+    line.textContent = officeMotionOff()
+      ? 'движение выключено' + (officeReduced() ? ' системной настройкой «уменьшить движение»' : ' переключателем') + ': сцена замерла, состояния обновляются'
+      : 'сцена Pixel Agents: движение включено';
+  }
+  function officeReduced() {
+    return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+  function officeMotionOff() { return !state.office.motion || officeReduced(); }
+
+  function renderOffice(summary, trace, moment) {
+    var actors = officeActors(summary, trace, moment);
+    actors.forEach(function (actor) {
+      var nodes = state.office.nodes[actor.id];
+      if (!nodes) { return; }
+      nodes.name.textContent = actor.name + ' · ' + actor.duty;
+      nodes.status.textContent = actor.short + (actor.tool ? ' · ' + actor.tool : '');
+      nodes.detail.textContent = actor.detail;
+      nodes.button.setAttribute('aria-pressed', state.office.selected === actor.id ? 'true' : 'false');
+      nodes.button.className = 'office-actor role-' + actor.role + ' state-' + actor.kind;
+    });
+    var snapshot = { connected: !(!state.connected && state.failures > 0), motion: !officeMotionOff(),
+                     selectedActorId: state.office.selected,
+                     actors: actors.map(function (actor) {
+                       return { id: actor.id, name: actor.name, short: actor.short, active: actor.active, tool: actor.tool };
+                     }) };
+    if (state.office.view) { state.office.view.update(snapshot); } else { state.office.pending = snapshot; }
+    renderOfficeDetails(actors, trace);
+    officeStatus();
+    return actors;
+  }
+
+  // ── Инженерный цикл ───────────────────────────────────────────────────────────
+  // Пять узлов основного пути и дуга возврата. Топология статична и сама по себе ничего
+  // не утверждает: работа берется из officeEntry/officeObserved - тех же исправленных
+  // наблюдений, что и сцена. Наличие фазы в журнале работой не считается.
+  var LOOP_NODES = [
+    { phase: 'build', name: 'Код' }, { phase: 'tests', name: 'Тесты' }, { phase: 'review', name: 'Ревью' },
+    { phase: 'triage', name: 'Разбор' }, { phase: 'decision', name: 'Решение' }
+  ];
+  var LOOP_CHIPS = [{ phase: 'verify', name: 'Сбор оснований' }, { phase: 'handoff', name: 'Передача' }];
+  var LOOP_KIND_NAMES = { neutral: 'записей нет', pending: 'идет', wait: 'ожидает', ok: 'CLI завершил',
+                          done: 'записано', warn: 'внимание', bad: 'ошибка', stale: 'не подтверждено' };
+  var DECISION_NEXT = { retry: 'ожидается новый запуск исполнителя', verify: 'менеджер собирает основания без правок кода',
+                        escalate: 'нужен ответ пользователя, конвейер не продолжается сам',
+                        complete: 'конвейер завершен решением менеджера' };
+
+  function loopAttempt(summary) {
+    // Наблюдаемая попытка - максимум по записанным запускам и записям менеджера. Строка ожидания,
+    // которую stageStates дорисовывает после RETRY, запуском не является и сюда не попадает.
+    var attempt = 0;
+    summary.stepOrder.forEach(function (k) {
+      var step = summary.steps[k];
+      if (step.run && PHASES.indexOf(step.phase) >= 0) { attempt = Math.max(attempt, step.attempt); }
+    });
+    summary.manager.forEach(function (event) { attempt = Math.max(attempt, event.attempt); });
+    return attempt;
+  }
+
+  function loopShort(entry) {
+    // Короткий токен узла: он должен различать состояния, а не пересказывать полную подпись,
+    // которая целиком лежит в строке цикла, в aria-label узла и в инспекторе.
+    if (entry.working) { return entry.parallel ? plural(entry.count, 'вызов', 'вызова', 'вызовов') : 'идет'; }
+    var inner = entry.entry || {};
+    if (inner.shortText) { return officeShort(inner.shortText, 24); }
+    if (entry.kind === 'stale' && inner.age != null) { return 'тишина ' + span(inner.age); }
+    if (entry.kind === 'wait') { return 'ждет ответа API'; }
+    return LOOP_KIND_NAMES[entry.kind] || entry.kind;
+  }
+
+  function loopStates(summary, trace, moment) {
+    var attempt = loopAttempt(summary), lost = !state.connected && state.failures > 0, phases = {}, byPhase = {};
+    summary.stepOrder.forEach(function (k) {
+      var step = summary.steps[k];
+      if (!step.run || step.attempt !== attempt || PHASES.indexOf(step.phase) < 0) { return; }
+      (byPhase[step.phase] = byPhase[step.phase] || []).push(step);
+    });
+    Object.keys(byPhase).forEach(function (phase) {
+      var seen = byPhase[phase].map(function (step) {
+        var captured = trace.steps[step.key], entry = officeEntry(step, captured, moment);
+        // Все четыре условия обязательны вместе: связь есть, запись не импорт, вызов наблюдается
+        // и он еще идет. Записанный запуск и завершенный ход этот набор не проходят.
+        return { step: step, entry: entry,
+                 working: !lost && !(captured && captured.imported) && entry.kind === 'pending' && entry.active === true };
+      });
+      // Параллельные вызовы складываются: более свежий завершенный не прячет идущий.
+      var working = seen.filter(function (item) { return item.working; });
+      var pool = working.length ? working : seen;
+      var chosen = pool.reduce(function (best, item) { return item.entry.time > best.entry.time ? item : best; });
+      phases[phase] = {
+        phase: phase, kind: working.length ? 'pending' : chosen.entry.kind, working: working.length > 0,
+        parallel: working.length > 1, count: working.length || seen.length, time: chosen.entry.time,
+        step: chosen.step.id, entry: chosen.entry, steps: seen,
+        label: working.length > 1
+          ? plural(working.length, 'наблюдаемый вызов', 'наблюдаемых вызова', 'наблюдаемых вызовов') + ': '
+            + working.map(function (item) { return item.step.id; }).join(', ')
+          : chosen.entry.label + (chosen.entry.label.indexOf(chosen.step.id) >= 0 ? '' : ' (' + chosen.step.id + ')')
+      };
+      phases[phase].short = loopShort(phases[phase]);
+    });
+    // Запись менеджера - событие фазы, а не наблюдаемая работа: идущий вызов она не вытесняет.
+    summary.manager.forEach(function (event) {
+      if (event.attempt !== attempt || PHASES.indexOf(event.phase) < 0) { return; }
+      var current = phases[event.phase];
+      if (current && (current.working || current.time > event.time)) { return; }
+      var kind = statusClass(event.status), label = event.label.replace(/^[a-z]+: /, '').replace(/ \[.*\]$/, '');
+      if (event.event === 'phase' && event.status === 'passed') { kind = 'done'; }
+      if (event.event === 'finding') { kind = event.status === 'refuted' ? 'done' : 'warn'; }
+      if (event.event === 'decision') { kind = event.status === 'complete' ? 'done' : event.status === 'escalate' ? 'bad' : 'warn'; }
+      phases[event.phase] = { phase: event.phase, kind: kind, working: false, parallel: false, count: 1, manager: event,
+                              time: event.time, step: event.step_id, steps: [],
+                              label: 'запись менеджера: ' + label, short: officeShort(label, 22) };
+    });
+    // Связи нет: последнее известное состояние остается видимым, но перестает быть утверждением
+    // о настоящем времени - ровно как у персонажей сцены.
+    if (lost) {
+      PHASES.forEach(function (phase) {
+        if (!phases[phase]) { return; }
+        phases[phase].label = 'нет связи с сервером; последнее известное: ' + phases[phase].label;
+        phases[phase].short = 'нет связи';
+      });
+    }
+    var decision = summary.decision && summary.decision.attempt === attempt ? summary.decision : null;
+    // Решение читается одним словом: у него есть собственный словарь, а не усеченная подпись события.
+    if (decision && phases.decision && !phases.decision.working) {
+      phases.decision.short = DECISIONS[decision.status] || decision.status;
+    }
+    // Дуга возврата - записанное событие, а не номер попытки: активна она по RETRY текущей попытки,
+    // пройденной становится по RETRY более ранней. Без такой записи остается статичная топология.
+    var retries = summary.manager.filter(function (event) { return event.event === 'decision' && event.status === 'retry'; });
+    var arc = { kind: 'idle', label: 'Исправления' };
+    if (decision && decision.status === 'retry') {
+      arc = { kind: 'active', label: 'Исправления: RETRY записан, ожидает нового запуска' };
+    } else if (retries.some(function (event) { return event.attempt < attempt; })) {
+      arc = { kind: 'traversed', label: 'Исправления · пройдена: попытка ' + attempt + ' после RETRY' };
+    }
+    // Наблюдаемая работа берется по всем фазам, включая условные verify и handoff: записанное
+    // решение по задаче и идущий вспомогательный вызов - разные факты, и второй первым не закрывается.
+    var working = LOOP_NODES.concat(LOOP_CHIPS).filter(function (base) { return phases[base.phase] && phases[base.phase].working; });
+    var known = PHASES.map(function (phase) { return phases[phase]; }).filter(Boolean);
+    var prefix = attempt ? 'попытка ' + attempt + ': ' : '';
+    var line;
+    if (lost) {
+      line = 'нет связи с сервером: показанные состояния не подтверждены';
+    } else if (working.length) {
+      line = prefix + 'идет ' + working.map(function (base) { return base.name + ' - ' + phases[base.phase].label; }).join('; ')
+        + (decision ? '; записано решение ' + (DECISIONS[decision.status] || decision.status) : '');
+    } else if (decision) {
+      line = prefix + 'решение ' + (DECISIONS[decision.status] || decision.status) + ': ' + (DECISION_NEXT[decision.status] || 'см. раздел "Журнал"');
+    } else if (known.length) {
+      var last = known.reduce(function (best, entry) { return entry.time > best.time ? entry : best; });
+      var name = (LOOP_NODES.concat(LOOP_CHIPS).filter(function (base) { return base.phase === last.phase; })[0] || {}).name || last.phase;
+      line = prefix + 'наблюдаемой работы нет; последняя запись: ' + name + ' - ' + last.label;
+    } else {
+      line = 'записей о фазах пока нет';
+    }
+    return { attempt: attempt, phases: phases, arc: arc, line: line, lost: lost };
+  }
+
+  function loopRecords(loop, phase, trace) {
+    var entry = loop.phases[phase];
+    if (!entry) { return []; }
+    var steps = {};
+    entry.steps.forEach(function (item) { steps[item.step.id] = true; });
+    if (entry.manager) { steps[entry.manager.step_id] = true; }
+    return trace.messages.filter(function (item) {
+      return item.record.attempt === loop.attempt && steps[item.record.step_id];
+    }).slice(-6);
+  }
+
+  function renderLoopDetails(loop, trace) {
+    var phase = state.loop.selected, box = $('loop-details');
+    box.hidden = !phase;
+    if (!phase) { state.loop.detailKey = ''; return; }
+    var entry = loop.phases[phase];
+    var base = LOOP_NODES.concat(LOOP_CHIPS).filter(function (item) { return item.phase === phase; })[0];
+    var records = loopRecords(loop, phase, trace);
+    var key = phase + '|' + loop.attempt + '|' + (entry ? entry.label : '') + '|'
+      + records.map(function (item) { return item.record.record_id || item.id; }).join(',');
+    if (key === state.loop.detailKey) { return; }
+    state.loop.detailKey = key;
+    box.textContent = '';
+    box.appendChild(node('h3', null, base.name + ' · попытка ' + (loop.attempt || '?')));
+    box.appendChild(node('div', 'office-line', entry ? entry.label : 'записей этой фазы в наблюдаемой попытке нет'));
+    if (entry) {
+      entry.steps.forEach(function (item) {
+        box.appendChild(node('div', 'office-line muted', item.step.id + ': ' + item.entry.label
+          + (item.working ? ' (наблюдается сейчас)' : ' (работой не считается)')));
+      });
+      if (entry.manager) {
+        box.appendChild(node('div', 'office-line muted', 'запись менеджера ' + clock(entry.manager.time)
+          + '; статус ' + entry.manager.status + '. Запись фазы не является наблюдаемой работой.'));
+      }
+    }
+    box.appendChild(node('h3', null, records.length ? 'последние записи фазы' : 'записи фазы'));
+    if (records.length) {
+      records.forEach(function (item) { box.appendChild(officeRecordEntry(item, trace)); });
+    } else {
+      box.appendChild(node('div', 'empty', 'сообщений этой фазы пока нет; полный разговор и история - в разделах ниже'));
+    }
+  }
+
+  function renderLoop(summary, trace, moment) {
+    var loop = loopStates(summary, trace, moment), still = officeMotionOff();
+    LOOP_NODES.forEach(function (base) {
+      var nodes = state.loop.nodes[base.phase];
+      if (!nodes) { return; }
+      var entry = loop.phases[base.phase], kind = entry ? entry.kind : 'neutral';
+      nodes.state.textContent = entry ? entry.short : 'не начат';
+      nodes.button.className = 'loop-node s-' + kind + (entry && entry.working && !still ? ' pulse' : '');
+      nodes.button.setAttribute('aria-pressed', state.loop.selected === base.phase ? 'true' : 'false');
+      nodes.button.setAttribute('aria-label', base.name + ', попытка ' + (loop.attempt || '?') + ': '
+        + (entry ? entry.label : 'записей нет'));
+    });
+    LOOP_CHIPS.forEach(function (base) {
+      var nodes = state.loop.nodes[base.phase];
+      if (!nodes) { return; }
+      // Фишка появляется только при собственных записях фазы: запрошенный VERIFY и решение
+      // COMPLETE сами по себе не доказывают ни сбора оснований, ни передачи.
+      var entry = loop.phases[base.phase];
+      nodes.button.hidden = !entry;
+      if (!entry) { return; }
+      nodes.state.textContent = entry.short;
+      nodes.button.className = 'loop-chip s-' + entry.kind + (entry.working && !still ? ' pulse' : '');
+      nodes.button.setAttribute('aria-pressed', state.loop.selected === base.phase ? 'true' : 'false');
+      nodes.button.setAttribute('aria-label', base.name + ', попытка ' + (loop.attempt || '?') + ': ' + entry.label);
+    });
+    $('loop-return').className = 'loop-return ' + loop.arc.kind;
+    text('loop-return-label', loop.arc.label);
+    text('loop-state', loop.line);
+    renderLoopDetails(loop, trace);
+    return loop;
+  }
+
+  // ── Инспектор ─────────────────────────────────────────────────────────────────
+  var SECTIONS = ['talk', 'sessions', 'metrics', 'journal'];
+
+  function syncReading() {
+    // Скрытый раздел не имеет высоты, поэтому позиция чтения восстанавливается при показе,
+    // а не пересчитывается из нулевого макета опросом.
+    var box = $('conversation');
+    if ($('follow').checked && state.ui.atBottom) { box.scrollTop = box.scrollHeight; }
+    else { box.scrollTop = state.ui.savedScroll || 0; }
+  }
+  function stashReading() {
+    // Позиция снимается только пока разговор виден: у скрытого раздела высота нулевая, и запись
+    // такого нуля стерла бы место, на котором остановился читатель.
+    if (state.ui.inspectorOpen && state.ui.section === 'talk') { state.ui.savedScroll = $('conversation').scrollTop; }
+  }
+  function setSection(name) {
+    // Уход с раздела разговора - последний момент, когда его геометрия еще настоящая. Повторный
+    // выбор уже открытого раздела ничего не восстанавливает: читателя нельзя двигать без причины.
+    var changed = name !== state.ui.section;
+    if (changed) { stashReading(); }
+    state.ui.section = name;
+    SECTIONS.forEach(function (id) {
+      $('section-' + id).hidden = id !== name;
+      $('tab-' + id).setAttribute('aria-selected', id === name ? 'true' : 'false');
+      $('tab-' + id).className = 'inspector-tab' + (id === name ? ' current' : '');
+    });
+    if (name === 'talk' && changed) { syncReading(); }
+  }
+  function openInspector(opener) {
+    state.ui.opener = opener || $('details-open');
+    if (!state.ui.inspectorOpen) {
+      state.ui.inspectorOpen = true;
+      $('inspector').showModal();
+      $('details-open').setAttribute('aria-expanded', 'true');
+    }
+    if (state.ui.section === 'talk') { syncReading(); }
+  }
+  function closeInspector() {
+    stashReading();
+    if (state.ui.inspectorOpen) { $('inspector').close(); }
+  }
+  function renderContext() {
+    var actor = state.office.selected != null, phase = !!state.loop.selected;
+    $('inspector-context').hidden = !(actor || phase);
+    $('office-details').hidden = !actor;
+    text('inspector-title', actor || phase ? 'Подробности: выбранный контекст' : 'Подробности');
+  }
+
+  function bindLoopControl(button, base, prefix) {
+    var name = node('span', prefix + '-name', base.name), status = node('span', prefix + '-state', 'не начат');
+    button.appendChild(name);
+    button.appendChild(status);
+    state.loop.nodes[base.phase] = { button: button, name: name, state: status };
+    button.addEventListener('click', function () { selectLoopPhase(base.phase, button); });
+  }
+
+  function selectOfficeActor(id) {
+    state.office.selected = state.office.selected === id ? null : id;
+    if (state.office.selected != null) { state.loop.selected = null; }
+    openInspector($('office-actor-' + id));
+    render();
+  }
+  function selectLoopPhase(phase, opener) {
+    state.loop.selected = state.loop.selected === phase ? null : phase;
+    if (state.loop.selected) { state.office.selected = null; }
+    openInspector(opener);
+    render();
+  }
+
+  function mountOffice() {
+    var mount = typeof mountPixelOffice === 'function' ? mountPixelOffice : null;
+    if (!mount) {
+      state.office.error = 'скрипт сцены не выполнен (нет /pixel-agents/office.js или его не пропустила политика CSP)';
+      officeStatus();
+      return;
+    }
+    try {
+      mount($('office-canvas'), { onSelect: selectOfficeActor }).then(function (view) {
+        state.office.view = view;
+        state.office.error = null;
+        view.setZoomStep(state.office.zoomStep);
+        if (state.office.pending) { view.update(state.office.pending); }
+        officeStatus();
+      }, function (error) {
+        state.office.error = String((error && error.message) || error);
+        officeStatus();
+      });
+    } catch (error) {
+      state.office.error = String((error && error.message) || error);
+      officeStatus();
+    }
+  }
+
   function render() {
     var summary = summarize(), trace = summarizeTrace(), current = summary.current, moment = now();
     var connection = $('connection');
@@ -1293,7 +2128,9 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
       notice.className = 'notice hidden';
     }
     var runId = summary.runId || trace.runId, attempts = Math.max(summary.attempt, trace.attempt);
-    text('title', trace.userTitle || trace.title || (runId ? 'Задача ' + runId : 'Монитор конвейера'));
+    // Заголовок - опознание задачи, а не пересказ запроса: полный текст с авторством остается
+    // сообщением пользователя в разделе "Разговор" и в записях персонажа "Пользователь".
+    text('title', officeShort(trace.userTitle || trace.title || (runId ? 'Задача ' + runId : 'Монитор конвейера'), 64));
     text('run', 'run: ' + (runId || '-'));
     text('attempt', 'попытка: ' + (attempts || '-') + (attempts > 1 ? ' (циклов: ' + attempts + ')' : ''));
     text('records', 'записей: ' + state.events.list.length + ', трассировка: ' + state.trace.list.length
@@ -1558,8 +2395,12 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
     renderInvocations(summary, trace, moment);
     refreshFilters(summary, trace);
     renderConversation(summary, trace);
+    var office = renderOffice(summary, trace, moment);
+    var loop = renderLoop(summary, trace, moment);
+    renderContext();
     text('status-text', 'Состояние: ' + $('stage').textContent + '. ' + $('stage-detail').textContent + '. ' + $('next-action').textContent
-      + '. Токены: ' + $('usage').textContent + '. Связь: ' + connection.textContent + '.');
+      + '. Цикл: ' + loop.line + '. Токены: ' + $('usage').textContent + '. Связь: ' + connection.textContent + '. Офис: '
+      + office.map(function (actor) { return actor.name + ' - ' + actor.short; }).join('; ') + '.');
   }
 
   function bind() {
@@ -1580,9 +2421,48 @@ details.diagnostics summary { cursor: pointer; padding: 4px 0; }
     ['show-user', 'show-manager', 'show-claude', 'show-codex'].forEach(function (id) { $(id).addEventListener('change', render); });
     $('show-subagents').addEventListener('change', function () { state.ui.subagents = $('show-subagents').checked; render(); });
     $('show-activity').addEventListener('change', function () { state.ui.activity = $('show-activity').checked; render(); });
+    // Кнопки участников офиса живут в разметке и никогда не пересоздаются: выбор и фокус
+    // переживают перерисовку страницы. Обновляются только тексты внутри них.
+    OFFICE_ACTORS.forEach(function (base) {
+      var button = $('office-actor-' + base.id);
+      var nodes = { button: button, name: node('span', 'office-actor-name'), status: node('span', 'office-actor-status'),
+                    detail: node('span', 'office-actor-detail') };
+      button.appendChild(nodes.name);
+      button.appendChild(nodes.status);
+      button.appendChild(nodes.detail);
+      button.addEventListener('click', function () { selectOfficeActor(base.id); });
+      state.office.nodes[base.id] = nodes;
+    });
+    state.office.motion = $('office-motion').checked;
+    $('office-motion').addEventListener('change', function () { state.office.motion = $('office-motion').checked; render(); });
+    function zoom(delta) {
+      var next = Math.max(1, Math.min(3, state.office.zoomStep + delta));
+      state.office.zoomStep = next;
+      if (state.office.view) { state.office.view.setZoomStep(next); }
+      text('office-zoom', 'масштаб: ' + OFFICE_ZOOM_NAMES[next]);
+    }
+    $('office-zoom-in').addEventListener('click', function () { zoom(1); });
+    $('office-zoom-out').addEventListener('click', function () { zoom(-1); });
+    // Узлы цикла и фишки тоже живут в разметке и не пересоздаются: выбор и фокус переживают опрос.
+    LOOP_NODES.forEach(function (base) { bindLoopControl($('loop-node-' + base.phase), base, 'loop-node'); });
+    LOOP_CHIPS.forEach(function (base) { bindLoopControl($('loop-chip-' + base.phase), base, 'loop-chip'); });
+    $('details-open').addEventListener('click', function () { openInspector($('details-open')); });
+    $('inspector-close').addEventListener('click', closeInspector);
+    // Escape закрывает нативно; позиция чтения снимается до закрытия, пока раздел еще имеет высоту.
+    $('inspector').addEventListener('cancel', stashReading);
+    $('inspector').addEventListener('close', function () {
+      state.ui.inspectorOpen = false;
+      $('details-open').setAttribute('aria-expanded', 'false');
+      (state.ui.opener || $('details-open')).focus();
+    });
+    SECTIONS.forEach(function (name) {
+      $('tab-' + name).addEventListener('click', function () { setSection(name); });
+    });
+    setSection(state.ui.section);
   }
 
   bind();
+  mountOffice();
   setInterval(function () { if (state.events.list.length || state.trace.list.length) { render(); } }, 1000);
   poll();
 })();

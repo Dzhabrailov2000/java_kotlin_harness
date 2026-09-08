@@ -1,113 +1,109 @@
 ---
-description: Завести ADR или сменить его статус по конвенциям репозитория документации текущего проекта
-argument-hint: '<тема решения> | status <NNNN> <новый статус> | supersede <NNNN> <тема нового решения>'
+description: Create an ADR or change its status, following the documentation conventions of the current project
+argument-hint: '<decision topic> | status <NNNN> <new status> | supersede <NNNN> <topic of the new decision>'
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(date:*), Bash(git log:*)
 ---
 
-Аргументы: $ARGUMENTS
+Arguments: $ARGUMENTS
 
-Ты работаешь с Architecture Decision Record (ADR) проекта, в котором запущена
-команда. Конвенции берутся из материалов этого проекта, а не из памяти и не из
-примеров другого проекта. Там, где материалы молчат, ничего не выдумывай:
-спрашивай пользователя через AskUserQuestion.
+You are working with the Architecture Decision Record (ADR) of the project the command was run in.
+The conventions come from the materials of that project, not from memory and not from the examples
+of another project. Where the materials are silent, invent nothing: ask the user through
+AskUserQuestion. The record itself is written in the language and the form the project uses.
 
-## Шаг 0. Решение должно быть уже принято
+## Step 0. The decision must already be taken
 
-ADR фиксирует принятое решение, а не предлагает его. Если из запроса неясно,
-что именно решено, остановись и спроси. Не ставь статус `accepted` решению,
-которого пользователь не принимал: по умолчанию новая запись это `proposed`
-(или эквивалент из шаблона проекта).
+An ADR records a decision that was taken; it does not propose one. If the request does not make
+clear what exactly was decided, stop and ask. Do not give the status `accepted` to a decision the
+user never took: by default a new record is `proposed` (or the equivalent from the project
+template).
 
-Не дописывай в материалы непринятые или спекулятивные технические детали.
-Только решенное и необходимое; неутвержденное помечай явно.
+Do not add unaccepted or speculative technical detail to the materials. Only what is decided and
+necessary; mark anything unapproved explicitly.
 
-## Шаг 1. Найти дом ADR и его правила
+## Step 1. Find the home of the ADRs and its rules
 
-Источники, по убыванию приоритета:
+Sources, in descending priority:
 
-1. Аргументы команды и текущая рабочая директория.
-2. Инструкции проекта: CLAUDE.md или AGENTS.md репозитория и родительских
-   каталогов, в первую очередь разделы о конвенциях документов.
-3. Индекс документации (README каталога `docs` или корня) и индекс ADR
-   (README каталога с записями).
-4. Шаблон записи (`template.md` или аналог рядом с записями) и две-три живые
-   записи, лучше последние.
+1. The command arguments and the current working directory.
+2. The project instructions: the CLAUDE.md or AGENTS.md of the repository and of the parent
+   directories, above all the sections about document conventions.
+3. The documentation index (the README of the `docs` directory or of the root) and the ADR index
+   (the README of the directory with the records).
+4. The record template (`template.md` or its equivalent next to the records) and two or three live
+   records, preferably the latest ones.
 
-Если каталогов ADR несколько, определи по теме и подтверди у пользователя,
-когда тема не ложится однозначно. Если тема относится к каталогу, чей дом не
-определен (записи лежат в выведенном из оборота дереве, каталог осиротел),
-не пиши никуда молча: сообщи об этом и спроси, куда класть. Если каталога ADR
-нет вовсе, скажи это и спроси, заводить ли его и где. Не заводи запись "на
-всякий случай" в два места.
+If there are several ADR directories, decide by the topic and confirm with the user when the topic
+does not fit one of them unambiguously. If the topic belongs to a directory whose home is undefined
+(the records lie in a retired tree, the directory is orphaned), do not write anywhere in silence:
+say so and ask where to put it. If there is no ADR directory at all, say so and ask whether to
+create one and where. Do not create a record "just in case" in two places.
 
-## Шаг 2. Определить номер
+## Step 2. Determine the number
 
-Если материалы не задают правило, прочитай индекс и возьми максимальный номер
-плюс один. Сверь индекс с файлами каталога: файл без строки в индексе или
-строка без файла - расхождение, которое чинит человек. Остановись и сообщи о
-нем, не продолжай нумерацию поверх расхождения.
+If the materials set no rule, read the index and take the maximum number plus one. Compare the index
+with the files of the directory: a file with no line in the index, or a line with no file, is a
+divergence for a human to fix. Stop and report it; do not continue the numbering over a divergence.
 
-## Шаг 3. Создать файл по шаблону
+## Step 3. Create the file from the template
 
-- Имя файла - по образцу существующих записей: префикс, число цифр в номере,
-  slug. Правило выводи из всех имен каталога, а не из одного файла.
-- Тело - копия шаблона проекта. Секции, порядок и поля метаданных как в
-  шаблоне. Если живые записи последовательно отклоняются от шаблона
-  (например иначе оформляют альтернативы), покажи расхождение пользователю
-  и спроси, чему следовать; по умолчанию бери форму последних живых записей.
-- Легаси-записи в старом формате не переписывай.
-- Все плейсхолдеры шаблона замени. Незамененный плейсхолдер в чужой записи -
-  дефект, а не образец.
+- The file name follows the existing records: the prefix, the number of digits in the number, the
+  slug. Derive the rule from all the names in the directory, not from one file.
+- The body is a copy of the project template. The sections, their order and the metadata fields are
+  as in the template. If the live records consistently diverge from the template (they format the
+  alternatives differently, for example), show the divergence to the user and ask which to follow;
+  by default take the form of the latest live records.
+- Do not rewrite legacy records in the old format.
+- Replace every placeholder of the template. A placeholder left in someone else's record is a
+  defect, not a model to copy.
 
-## Шаг 4. Заполнить содержание
+## Step 4. Fill in the content
 
-- Контекст: какую проблему решаем, какие ограничения и силы действуют. Факты,
-  а не выводы.
-- Решение: что именно решили, в настоящем времени.
-- Альтернативы: только те, что реально рассматривались, с причиной
-  отклонения. Не выдумывай альтернативы для симметрии.
-- Последствия: плюсы, цена, открытые вопросы.
-- Одна запись это одно решение. Если в теме два независимых решения, скажи
-  об этом и предложи две записи.
-- Оформление по конвенциям проекта: язык, пунктуация, расшифровка
-  аббревиатур, вид кросс-ссылок. Если конвенции нигде не записаны, следуй
-  стилю живых записей и скажи, что опирался на прецедент.
+- Context: which problem is being solved, which constraints and forces are in play. Facts, not
+  conclusions.
+- Decision: what exactly was decided, in the present tense.
+- Alternatives: only those actually considered, with the reason for rejecting them. Do not invent
+  alternatives for symmetry.
+- Consequences: the benefits, the price, the open questions.
+- One record is one decision. If the topic holds two independent decisions, say so and propose two
+  records.
+- Formatting follows the project conventions: language, punctuation, spelled-out abbreviations, the
+  form of cross-references. If the conventions are written down nowhere, follow the style of the
+  live records and say that you relied on precedent.
 
-## Шаг 5. Дописать строку в индекс
+## Step 5. Add the line to the index
 
-Индекс - единый источник истины по статусам. Добавь строку в форме
-существующих строк: те же колонки, та же форма номера, ссылки и статуса.
-Формы статуса не изобретай: если нужной формы в индексе нет (например для
-superseded или rejected), спроси пользователя.
+The index is the single source of truth for statuses. Add a line in the form of the existing lines:
+the same columns, the same form of the number, the links and the status. Do not invent status forms:
+if the form you need is not in the index (for superseded or rejected, for example), ask the user.
 
-## Шаг 6. Бэклог кандидатов
+## Step 6. The backlog of candidates
 
-Если в индексе есть раздел кандидатов и новая запись закрывает его пункт,
-оформи закрытие в форме, принятой в этом разделе; если формы нет, спроси. Не
-заводи такой раздел сам.
+If the index has a section of candidates and the new record closes one of its entries, record that
+closure in the form used in that section; if there is no form, ask. Do not create such a section
+yourself.
 
-## Шаг 7. Смена статуса и перекрытие решений
+## Step 7. Status changes and superseding decisions
 
-- ADR не правятся задним числом. При смене статуса тело решения не
-  переписывай: меняй только поле статуса и строку индекса.
-- Если в проекте есть прецедент секции о статусе реализации или блока
-  "обновление" при ревизии, следуй форме того каталога, в котором работаешь,
-  и спроси, нужна ли такая секция здесь.
-- Перекрытие: старую запись пометь `superseded by ADR-XXXX` (в форме
-  проекта), тело не трогай, новое решение пиши отдельной записью. Указатель
-  на новую запись внутри старой добавляй только если это принято в проекте;
-  сомневаешься - спроси.
+- ADRs are not edited after the fact. When the status changes, do not rewrite the body of the
+  decision: change only the status field and the index line.
+- If the project has a precedent for a section about implementation status or an "update" block on
+  revision, follow the form of the directory you are working in and ask whether such a section is
+  needed here.
+- Superseding: mark the old record `superseded by ADR-XXXX` (in the project's form), leave its body
+  alone and write the new decision as a separate record. Add a pointer to the new record inside the
+  old one only if the project does that; when in doubt, ask.
 
-## Шаг 8. Самопроверка перед сдачей
+## Step 8. Self-check before handing over
 
-1. Оформление (пунктуация, ссылки, язык) по конвенциям проекта.
-2. Аббревиатуры расшифрованы там, где проект этого требует.
-3. Номер файла, номер в H1 и номер в индексе совпадают.
-4. Формулировка решения в индексе не противоречит H1 файла.
-5. Ни одного плейсхолдера шаблона не осталось.
-6. В теле нет решений, которых пользователь не принимал.
-7. Дата в метаданных и дата в индексе согласованы; если у проекта они
-   означают разное (дата записи против даты принятия), спроси, какую ставить.
+1. The formatting (punctuation, links, language) follows the project conventions.
+2. Abbreviations are spelled out where the project requires it.
+3. The number in the file name, in the H1 and in the index match.
+4. The wording of the decision in the index does not contradict the H1 of the file.
+5. No template placeholder is left.
+6. The body holds no decision the user never took.
+7. The date in the metadata and the date in the index agree; if the project means different things
+   by them (the date of the record against the date of acceptance), ask which one to use.
 
-В конце покажи пользователю: путь нового файла, добавленную строку индекса,
-чего не хватало в материалах и что ты решил по умолчанию.
+At the end, show the user: the path of the new file, the index line you added, what was missing in
+the materials and what you decided by default.

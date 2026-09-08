@@ -1,48 +1,44 @@
 ---
 name: kotlin-testing
-description: Тест-стек Kotlin-сервисов на Spring Boot по факту кода - JUnit 5 Jupiter, Spring Boot Test, MockK для нового кода, Testcontainers, Kover. Kotest не используется сознательно. Применять при написании и ревью тестов в сервисах этого стека; конкретные версии, ассерты и пороги покрытия сверять с build-файлами репозитория.
+description: The test stack of Kotlin services on Spring Boot as the code has it - JUnit 5 Jupiter, Spring Boot Test, MockK for new code, Testcontainers, Kover. Kotest is deliberately not used. Apply it when writing and reviewing tests in services of this stack; check the concrete versions, assertion library and coverage thresholds against the build files of the repository.
 ---
 
-# Тест-стек Kotlin-сервисов на Spring Boot
+# Test stack of Kotlin services on Spring Boot
 
-Снято с кода нескольких сервисов одного стека. Все, что ниже, либо
-встречается в коде таких сервисов, либо явно помечено как решение без
-прецедента. Конкретный репозиторий главнее этого skill: версии, библиотека
-ассертов, пороги покрытия и стиль читаются из его build-файлов, инструкций
-(CLAUDE.md, CONTRIBUTING.md) и существующих тестов.
+Taken from the code of several services of one stack. Everything below either occurs in the code of
+such services or is explicitly marked as a decision without precedent. The concrete repository
+outranks this skill: versions, the assertion library, coverage thresholds and style are read from
+its build files, its instructions (CLAUDE.md, CONTRIBUTING.md) and its existing tests.
 
-## Когда применять
+## When to apply
 
-При написании нового теста, ревью тестов, разборе покрытия и при вопросах
-"чем мокать", "как проверять логи", "как поднять базу в тесте" в
-Kotlin-сервисах на Spring Boot с JUnit 5.
+When writing a new test, reviewing tests, analysing coverage and answering "what do we mock with",
+"how do we check logs", "how do we start a database in a test" in Kotlin services on Spring Boot
+with JUnit 5.
 
-## Базовый набор
+## Base set
 
-- Раннер: JUnit 5 Jupiter. `tasks.withType<Test> { useJUnitPlatform() }`.
-- Обвязка Spring: `testImplementation("org.springframework.boot:spring-boot-starter-test")`.
-- Ассерты Kotlin: `testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")`.
-- Покрытие: Kover (`org.jetbrains.kotlinx.kover`); версию бери из build-файла.
-- Платформа: Kotlin JVM, Java toolchain и Spring Boot тех версий, что заданы
-  в build-файле репозитория. Часть правил ниже относится к Spring Boot 4 и
-  помечена явно.
+- Runner: JUnit 5 Jupiter. `tasks.withType<Test> { useJUnitPlatform() }`.
+- Spring support: `testImplementation("org.springframework.boot:spring-boot-starter-test")`.
+- Kotlin assertions: `testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")`.
+- Coverage: Kover (`org.jetbrains.kotlinx.kover`); take the version from the build file.
+- Platform: Kotlin JVM, the Java toolchain and the Spring Boot version set in the build file of the
+  repository. Some rules below apply to Spring Boot 4 and say so explicitly.
 
-Отдельные артефакты `junit-jupiter`, `mockito`, `assertj`, `hamcrest` обычно
-не объявлены явно: они приезжают транзитивно со `spring-boot-starter-test`.
-Не добавляй их руками без причины.
+Separate `junit-jupiter`, `mockito`, `assertj` and `hamcrest` artifacts are usually not declared:
+they arrive transitively with `spring-boot-starter-test`. Do not add them by hand without a reason.
 
-## Kotest не используем
+## Kotest is not used
 
-Решение стека: ни зависимостей, ни импортов, ни матчеров Kotest. Если в
-репозитории оно зафиксировано текстом (инструкция или CONTRIBUTING),
-ссылайся на это место.
+A decision of the stack: no dependencies, no imports, no Kotest matchers. If the repository fixes it
+in writing (an instruction or CONTRIBUTING), refer to that place.
 
-Не предлагай `StringSpec`, `FunSpec`, `BehaviorSpec`, `shouldBe`, `Arb`,
-`forAll` и прочий Kotest ни в новом коде, ни в ревью.
+Do not propose `StringSpec`, `FunSpec`, `BehaviorSpec`, `shouldBe`, `Arb`, `forAll` or any other
+Kotest, neither in new code nor in review.
 
-## Мокирование
+## Mocking
 
-Стандарт для нового кода: **MockK**.
+The standard for new code: **MockK**.
 
 ```kotlin
 private val store = mockk<TokenStore>()
@@ -54,16 +50,15 @@ verify(exactly = 1) { store.find(TOKEN) }
 verify(exactly = 0) { store.remove(any()) }
 ```
 
-Без явной причины не нужны: relaxed-моки, `spyk`, `mockkStatic`, `slot` /
+Without an explicit reason you do not need: relaxed mocks, `spyk`, `mockkStatic`, `slot` /
 `CapturingSlot`, `coEvery`, `coVerify`.
 
-`clearAllMocks()` в `@AfterEach` нужен только там, где моки лежат в полях
-класса и переиспользуются между тестами.
+`clearAllMocks()` in `@AfterEach` is needed only where mocks live in fields of the class and are
+reused between tests.
 
-### Известное отклонение: репозитории на Mockito
+### Known divergence: repositories on Mockito
 
-Отдельный сервис может целиком стоять на Mockito, а MockK там даже не
-подключен:
+A particular service may stand entirely on Mockito, with MockK not even on the classpath:
 
 ```kotlin
 private val validator = mock(SessionTokenValidator::class.java)
@@ -75,34 +70,31 @@ Mockito.verify(repository).save(any())
 verifyNoInteractions(gateway)
 ```
 
-Это расхождение со стандартом, а не образец. Правило работы: **в существующем
-файле следуй тому, что в нем уже есть**, не смешивай Mockito и MockK в одном
-файле. В новом файле такого репозитория спроси владельца, что делать, вместо
-того чтобы молча вводить вторую библиотеку моков.
+This is a divergence from the standard, not a model to copy. The working rule: **in an existing file
+follow what is already in it**, and do not mix Mockito and MockK inside one file. In a new file of
+such a repository, ask the owner what to do instead of silently introducing a second mocking
+library.
 
-Для Spring-слоя в Boot 4 используется `@MockitoBean`, а не `@MockBean`:
-последний в Boot 4 удален.
+For the Spring layer in Boot 4 use `@MockitoBean`, not `@MockBean`: the latter is removed in Boot 4.
 
-## Ассерты: единого выбора может не быть
+## Assertions: there may be no single choice
 
-В разных сервисах одного стека встречаются `kotlin.test`, AssertJ и
-`org.junit.jupiter.api.Assertions`, иногда вперемешку внутри репозитория.
-Правило до принятия общего решения: следуй тому, что уже в этом репозитории.
-Не переписывай чужие ассерты попутно.
+Across services of one stack you meet `kotlin.test`, AssertJ and
+`org.junit.jupiter.api.Assertions`, sometimes mixed inside one repository. The rule until a common
+decision exists: follow what is already in this repository. Do not rewrite someone else's assertions
+along the way.
 
-## Именование
+## Naming
 
-Классы:
+Classes:
 
-- `XxxTest` - юнит-тест.
-- `XxxIntegrationTest` - поднимается контекст Spring и/или Testcontainers.
-- `XxxGuardTest` и подобные - отдельный жанр: тест держит инвариант окружения
-  или сборки, а не бизнес-логику (наличие Docker на CI, checksum миграций,
-  отсутствие default у обязательной переменной окружения, side effects
-  classpath библиотеки).
+- `XxxTest` is a unit test.
+- `XxxIntegrationTest` starts a Spring context and/or Testcontainers.
+- `XxxGuardTest` and similar are a separate genre: the test holds an invariant of the environment or
+  the build rather than business logic (Docker present on CI, migration checksums, no default for a
+  mandatory environment variable, classpath side effects of a library).
 
-Методы: имя в обратных кавычках, английский, повествовательное предложение в
-третьем лице:
+Methods: the name in backticks, English, a narrative sentence in the third person:
 
 ```kotlin
 @Test
@@ -112,44 +104,41 @@ fun `derives endpoint from session context when request endpoint is null`() { ..
 fun `returns 503 when service hits a database error`() { ... }
 ```
 
-CamelCase остается только у `setUp`, `tearDown` и хелперов.
+CamelCase stays only for `setUp`, `tearDown` and helpers.
 
-`@DisplayName` и `@Nested` в более новом сервисном коде не используются:
-backtick-имя уже несет описание. В библиотеке, где они уже применяются
-массово, держи ее стиль. Для нового кода не добавляй.
+`@DisplayName` and `@Nested` are not used in the newer service code: the backtick name already
+carries the description. In a library where they are already used everywhere, keep its style. Do not
+add them to new code.
 
-## Разметка тела теста
+## Layout of the test body
 
-Комментариев `// Given`, `// When`, `// Then` в сервисном коде нет. Блоки
-разделяются пустой строкой: подготовка стабов, вызов, утверждения.
-Комментарий в тесте несет не разметку, а мотив: почему кейс важен и что
-сломается в бою.
+There are no `// Given`, `// When`, `// Then` comments in the service code. Blocks are separated by
+a blank line: preparing stubs, the call, the assertions. A comment in a test carries the motive, not
+the layout: why the case matters and what would break in production.
 
 ```kotlin
 // Fail closed: чужой идентификатор из тела запроса не должен попасть в
 // запись ключа - иначе клиент A получил бы ключ, привязанный к клиенту B.
 ```
 
-KDoc над классом теста объясняет, что этот тест ловит такого, чего не ловит
-соседний уровень.
+The KDoc above a test class explains what this test catches that the neighbouring level does not.
 
-Если в конкретном репозитории разметка Given/When/Then уже принята, держи ее
-там; в новых репозиториях не вводи.
+If a particular repository already uses Given/When/Then layout, keep it there; do not introduce it
+in new repositories.
 
-## Фикстуры
+## Fixtures
 
-- Константы и тестовые данные - в `private companion object` с `const val`.
-- Зависимости в сервисах создаются прямо на уровне полей, без `lateinit` и
-  без `@BeforeEach`.
-- Библиотечный стиль отличается: `private lateinit var` плюс `@BeforeEach fun
-  setUp()` плюс `@AfterEach fun tearDown()`. Следуй стилю репозитория.
-- Переиспользуемая обвязка оформляется как `object` (набор фикстур) или как
-  класс с `AutoCloseable` (захват логов, локальный стаб внешнего сервиса).
-- Там, где проверяется факт, а не взаимодействие, берется реальный примитив, а
-  не мок. Пример: реальный AEAD (AES256_GCM) вместо мока, потому что тест
-  проверяет фактическое шифрование.
+- Constants and test data go into a `private companion object` with `const val`.
+- Dependencies in services are created directly at field level, without `lateinit` and without
+  `@BeforeEach`.
+- The library style differs: `private lateinit var` plus `@BeforeEach fun setUp()` plus
+  `@AfterEach fun tearDown()`. Follow the style of the repository.
+- Reusable support code is written as an `object` (a set of fixtures) or as a class with
+  `AutoCloseable` (log capture, a local stub of an external service).
+- Where a fact is checked rather than an interaction, take the real primitive instead of a mock. For
+  example: a real AEAD (AES256_GCM) instead of a mock, because the test checks actual encryption.
 
-## Веб-слой
+## Web layer
 
 ```kotlin
 @WebMvcTest(OrdersController::class)
@@ -159,7 +148,7 @@ class OrdersControllerTest {
     @MockitoBean private lateinit var service: OrdersService
 ```
 
-Вызовы через Kotlin-DSL (`org.springframework.test.web.servlet.post` / `.get`):
+Calls go through the Kotlin DSL (`org.springframework.test.web.servlet.post` / `.get`):
 
 ```kotlin
 mockMvc.post("/api/v1/orders") {
@@ -173,15 +162,15 @@ mockMvc.post("/api/v1/orders") {
 }
 ```
 
-Покрываются коды целиком (200, 400, 401, 403, 415, 503) вместе с машинным
-кодом в поле `$.error`. В Boot 4 для этого нужен отдельный
-`testImplementation("org.springframework.boot:spring-boot-webmvc-test")`:
-`@WebMvcTest` и `@AutoConfigureMockMvc` больше не входят в `starter-test`.
+The codes are covered as a whole (200, 400, 401, 403, 415, 503) together with the machine code in
+the `$.error` field. In Boot 4 this needs a separate
+`testImplementation("org.springframework.boot:spring-boot-webmvc-test")`: `@WebMvcTest` and
+`@AutoConfigureMockMvc` are no longer part of `starter-test`.
 
-## Конфигурация и старт контекста
+## Configuration and context startup
 
-Для проверки биндинга свойств и падения старта используется
-`ApplicationContextRunner`, а не поднятие всего приложения:
+To check property binding and a failing startup, use `ApplicationContextRunner` instead of starting
+the whole application:
 
 ```kotlin
 ApplicationContextRunner()
@@ -195,13 +184,13 @@ ApplicationContextRunner()
     }
 ```
 
-Профиль в тестах всегда `test`, никогда `local`: файл `local` лежит в
-gitignore и перекрыл бы проверяемые значения.
+The profile in tests is always `test`, never `local`: the `local` file is gitignored and would
+override the values under test.
 
-## Логи как контракт
+## Logs as a contract
 
-Если часть отказов по контракту возвращает `null`, лог оказывается
-единственным носителем причины. Тогда лог проверяется тестом:
+If part of the failures returns `null` by contract, the log is the only carrier of the reason. Then
+the log is checked by a test:
 
 ```kotlin
 private val appender = ListAppender<ILoggingEvent>()
@@ -211,24 +200,23 @@ private val logger = LoggerFactory.getLogger(RestClientAdapter::class.java) as L
 @AfterEach  fun detach() { logger.detachAppender(appender); appender.stop() }
 ```
 
-Удобная форма - обертка `LogCapture : AutoCloseable`, которая дополнительно
-поднимает уровень до DEBUG и возвращает его обратно в `close()`.
+A convenient form is a `LogCapture : AutoCloseable` wrapper that also raises the level to DEBUG and
+puts it back in `close()`.
 
-## HTTP-стабы
+## HTTP stubs
 
-MockWebServer (`com.squareup.okhttp3:mockwebserver`), не WireMock. Два способа:
+MockWebServer (`com.squareup.okhttp3:mockwebserver`), not WireMock. Two ways:
 
-- `enqueue(MockResponse())` для простых последовательностей.
-- Собственный `Dispatcher`, отвечающий по пути, когда порядок запросов задает
-  не тест.
+- `enqueue(MockResponse())` for simple sequences.
+- Your own `Dispatcher`, answering by path, when the order of requests is not set by the test.
 
 ## Testcontainers
 
-Для PostgreSQL. Версия прибивается явно в build-файле, если BOM (Bill of
-Materials) Spring Boot тянет другую мажорную линию с другими координатами
-(так происходит с Boot 4 и Testcontainers 2.x).
+For PostgreSQL. The version is pinned explicitly in the build file when the Spring Boot BOM (Bill of
+Materials) pulls another major line with other coordinates (this happens with Boot 4 and
+Testcontainers 2.x).
 
-Базовый класс:
+The base class:
 
 ```kotlin
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
@@ -248,44 +236,43 @@ abstract class PostgresIntegrationTest {
 }
 ```
 
-Два нюанса, каждый с причиной:
+Two details, each with a reason:
 
-- Контейнер держится через `by lazy` **без** аннотации `@Container`.
-  `@Container` убивал бы контейнер после каждого класса, а Spring кэширует
-  контекст между наследниками, и пул смотрел бы на мертвый порт. `lazy` при
-  этом сохраняет работу `disabledWithoutDocker`.
-- Время сверяется по часам базы (`select now()`), а не по JVM: иначе тест
-  флакает от расхождения часов Docker и JVM.
+- The container is held through `by lazy` **without** the `@Container` annotation. `@Container`
+  would kill the container after each class, while Spring caches the context between subclasses, so
+  the pool would look at a dead port. `lazy` still keeps `disabledWithoutDocker` working.
+- Time is compared against the database clock (`select now()`), not the JVM one: otherwise the test
+  flakes on the drift between the Docker and the JVM clock.
 
-Тихий пропуск без Docker страхуется guard-тестом с
-`@EnabledIfEnvironmentVariable(named = "CI", matches = ".+")`, который валит
-джобу, если на раннере нет Docker.
+A silent skip without Docker is insured by a guard test with
+`@EnabledIfEnvironmentVariable(named = "CI", matches = ".+")`, which fails the job when the runner
+has no Docker.
 
-Очистка данных между тестами: `@BeforeEach` с `jdbc.update("delete from ...")`.
+Cleaning data between tests: `@BeforeEach` with `jdbc.update("delete from ...")`.
 
-## Асинхронность
+## Asynchrony
 
-`CountDownLatch` плюс `await(n, TimeUnit.SECONDS)`, `AtomicReference`,
-`Executors` для проверки гонок в базе. Awaitility не подключен. `Thread.sleep`
-допустим только для ожидания истечения TTL (Time To Live) кэша.
+`CountDownLatch` plus `await(n, TimeUnit.SECONDS)`, `AtomicReference`, `Executors` to check races in
+the database. Awaitility is not on the classpath. `Thread.sleep` is acceptable only to wait out a
+cache TTL (Time To Live).
 
-## Границы уровней
+## Boundaries between levels
 
-Если репозиторий фиксирует границы текстом (например в CONTRIBUTING), они
-главнее. Типичная раскладка:
+If the repository fixes the boundaries in writing (in CONTRIBUTING, for example), that text wins.
+The typical layout:
 
-- Unit - разработчик, CI (Continuous Integration) на каждый MR (Merge Request):
-  ветвление логики и маппинг ошибок.
-- Integration на Testcontainers - разработчик, CI на каждый MR: SQL, TTL,
-  шифрование at-rest, старт контекста.
-- E2E и ручное - тестировщик, dev/stage: реальные внешние системы и приемка.
+- Unit: developer, CI (Continuous Integration) on every MR (Merge Request): branching logic and
+  error mapping.
+- Integration on Testcontainers: developer, CI on every MR: SQL, TTL, encryption at rest, context
+  startup.
+- E2E and manual: tester, dev/stage: real external systems and acceptance.
 
-Критерий границы: если воспроизводится без VPN (Virtual Private Network), без
-живой внешней системы и детерминированно, это тест разработчика.
+The boundary criterion: if it reproduces without a VPN (Virtual Private Network), without a live
+external system and deterministically, it is a developer's test.
 
 ## Kover
 
-Общая форма:
+The general form:
 
 ```kotlin
 kover {
@@ -300,46 +287,42 @@ kover {
 }
 ```
 
-Варианты, встречающиеся в одном стеке:
+Variants that occur inside one stack:
 
-- `minBound(80)` плюс `tasks.named("koverVerify") { finalizedBy("koverLog") }`,
-  чтобы строка "application line coverage: NN%", которую читает регулярка
-  CI-джобы, попала в лог даже при непройденном пороге.
-- `minBound(80)` и явная привязка `tasks.check { dependsOn(tasks.koverVerify) }`.
-- Порога нет намеренно, с обоснованием в build-файле: планируется гейт по
-  покрытию измененных строк, а не всего кода.
+- `minBound(80)` plus `tasks.named("koverVerify") { finalizedBy("koverLog") }`, so that the line
+  "application line coverage: NN%", which the regular expression of the CI job reads, reaches the
+  log even when the threshold fails.
+- `minBound(80)` and an explicit `tasks.check { dependsOn(tasks.koverVerify) }`.
+- No threshold on purpose, with the reason stated in the build file: a gate on the coverage of
+  changed lines is planned instead of one over all the code.
 
-Порог и его наличие - решение репозитория; читай build-файл, не предполагай.
+The threshold and its very existence are the repository's decision; read the build file, do not
+assume.
 
-Принцип исключений одинаков: убирается только то, что по природе не
-покрывается юнит-тестами (точка входа Spring, конфигурация датасорсов и
-бинов). Обработчик исключений, классы свойств и DTO (Data Transfer Object) НЕ
-исключаются: их логика тестируется.
+The principle of exclusions is the same everywhere: only what is not covered by unit tests by nature
+is removed (the Spring entry point, the configuration of data sources and beans). The exception
+handler, property classes and DTOs (Data Transfer Object) are NOT excluded: their logic is tested.
 
-## Чего в коде может не быть
+## What the code may not contain
 
-Не выдумывай примеры под эти пункты и не утверждай, что "у нас так принято",
-пока не увидел прецедент в репозитории:
+Do not invent examples for these points and do not claim "this is how we do it" before you have seen
+a precedent in the repository:
 
-- Корутины и `suspend`-функции: если `kotlinx.coroutines`, `runTest`,
-  `runBlocking` в репозитории не встречаются, прецедента тестирования корутин
-  нет.
-- Тесты живой системы: ближайший аналог - интеграционный тест, который
-  поднимает программный клиент и гоняет реальное рукопожатие протокола против
-  собственного сервера на порту 0.
-- Property-based тесты: не вводи jqwik или аналоги без решения команды.
-- Параметризация (`@ParameterizedTest` плюс `@MethodSource`) - точечно, не
-  как стиль.
+- Coroutines and `suspend` functions: if `kotlinx.coroutines`, `runTest` and `runBlocking` do not
+  occur in the repository, there is no precedent for testing coroutines.
+- Tests of a live system: the closest analogue is an integration test that starts a software client
+  and runs a real protocol handshake against its own server on port 0.
+- Property-based tests: do not introduce jqwik or its analogues without a team decision.
+- Parameterisation (`@ParameterizedTest` plus `@MethodSource`): pointwise, not as a style.
 
-## Решения, которые этот skill не принимает
+## Decisions this skill does not make
 
-При ревью не выдавай свой вариант за стандарт; смотри репозиторий, при
-отсутствии правила спрашивай:
+In review, do not present your own preference as the standard; look at the repository, and where
+there is no rule, ask:
 
-1. Единый выбор ассертов (`kotlin.test` против AssertJ).
-2. Мигрировать ли репозиторий на Mockito на MockK или узаконить Mockito для
-   Spring-репозиториев.
-3. Политика порога покрытия: абсолютный порог против гейта по измененным
-   строкам.
-4. Где зафиксирован стандарт тест-стека: ADR (Architecture Decision Record),
-   инструкция репозитория или CONTRIBUTING.
+1. A single choice of assertions (`kotlin.test` against AssertJ).
+2. Whether to migrate the Mockito repository to MockK or to legitimise Mockito for Spring
+   repositories.
+3. The coverage threshold policy: an absolute threshold against a gate on changed lines.
+4. Where the test stack standard is recorded: an ADR (Architecture Decision Record), a repository
+   instruction or CONTRIBUTING.

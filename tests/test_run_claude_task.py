@@ -1,6 +1,12 @@
-"""Exercise the task launcher with a local fake executable, without model calls."""
+"""Exercise the task launcher with a local fake executable, without model calls.
+
+The workspace of these tests is a real repository with a real frozen acceptance plan, because an
+implementation launch is bound to that plan: what the model receives, which launches are refused and
+what the records hold cannot be observed against a fixture that has no contract.
+"""
 
 import hashlib
+import importlib
 import json
 import os
 from pathlib import Path
@@ -14,7 +20,10 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LAUNCHER = ROOT / "scripts" / "run_claude_task.py"
+SCRIPTS = ROOT / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+run_acceptance = importlib.import_module("run_acceptance")
+LAUNCHER = SCRIPTS / "run_claude_task.py"
 # The group leader exits on SIGTERM while its descendant ignores it and keeps writing to the workspace.
 DESCENDANT_CLI = textwrap.dedent("""\
     import json
@@ -50,7 +59,16 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.directory = Path(self.temporary.name)
         self.workspace = self.directory / "workspace"
-        self.workspace.mkdir()
+        (self.workspace / "src").mkdir(parents=True)
+        (self.workspace / "src" / "main.py").write_text("print('ok')\n", encoding="utf-8")
+        self.git("init", "-q", ".")
+        self.git("add", "-A")
+        self.git("-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-qm", "init")
+        self.evidence = self.directory / "acceptance"
+        self.declaration = self.directory / "acceptance-plan.json"
+        self.declaration.write_text(json.dumps(self.plan_body()), encoding="utf-8")
+        self.plan = run_acceptance.freeze_plan(self.evidence, self.declaration, self.workspace)
+        self.workspace_before = self.workspace_entries()
         self.user_home = self.directory / "home"
         self.user_home.mkdir()
         self.prompt = self.directory / "task.md"
@@ -98,6 +116,28 @@ class RunClaudeTaskTest(unittest.TestCase):
         }
         self.invocation_index = 0
 
+    def git(self, *arguments):
+        subprocess.run(["git", "-C", str(self.workspace), *arguments], check=True, capture_output=True, timeout=60)
+
+    def plan_body(self, **overrides):
+        body = {
+            "run_id": "launcher-run", "max_attempts": 3,
+            "criteria": [{"id": "C1", "description": "The launched turn works from the frozen contract",
+                          "key": True, "checks": ["tests"]},
+                         {"id": "C2", "description": "Ревью подтверждает область", "key": False, "checks": []}],
+            "commands": {"tests": {"argv": [sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests"],
+                                   "cwd": ".", "timeout": 900}},
+            "scope": {"allowed": ["src/"], "protected": [".gitignore"]}}
+        body.update(overrides)
+        return body
+
+    def workspace_entries(self):
+        """What the workspace holds now: a refused launch must add nothing to it."""
+        return sorted(str(path.relative_to(self.workspace)) for path in self.workspace.rglob("*"))
+
+    def contract(self, attempt=1, evidence=None):
+        return run_acceptance.contract_text(run_acceptance.load_plan(evidence or self.evidence), attempt)
+
     def successful_events(self):
         return [
             {"type": "system", "subtype": "init", "model": self.MODEL},
@@ -117,7 +157,7 @@ class RunClaudeTaskTest(unittest.TestCase):
             },
         ]
 
-    def command(self, output, extra=(), timeout="10"):
+    def command(self, output, extra=(), timeout="10", contract=True):
         return [
             sys.executable, str(LAUNCHER),
             "--workspace", str(self.workspace),
@@ -125,12 +165,15 @@ class RunClaudeTaskTest(unittest.TestCase):
             "--output-dir", str(output),
             "--model", self.MODEL,
             "--effort", "max",
-            "--timeout", timeout,
+            # timeout=None launches without any deadline, as a real call does.
+            *(() if timeout is None else ("--timeout", timeout)),
+            # An implementation launch carries the frozen plan and the attempt it belongs to.
+            *(("--acceptance-dir", str(self.evidence), "--attempt", "1") if contract else ()),
             *extra,
         ]
 
     def invoke(self, *, events=None, exit_code=0, raw_lines=(), output=None, extra=(), doctor_exit_code=0,
-               timeout="10"):
+               timeout="10", contract=True):
         self.invocation_index += 1
         if output is None:
             output = self.directory / ("output-" + str(self.invocation_index))
@@ -145,7 +188,7 @@ class RunClaudeTaskTest(unittest.TestCase):
             encoding="utf-8",
         )
         process = subprocess.run(
-            self.command(output, extra, timeout),
+            self.command(output, extra, timeout, contract),
             cwd=self.workspace,
             env=self.environment,
             capture_output=True,
@@ -233,7 +276,7 @@ class RunClaudeTaskTest(unittest.TestCase):
                 self.assertEqual(Path(source["path"]), path)
                 self.assertIn(content.decode("utf-8"), forwarded)
                 self.assertEqual(source["sha256"], hashlib.sha256(content).hexdigest())
-        self.assertEqual(captured["stdin"], self.prompt.read_text(encoding="utf-8"))
+        self.assertIn(self.prompt.read_text(encoding="utf-8").rstrip("\n"), captured["stdin"])
         self.assertEqual(captured["stdin"], (output / "prompt.md").read_text(encoding="utf-8"))
         self.assertEqual(
             invocation["prompt_sha256"],
@@ -241,19 +284,157 @@ class RunClaudeTaskTest(unittest.TestCase):
         )
         self.assertEqual(Path(captured["cwd"]), self.workspace.resolve())
 
+    def test_the_frozen_contract_reaches_the_model_and_the_records(self):
+        process, output = self.invoke()
+        self.assert_completed(process, output)
+        captured = self.read_json(self.capture)
+        contract = self.contract()
+        # The contract the model received is the rendering of the plan, not a copy retyped in the prompt.
+        self.assertIn(contract, captured["stdin"])
+        self.assertIn("| C1 | yes | The launched turn works from the frozen contract | tests |", captured["stdin"])
+        self.assertIn(run_acceptance.argv_cell(self.plan["declaration"]["commands"]["tests"]["argv"]),
+                      captured["stdin"])
+        self.assertIn("- Run: launcher-run, attempt 1 of 3", captured["stdin"])
+        self.assertIn("- Attempt limit: 3, explicitly requested", captured["stdin"])
+        self.assertIn('- Allowed to change: ["src/"]', captured["stdin"])
+        self.assertEqual(captured["stdin"],
+                         self.prompt.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + contract)
+        # The saved prompt, its hash and the trace are that same effective text, not the manager's file.
+        self.assertEqual((output / "prompt.md").read_text(encoding="utf-8"), captured["stdin"])
+        invocation = self.read_json(output / "invocation.json")
+        self.assertEqual(invocation["prompt_sha256"], hashlib.sha256(captured["stdin"].encode("utf-8")).hexdigest())
+        self.assertEqual(invocation["prompt_source_sha256"],
+                         hashlib.sha256(self.prompt.read_bytes()).hexdigest())
+        self.assertEqual(invocation["acceptance"],
+                         {"plan": str((self.evidence / "plan.json").resolve()), "plan_id": self.plan["plan_id"],
+                          "run_id": "launcher-run", "attempt": 1, "max_attempts": 3,
+                          "baseline": self.plan["baseline"]})
+        traced = [record for record in
+                  (json.loads(line) for line in (output / "trace.jsonl").read_text(encoding="utf-8").splitlines())
+                  if record.get("message_kind") == "task_prompt"]
+        self.assertEqual([record["text"] for record in traced], [captured["stdin"]])
+        self.assertEqual(traced[0]["origin"], str(output.resolve() / "prompt.md"))
+        # The journal identity is the contract's own, not a value guessed from the journal.
+        first = json.loads(process.stdout.splitlines()[0])
+        self.assertEqual((first["run_id"], first["attempt"]), ("launcher-run", 1))
+
+    def test_a_launch_that_does_not_match_the_frozen_plan_never_reaches_the_cli(self):
+        other_workspace = self.directory / "other-workspace"
+        other_workspace.mkdir()
+        subprocess.run(["git", "-C", str(other_workspace), "init", "-q", "."], check=True, capture_output=True,
+                       timeout=60)
+        foreign = self.directory / "foreign-acceptance"
+        run_acceptance.freeze_plan(foreign, self.declaration, other_workspace)
+        cases = {
+            "no plan at all": ((), False),
+            "no attempt": (("--acceptance-dir", str(self.evidence)), False),
+            "attempt above the limit this plan was given": (
+                ("--acceptance-dir", str(self.evidence), "--attempt", "4"), False),
+            "attempt that is not a positive number": (
+                ("--acceptance-dir", str(self.evidence), "--attempt", "0"), False),
+            "plan frozen for another workspace": (("--acceptance-dir", str(foreign), "--attempt", "1"), False),
+            "run id that contradicts the plan": (("--run-id", "another-run",), True),
+            "missing evidence directory": (("--acceptance-dir", str(self.directory / "absent"), "--attempt", "1"),
+                                           False),
+        }
+        for label, (extra, contract) in cases.items():
+            with self.subTest(case=label):
+                process, output = self.invoke(extra=extra, contract=contract)
+                self.assertNotEqual(process.returncode, 0, process.stdout)
+                self.assertFalse(self.capture.exists(), "a refused launch must not start the executable")
+                self.assertFalse(output.exists(), "a refused launch must not leave an output directory")
+                self.assertEqual(self.workspace_entries(), self.workspace_before)
+        # A plan or a baseline edited after the freeze is no longer the plan this launch claims.
+        plan_file = self.evidence / "plan.json"
+        original = plan_file.read_text(encoding="utf-8")
+        tampered = json.loads(original)
+        tampered["declaration"]["criteria"][0]["description"] = "A requirement nobody froze"
+        plan_file.write_text(json.dumps(tampered), encoding="utf-8")
+        process, output = self.invoke()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("changed after it was written", process.stdout + process.stderr)
+        self.assertFalse(self.capture.exists())
+        # Sealed again, the edited plan matches its own receipt_id and still is not the frozen plan.
+        resealed = run_acceptance.seal({key: value for key, value in tampered.items() if key != "receipt_id"})
+        plan_file.write_text(json.dumps(resealed), encoding="utf-8")
+        process, output = self.invoke()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("no longer match plan_id", process.stdout + process.stderr)
+        self.assertFalse(self.capture.exists())
+        plan_file.write_text(original, encoding="utf-8")
+        baseline_file = self.evidence / "baseline.json"
+        baseline = json.loads(baseline_file.read_text(encoding="utf-8"))
+        baseline["entries"]["src/main.py"]["sha256"] = "0" * 64
+        baseline_file.write_text(json.dumps(baseline), encoding="utf-8")
+        process, output = self.invoke()
+        self.assertNotEqual(process.returncode, 0)
+        self.assertIn("baseline.json changed", process.stdout + process.stderr)
+        self.assertFalse(self.capture.exists())
+        self.assertFalse(output.exists())
+
+    def test_no_deadline_turn_or_attempt_quota_is_imposed_by_default(self):
+        """The default call is unbounded: no timeout, no budget, no attempt ceiling, no large sentinel."""
+        unlimited = self.directory / "acceptance-unlimited"
+        declaration = self.directory / "plan-unlimited.json"
+        declaration.write_text(json.dumps(self.plan_body(run_id="unbounded-run", max_attempts=None)),
+                               encoding="utf-8")
+        plan = run_acceptance.freeze_plan(unlimited, declaration, self.workspace)
+        self.assertIsNone(plan["declaration"]["max_attempts"], "a plan carries a limit only when one was asked for")
+        # An attempt far above every counter ceiling the pipeline used to carry still launches.
+        process, output = self.invoke(contract=False, timeout=None,
+                                      extra=("--acceptance-dir", str(unlimited), "--attempt", "100000"))
+        self.assert_completed(process, output)
+        invocation = self.read_json(output / "invocation.json")
+        self.assertIsNone(invocation["timeout_seconds"], "no wall-clock deadline is imposed by default")
+        self.assertIsNone(invocation["max_budget_usd"])
+        self.assertNotIn("--max-budget-usd", invocation["argv"])
+        self.assertEqual((invocation["acceptance"]["attempt"], invocation["acceptance"]["max_attempts"]),
+                         (100000, None))
+        captured = self.read_json(self.capture)
+        self.assertIn("- Run: unbounded-run, attempt 100000\n", captured["stdin"])
+        self.assertIn("- Attempt limit: no attempt limit was requested", captured["stdin"])
+        self.assertNotIn("attempt 100000 of", captured["stdin"])
+        # The journal and the trace record that attempt as it is, instead of refusing it.
+        self.assertEqual({record["attempt"] for record in
+                          (json.loads(line) for line in
+                           (output / "progress.jsonl").read_text(encoding="utf-8").splitlines())}, {100000})
+        self.assertEqual({record["attempt"] for record in
+                          (json.loads(line) for line in
+                           (output / "trace.jsonl").read_text(encoding="utf-8").splitlines())}, {100000})
+        # A limit exists only when it was requested, and then it has to be a real one.
+        for label, extra in (("timeout", ("--timeout", "0")), ("budget", ("--max-budget-usd", "0"))):
+            with self.subTest(refused=label):
+                refused = subprocess.run(self.command(self.directory / ("output-zero-" + label), extra, timeout=None),
+                                         cwd=self.workspace, env=self.environment, capture_output=True, text=True,
+                                         encoding="utf-8", timeout=20)
+                self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
+                self.assertIn("omit it for no limit", refused.stderr)
+
+    def test_the_read_only_handoff_needs_no_plan_and_grants_no_write_tools(self):
+        process, output = self.invoke(extra=("--read-only",), contract=False)
+        self.assert_completed(process, output)
+        captured = self.read_json(self.capture)
+        self.assertEqual(captured["stdin"], self.prompt.read_text(encoding="utf-8"),
+                         "the handoff carries the report itself, with no contract of a new attempt")
+        self.assertFalse({"Bash", "Edit", "Write"} & set(self.option(captured["argv"], "--tools").split(",")))
+        self.assertIsNone(self.read_json(output / "invocation.json")["acceptance"])
+        self.assertEqual([record["phase"] for record in
+                          (json.loads(line) for line in
+                           (output / "progress.jsonl").read_text(encoding="utf-8").splitlines())][:1], ["handoff"])
+
     def test_output_cannot_be_workspace_or_inside_it(self):
         for output in (self.workspace, self.workspace / "artifacts"):
             with self.subTest(output=output):
                 process, _ = self.invoke(output=output)
                 self.assertNotEqual(process.returncode, 0)
                 self.assertFalse(self.capture.exists(), "Rejected output must not start the executable")
-                self.assertEqual(list(self.workspace.iterdir()), [])
+                self.assertEqual(self.workspace_entries(), self.workspace_before)
         for progress in (self.workspace, self.workspace / "progress"):
             with self.subTest(progress=progress):
                 process, output = self.invoke(extra=("--progress-dir", str(progress)))
                 self.assertNotEqual(process.returncode, 0)
                 self.assertFalse(self.capture.exists(), "Rejected progress directory must not start the executable")
-                self.assertEqual(list(self.workspace.iterdir()), [])
+                self.assertEqual(self.workspace_entries(), self.workspace_before)
                 self.assertFalse(output.exists())
 
     def test_output_symlink_cannot_bypass_workspace_boundary(self):
@@ -262,7 +443,7 @@ class RunClaudeTaskTest(unittest.TestCase):
         process, _ = self.invoke(output=alias / "artifacts")
         self.assertNotEqual(process.returncode, 0)
         self.assertFalse(self.capture.exists())
-        self.assertEqual(list(self.workspace.iterdir()), [])
+        self.assertEqual(self.workspace_entries(), self.workspace_before)
 
     def test_existing_output_is_preserved_and_executable_is_not_started(self):
         output = self.directory / "existing-output"
@@ -417,7 +598,7 @@ class RunClaudeTaskTest(unittest.TestCase):
         self.assertFalse(self.capture.exists())
 
     def test_agent_resolution_does_not_escape_repository_into_parent_project(self):
-        (self.workspace / ".git").mkdir()
+        # The workspace is a repository of its own, so the .claude directory above it is another project.
         parent_agent = self.directory / ".claude/agents/reader.md"
         user_agent = self.user_home / ".claude/agents/reader.md"
         for path, instruction in ((parent_agent, "Wrong parent definition"), (user_agent, "User definition")):

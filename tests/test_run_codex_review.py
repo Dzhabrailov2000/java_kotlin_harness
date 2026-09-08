@@ -91,8 +91,10 @@ class CodexRunnerTest(unittest.TestCase):
         self.index = 0
 
     def command(self, output, extra=(), timeout="15"):
+        """timeout=None launches without a deadline, the way a real review call does."""
         return [sys.executable, str(RUNNER), "--workspace", str(self.workspace), "--prompt", str(self.prompt),
-                "--output-dir", str(output), "--model", MODEL, "--effort", "ultra", "--timeout", timeout, *extra]
+                "--output-dir", str(output), "--model", MODEL, "--effort", "ultra",
+                *(() if timeout is None else ("--timeout", timeout)), *extra]
 
     def invoke(self, events, *, output=None, extra=(), exit_code=0, last_message=None, timeout="15"):
         self.index += 1
@@ -216,6 +218,19 @@ class CodexRunnerTest(unittest.TestCase):
         result = json.loads((output / "result.json").read_text(encoding="utf-8"))
         self.assertEqual((result["completed"], result["timed_out"]), (False, True))
         self.assertEqual(journal_outline(output / "progress.jsonl")[-1][:3], ("launcher", "cli_exit", "timeout"))
+
+    def test_the_review_call_carries_no_deadline_unless_one_was_requested(self):
+        """A review runs until Codex exits; the recorded timeout is absent, not a large sentinel."""
+        process, output = self.invoke(review_events(), timeout=None)
+        self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        invocation = json.loads((output / "invocation.json").read_text(encoding="utf-8"))
+        self.assertIsNone(invocation["timeout_seconds"])
+        self.assertNotIn("--timeout", invocation["argv"], "no deadline is forwarded to the CLI either")
+        refused = subprocess.run(self.command(self.directory / "review-zero", ("--timeout", "0"), timeout=None),
+                                 cwd=self.workspace, env=self.environment, capture_output=True, text=True,
+                                 encoding="utf-8", timeout=60)
+        self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
+        self.assertIn("omit it for no limit", refused.stderr)
 
     def test_model_catalog_gives_the_context_capacity_and_its_absence_is_reported_not_invented(self):
         catalog = self.directory / "models_cache.json"

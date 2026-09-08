@@ -1,51 +1,76 @@
 ---
 name: adversarial-self-check
-description: Перед сдачей вывода, дизайна или диффа - одна честная попытка опровергнуть собственный результат. Конкретный сценарий провала, непроверенные допущения, альтернативное объяснение тех же симптомов. Применять перед финальным ответом в диагностике, анализе, исследовании и перед коммитом нетривиальных изменений.
+description: Before handing over an answer, a design or a diff, make one honest attempt to refute your own result. A concrete failing scenario, the assumptions you never checked, an alternative explanation of the same symptoms. Apply it before the final answer in diagnosis, analysis and research, and before committing a non-trivial change.
 ---
 
-# Самоопровержение перед сдачей
+# Self-refutation before handing over
 
-Автор защищает свой результат, скептик его атакует. Перед сдачей нужно один раз сменить роль: не "почему я прав", а "что должно быть правдой, чтобы я был неправ, и проверил ли я это". Плаузибельно-но-неверный вывод опаснее явно сырого: его примут и построят на нем.
+The author defends the result, the sceptic attacks it. Before handing over, switch roles once: not
+"why am I right" but "what would have to be true for me to be wrong, and did I check it". A
+plausible but wrong conclusion is more dangerous than an obviously raw one: it gets accepted and
+built upon.
 
-## Когда применять
+## When to apply
 
-- Диагноз готов, рука тянется написать "причина в X".
-- Дифф готов к коммиту и нетривиален (логика, конкурентность, контракты, миграции).
-- Исследование или сверка завершены, вывод сформулирован.
-- Числа и факты пришли из одного источника (поиск, один док, одна статья).
+- The diagnosis is ready and you are about to write "the cause is X".
+- The diff is ready to commit and it is not trivial (logic, concurrency, contracts, migrations).
+- Research or a conformance check is finished and the conclusion is written.
+- Numbers and facts came from a single source (one search, one document, one article).
 
-## Когда НЕ применять
+## When NOT to apply
 
-- Тривиальная механическая правка без логики (опечатка, переименование).
-- Результат уже прошел независимую проверку (агент-ревьюер, живой прогон) - не дублировать ее вручную.
+- A trivial mechanical edit with no logic in it (a typo, a rename).
+- The result already passed an independent check (a reviewer agent, a live run): do not duplicate it
+  by hand.
 
-## Метод
+## Method
 
-1. **Смени роль явно.** Вопрос скептика: "мне заплатили за то, чтобы этот вывод не прошел; за что я зацеплюсь?"
+1. **Switch roles explicitly.** The sceptic's question: "I am paid to make this conclusion fail;
+   what do I grab first?"
 
-2. **Для диагноза - альтернативное объяснение.** Какое еще состояние системы дает ровно те же симптомы? Если альтернатива есть и не исключена наблюдением - вывод не готов. Назови наблюдение, которое различает две версии, и сделай его.
+2. **For a diagnosis, an alternative explanation.** Which other state of the system produces exactly
+   these symptoms? If the alternative exists and observation has not ruled it out, the conclusion is
+   not ready. Name the observation that separates the two versions, and make it.
 
-3. **Для кода - конкретный ломающий вход.** Не "выглядит корректно", а перебор классов входов: пустая коллекция, дубликат, конкурентный вызов, ретрай того же запроса, таймаут посреди операции, unicode/кириллица, максимальный размер. Итоговая формула честности: "контрпример не нашел на таких-то классах", а не "багов нет".
+3. **For code, a concrete breaking input.** Not "it looks correct" but a pass over the classes of
+   input: empty collection, duplicate, concurrent call, a retry of the same request, a timeout in
+   the middle of the operation, unicode or Cyrillic, the maximum size. The honest formula is "I
+   found no counterexample in these classes", not "there are no bugs".
 
-4. **Для дизайна - сильнейшая форма отклоненной альтернативы.** Если отклоненный вариант в его лучшей форме все еще проигрывает - решение устойчиво. Если пришлось отклонять слабую форму - разбор был нечестным.
+4. **For a design, the strongest form of the rejected alternative.** If the rejected option still
+   loses in its best form, the decision holds. If you had to reject a weak form, the analysis was
+   dishonest.
 
-5. **Для фактов из поиска - второй независимый источник.** Один источник, особенно вторичный (блог, рилс, пересказ), - это статус "предположено". Цифры, даты, цены проверяются вторым источником другого происхождения.
+5. **For facts from a search, a second independent source.** One source, especially a secondary one
+   (a blog, a video, a retelling), is the status "assumed". Numbers, dates and prices are checked
+   against a second source of different origin.
 
-6. **Каждая находка либо чинится, либо называется.** Найденное слабое место, которое молча остается в сданной работе, - худший исход: ты о нем знал, читатель - нет. Не можешь починить - напиши в отчете как известное ограничение.
+6. **Every finding is either fixed or named.** A weak spot you found and silently left in the
+   delivered work is the worst outcome: you knew, the reader did not. If you cannot fix it, write it
+   into the report as a known limitation.
 
-7. **Бюджет - одна итерация.** Одна честная атака, починка найденного, сдача. Не превращать в бесконечный цикл сомнений: вторая и третья атака подряд почти всегда дают шум, а стоят как первая.
+7. **The budget is one iteration.** One honest attack, fix what it found, hand over. Do not turn it
+   into an endless loop of doubt: the second and third attack in a row almost always produce noise
+   and cost as much as the first.
 
-## Анти-паттерны
+## Anti-patterns
 
-- **Ревью-поддавки.** "Проверил себя" чтением собственного кода сверху вниз с киванием. Атака начинается с входов и сценариев, а не с перечитывания.
-- **Подтверждающий поиск.** Искать "почему X верно" вместо "что противоречит X".
-- **Слабое чучело.** Опровергать карикатуру на альтернативу вместо ее сильнейшей формы.
-- **Молчаливое ограничение.** Знать про непокрытый кейс и сдать работу без упоминания.
-- **Паралич скептика.** Десятая итерация самопроверки вместо сдачи результата с названными допущениями.
+- **A rigged review.** "I checked myself" by reading your own code top to bottom and nodding. The
+  attack starts from inputs and scenarios, not from rereading.
+- **Confirming search.** Looking for "why X is true" instead of "what contradicts X".
+- **A straw man.** Refuting a caricature of the alternative instead of its strongest form.
+- **A silent limitation.** Knowing about an uncovered case and handing the work over without a word.
+- **Sceptic's paralysis.** A tenth iteration of self-checking instead of delivering the result with
+  its assumptions named.
 
-## Связь с обвязкой
+## Relation to the harness
 
-- Для кода тяжелую версию этой работы делают агент `code-reviewer` и `/code-review` - им и делегировать; этот скилл - быстрый проход перед сдачей и для не-кодовых результатов (диагнозы, ADR, сверки, исследования), куда ревьюеры не дотягиваются.
-- Ход 4 повторяет ход "веер альтернатив" из `system-design-tradeoffs` - там он часть метода, здесь - проверка уже готового решения.
-- Опирается на статусы из `evidence-before-claim`: атаковать проще всего утверждения со статусом "предположено", с них и начинать.
-- Скилл `deep-research` делает пункт 5 многоагентно; вручную он нужен для одиночных быстрых поисков.
+- For code, the heavy version of this work is done by the `code-reviewer` agent and `/code-review`:
+  delegate it to them. This skill is the quick pass before handing over, and it covers the non-code
+  results (diagnoses, ADRs, conformance checks, research) that reviewers do not reach.
+- Step 4 repeats the "fan of alternatives" move from `system-design-tradeoffs`: there it is part of
+  the method, here it is a check of a decision that is already made.
+- It rests on the statuses of `evidence-before-claim`: statements with the status "assumed" are the
+  easiest to attack, so start there.
+- The `deep-research` skill does step 5 with several agents; by hand it is needed for single quick
+  searches.

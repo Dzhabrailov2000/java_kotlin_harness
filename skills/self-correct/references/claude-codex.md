@@ -1,370 +1,390 @@
-# Claude пишет, Codex проверяет
+# Claude implements, Codex reviews
 
-Этот режим применяется, когда пользователь поручает управляющей сессии (по
-умолчанию Codex) готовить задания Claude, проверять результат через
-self-correct и передавать Claude отчет после каждой проверки. Менеджер -
-текущая управляющая сессия. `run_claude_task.py` запускает только один вызов
-исполнителя; решения и переходы между попытками остаются у менеджера, по
-общим правилам self-correct. Ни один скрипт этой обвязки не ведет цикл целиком.
+This mode applies when the user puts the managing session (Codex by default) in charge of preparing
+tasks for Claude, checking the result through self-correct and handing Claude a report after every
+check. The manager is the current managing session. `run_claude_task.py` launches exactly one
+implementer turn; the decisions and the transitions between attempts stay with the manager, by the
+general rules of self-correct. No script of this harness runs the loop.
 
-## Роли
+## Roles
 
-| Роль | Кто | Делает | Не делает |
+| Role | Who | Does | Does not do |
 | --- | --- | --- | --- |
-| Менеджер | управляющая сессия (Codex) | Define, чтение проекта и локального указателя источников, выбор компонентов, промпт, механические проверки, triage, решения RETRY / VERIFY / ESCALATE / COMPLETE, передача отчетов, локальная активация | не пишет код за исполнителя, не принимает замечания без основания |
-| Исполнитель | внешняя сессия Claude через helper | реализует по промпту в рабочей области, возвращает отчет с основаниями | не расширяет набор компонентов, не ведет self-correct, не запускает внешнее ревью, не коммитит без авторизации |
-| Независимый ревьюер | новый контекст Codex, `gpt-6-astra`, effort `ultra` (или последний явный выбор пользователя) | читает критерии, diff, новые файлы и журналы; выносит заключение | не редактирует репозиторий |
-| Человек | пользователь | ставит задачу, отвечает на ESCALATE, авторизует commit, push и активацию | |
+| Manager | the managing session (Codex) | Define, reading the project and the local pointer to sources, selecting components, the prompt, the mechanical checks, triage, the RETRY / VERIFY / ESCALATE / COMPLETE decisions, handing over reports, local activation | does not write the code for the implementer, does not accept a finding without evidence |
+| Implementer | an external Claude session through the launcher | implements from the prompt in the workspace, returns a report with evidence | does not widen the component set, does not run self-correct, does not run an external review, does not commit without authorisation |
+| Independent reviewer | a fresh Codex context, `gpt-6-astra`, effort `ultra` (or the user's latest explicit choice) | reads the criteria, the diff, the new files, the check receipts and the logs; returns a structured verdict | does not edit the repository, does not start nested agents or judges; there is no reviewer above the reviewer |
+| Human | the user | sets the task, answers ESCALATE, authorises commit, push and activation | |
 
-## Подготовка и запуск исполнителя
+## Language
 
-1. Прочитай задачу, текущий код, применимые AGENTS.md/CLAUDE.md и источники.
-   Перед этим прочитай локальный указатель на источники проекта (маршрут
-   описан в [docs/memory.md](../../../docs/memory.md)): он говорит, где лежат
-   актуальные документы и какие ревизии сверялись; сами документы читай из их
-   мест, память им не главнее. Зафиксируй Define из основного skill, команды
-   проверок, начальное состояние (включая незакоммиченные файлы) и общий лимит
-   попыток. Для изолированной копии сохрани также применимые инструкции
-   исходного расположения: перенос каталога не должен молча терять
-   родительские правила. Не меняй исходные файлы пользователя.
-2. Составь файл промпта по шаблону [templates/task.md](../../../templates/task.md):
-   цель, все критерии с ID, источники и их ревизии, разрешенная область и
-   защищенная зона, запреты, ожидаемые проверки, место и шаблон отчета,
-   номер попытки. Шаблон не составляет промпт сам: он заполняется после
-   анализа задачи и выбора компонентов. Claude выполняет кодовую задачу;
-   собственный цикл self-correct и внутренний многоагентный review не запускает.
-3. Менеджер выбирает обвязку до запуска. Прочитай полные инструкции выбранных
-   компонентов, а не только description. В промпте перечисли skills, агентов и MCP,
-   причину выбора и ожидаемый результат каждого. Пустой список агентов/MCP допустим.
-   `scope-fence` и `evidence-before-claim` передаются всегда; для Kotlin обычно нужны
-   `kotlin-patterns`, `kotlin-testing`, архитектурные и прочие skills - по задаче.
-   Укажи приоритет существующего стека и правил проекта над примерами skills:
-   например, примеры Kotest/Ktor/Spring не разрешают переносить их в Quarkus-проект.
-   Self-correct и независимые review-роли остаются у менеджера. Исполнитель следует
-   выбранному набору; недостаток возможностей возвращает менеджеру с причиной.
-   Каталог из reminder hook не является поручением самостоятельно расширять набор.
-4. Запусти helper из корня этой обвязки, подставив реальные абсолютные пути:
+The user talks to the manager in Russian and gets the final answer in Russian. Everything inside the
+pipeline is English: the task prompt, the implementer's report, the review request and its report,
+the correction handoff and the manager's internal notes. Quotations from sources, logs, code
+identifiers and existing project documents stay verbatim in their own language, and domain
+requirements keep theirs as well (Russian comments and KDoc in Kotlin services, the team's Russian
+planning documents). This is an instruction policy, not a ban on Cyrillic.
+
+## Limits: what is not bounded, and what still is
+
+No agent call is put on a clock or a counter by default. `run_claude_task.py` and
+`run_codex_review.py` pass no timeout unless one is given, the plan carries no attempt quota unless
+the user asked for one, and no turn, token or cost cap is imposed. The builder and judge agents carry
+no `maxTurns`. A call ends when the CLI exits, when the user interrupts it, or when a limit the user
+themselves requested is reached; the manager stops the loop on acceptance, on that interruption, or
+on a blocker that needs input nobody has.
+
+What stays bounded is unrelated to how long an agent may work, and none of it cuts a running task:
+the timeout of a declared check command (a test run, not an agent), the 30-second `claude doctor`
+diagnostics, the bounded reading of streams and logs (line and scan limits that keep memory finite
+and report what stayed unread), and the git calls of the snapshot. Keep them. An explicitly requested
+`--timeout` still terminates the process group, so cancellation and cleanup are exercised either way.
+
+## The contract of the task
+
+The criteria, the required checks with their literal argv, the allowed and protected scope, the run
+identity and any attempt limit live in one place: the plan frozen by `run_acceptance.py`. Both
+launchers render that plan into the prompt they actually send, so the implementer and the reviewer
+work from one text.
+
+Do not retype the criteria, the scope or the check commands into the task prompt. The prompt built
+from [templates/task.md](../../../templates/task.md) carries what the contract does not: the goal,
+the context, the sources and revisions, the selected components with their reasons, what is unknown,
+and the full previous report on RETRY.
+
+## Preparing and launching the implementer
+
+1. Read the task, the current code, the applicable AGENTS.md / CLAUDE.md and the sources. Before
+   that, read the local pointer to the project sources (the route is described in
+   [docs/memory.md](../../../docs/memory.md)): it says where the current documents are and which
+   revisions were checked; read the documents themselves from their own places, memory does not
+   outrank them. Fix the Define of the main skill, the check commands, the initial state (including
+   uncommitted files) and, only if the user asked for one, the attempt limit. For an isolated copy,
+   also keep the instructions that applied in the original location: moving a directory must not
+   silently lose the parent rules. Do not change the user's original files.
+
+2. Freeze the acceptance plan once, before the first attempt (see the acceptance section). The
+   criteria go there, in their final wording, with the checks that verify them.
+
+3. Select the harness before the launch. Read the full instructions of the components you select,
+   not only their description. Name the skills, agents and MCP servers in the prompt with the reason
+   for each and the expected result. An empty list of agents or MCP servers is fine. `scope-fence`
+   and `evidence-before-claim` are always sent; for Kotlin, `kotlin-patterns` and `kotlin-testing`
+   are usually needed, and architectural and other skills follow the task. State that the existing
+   stack and the project rules outrank the examples inside a skill: Kotest, Ktor or Spring examples
+   do not license moving them into a Quarkus project. Self-correct and the independent review roles
+   stay with the manager. The installed catalogue (`/harness`) is inventory, not an instruction to
+   widen the set.
+
+4. Launch the implementer from the root of this harness, with real absolute paths:
 
    ```sh
    python3 scripts/run_claude_task.py \
      --workspace /path/to/workspace \
      --prompt /path/to/run/iteration-1-task.md \
      --output-dir /path/to/run/iteration-1-builder \
+     --acceptance-dir /path/to/run/acceptance \
+     --attempt 1 \
      --skill kotlin-patterns --skill kotlin-testing
    ```
 
-   Для новой модели передай `--model` и `--effort`. Текущий выбранный профиль по
-   умолчанию: `claude-fable-5-1`, `max`; тот же профиль показывает
-   `settings.reference.json` для интерактивных сессий. Флаги конкретного вызова
-   главнее файла настроек; native subagents сохраняют model/tools из своего
-   frontmatter; ревьюер остается Astra/ultra и в settings не описывается.
-   Timeout одного вызова - 1800 секунд, меняется через `--timeout`. Денежного
-   лимита по умолчанию нет; флаг `--max-budget-usd` передавай только при явно
-   установленном бюджете.
+   `--acceptance-dir` and `--attempt` are required for an implementation launch: the launcher loads
+   the frozen plan, refuses a plan of another workspace, a `--run-id` that contradicts it, an attempt
+   that is not positive or exceeds a limit the user explicitly requested, and a plan or baseline
+   edited after the freeze, and only then starts the CLI. The effective prompt (the request plus the
+   rendered contract) is saved as `prompt.md`, hashed in `invocation.json` and written to the trace.
 
-   `--agent code-explorer` разрешает установленного агента и делает его вызов
-   обязательным в этой попытке. Назначь ему конкретную работу в промпте; не добавляй
-   агента, если задача уже разобрана и его работа будет дублироваться. Helper
-   сохраняет исходный файл агента и hash. Агент использует свои native frontmatter
-   model/tools; `--model` задает основную сессию. Проверь эти поля при выборе роли.
-   `--mcp-config /path/to/selected-mcp.json` подключает только серверы из этого
-   файла. Подготовь конфигурацию вне репозитория, не выводи credentials. Серверы
-   доступны по необходимости; фиктивные вызовы ради отчета запрещены. Если MCP
-   нужен для критерия, явно назначь вопрос и проверь ответ в Check. Для IDEA
-   сначала установи, что инструмент адресует именно рабочую копию этой попытки.
+   For another model, pass `--model` and `--effort`. The selected profile by default is
+   `claude-opus-5`, `xhigh`; `settings.reference.json` shows the same profile for interactive
+   sessions. The flags of a particular call outrank the settings file; native subagents keep the
+   model and tools from their own frontmatter; the reviewer stays Astra/ultra and is not described in
+   the settings. A call has no wall-clock, turn, token or cost limit by default: it runs until the CLI
+   exits or the user interrupts it, and `--timeout` and `--max-budget-usd` are passed only for a limit
+   the user actually asked for. Do not add one to "be safe": the first build of this very refactor was
+   killed by such a default, and the user forbade automatic cutoffs.
 
-Helper передает полный текст выбранных skills в system-prompt дополнение, а не
-только их названия в списке доступных инструментов. `instructions.md` и
-`invocation.json` сохраняют пути, SHA-256 и фактически отправленные инструкции.
-Это доказательство доставки инструкций модели; соблюдение проверяет менеджер
-по результату. Наличие skill в init само по себе применением не считается.
-Сохраняются пользовательские настройки и hook events. `selection.json` фиксирует
-выбранные имена. PreToolUse hook блокирует вызовы невыбранных Skill/Agent/MCP;
-без `--agent` инструмент Agent отсутствует, без `--mcp-config` MCP не подключены.
-Это ограничение инструментов, а не файловая/сетевая песочница: Bash и native
-настройки агентов требуют обычной проверки. Глобальные настройки не меняются.
-Helper не устанавливается в PATH: вызывай его по пути из корня обвязки.
+   `--agent code-explorer` allows an installed agent and makes its call mandatory in this attempt.
+   Assign it concrete work in the prompt; do not add an agent when the task is already analysed and
+   its work would duplicate yours. The launcher stores the agent file and its hash. The agent uses
+   its own native frontmatter model and tools; `--model` sets the main session. Check those fields
+   when you choose the role. `--mcp-config /path/to/selected-mcp.json` connects only the servers from
+   that file. Prepare the configuration outside the repository and do not print credentials. Servers
+   are available when needed; dummy calls for the sake of the report are forbidden. If an MCP server
+   is needed for a criterion, assign the question explicitly and check the answer in the Check. For
+   IDEA, first establish that the tool addresses the workspace of this attempt.
 
-## Журнал прогресса конвейера
+The launcher sends the full text of the selected skills in the system prompt addition, not only their
+names in the list of available tools. `instructions.md` and `invocation.json` keep the paths, the
+SHA-256 and the instructions actually sent. That is evidence that the instructions were delivered to
+the model; whether they were followed is judged by the manager from the result. A skill present in
+init is not by itself an application of it. User settings and hook events are preserved.
+`selection.json` records the selected names. A PreToolUse hook blocks calls to Skill, Agent and MCP
+servers that were not selected; without `--agent` the Agent tool is absent, without `--mcp-config`
+no MCP servers are connected. This is a restriction of tools, not a file or network sandbox: Bash
+and the native settings of agents need the usual checking. Global settings are not changed. The
+launcher is not installed into PATH: call it by path from the harness root.
 
-Все вызовы helper одной задачи получают общий `--progress-dir` вне workspace
-(например, `/path/to/run/progress`); без него журнал лежит в `--output-dir`
-вызова. При RETRY передавай helper и emit `--attempt N`; по умолчанию берется
-последняя попытка в журнале. `--step-id` helper по умолчанию - имя каталога
-вывода (при совпадении в той же попытке добавляется суффикс `-2`), для emit -
-имя этапа. Helper печатает выбранные `run_id`, `attempt` и `step_id` первой
-строкой stdout. Helper сам записывает `run`, наблюдаемые события CLI (init,
-вызовы инструментов, hooks, фоновые задачи, result), `cli_exit`, `doctor`,
-`audit`, `result` и handoff в `--read-only` как фазу `handoff`. Этапы
-менеджера появляются в журнале только от менеджера, по одной команде на переход:
+## Acceptance: plan, captured checks, review and the COMPLETE gate
+
+The journal describes the course of the work. Acceptance rests on the separate receipts of
+`scripts/run_acceptance.py`: they live outside the workspace, are never rewritten and bind the plan,
+the tree snapshot, the run, the attempt and the workspace. The words "the tests passed" and
+"COMPLETE" without such a receipt are no longer accepted by the CLI.
+
+1. Freeze the plan once, before the first attempt. The declaration follows
+   [templates/acceptance-plan.json](../../../templates/acceptance-plan.json): criteria with ids and
+   the key flag, check commands with their exact argv and timeout, the allowed and protected scope,
+   the run id, and `max_attempts`. Leave `max_attempts` null, as the template does: attempts are then
+   numbered but not rationed. Put a number there only when the user explicitly asked for a limit; the
+   launchers, the capture and the gate then refuse an attempt above it. The `timeout` of a command
+   bounds that one check process and says nothing about how long an agent may work.
 
    ```sh
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status started
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase tests --status passed --count 40
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status started --model gpt-6-astra --effort ultra
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase review --status failed
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase triage --status confirmed --count 8
-   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress --phase decision --status retry
+   python3 scripts/run_acceptance.py plan \
+     --evidence-dir /path/to/run/acceptance \
+     --declaration /path/to/run/acceptance-plan.json \
+     --workspace /path/to/workspace
    ```
 
-Кто и когда пишет: `tests` вокруг запуска проверок (шаг 5), `review` вокруг
-независимого ревью (шаг 6), `triage` после фиксации CONFIRMED / REFUTED /
-UNVERIFIED (шаг 7; отдельная запись на каждый статус, `--count` - число
-замечаний), `verify` для повторной проверки без правок, `decision` - RETRY /
-VERIFY / ESCALATE / COMPLETE после каждой проверки. Заблокированная сеть или
-недоступный ревьюер записываются как `--status blocked` или `unverified`, а не
-пропускаются. `--phase`: build, tests, review, triage, verify, handoff, decision.
-Статусы этапов: started, passed, failed, blocked, unverified, stopped; для
-triage: confirmed, refuted, unverified; для decision: retry, verify, escalate,
-complete.
+   It writes `plan.json` (with `plan_id`, the hash of the declaration together with the baseline) and
+   `baseline.json`, the snapshot of the tree at the start. Uncommitted edits of the user that were
+   already in the copy belong to the baseline and are not changes made by the task. The same
+   declaration frozen on another state of the tree is another plan with another `plan_id`, so the
+   receipts of the first freeze cannot be presented to the second, whose baseline already contains
+   the disputed edit. A repeated freeze is refused: a plan is not rewritten, and a new plan means a
+   new directory. The receipt directory must be outside the workspace. The snapshot covers tracked
+   and non-ignored files: content, the executable bit, the symlink target, deletion and HEAD; ignored
+   artifacts, the index, the environment and external services are not proven by it, and that is said
+   out loud. A submodule or a nested git repository is returned by git as one directory entry whose
+   contents the snapshot does not walk: such a tree is declared unprovable (an error listing the
+   paths in `plan`, `check` and `complete`) instead of being recorded under a marker that hides the
+   edits inside it.
 
-В журнал попадают только проверенные метаданные с указанием источника
-(`native`, `launcher`, `manager`): промпты, аргументы и результаты
-инструментов, текст ответов, thinking, окружение, ключи, сообщения об ошибках
-API и пути из событий в него не пишутся; сырой поток остается в `events.jsonl`.
+2. Run every required check through capture. The argv comes from the plan, not from the command
+   line, and reaches the process literally, with no shell:
 
-Просмотр: `tail -f /path/to/run/progress/progress.log` или
-`python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress`.
-Страница слушает только 127.0.0.1, порт 0 выбирает свободный, URL печатается в
-stdout; сервер отдает только страницу, `/api/events`, `/api/trace` и
-зарегистрированные артефакты по `/api/artifact?id=<sha256>`; каталог
-артефактов и остальные файлы по HTTP недоступны, внешних ресурсов страница не
-загружает. Остановка страницы или сервера не влияет на задачу. Журнал не
-заменяет отчет и не является приемкой: `progress_status` в `result.json`
-говорит только о записи прогресса, а COMPLETE на странице появляется лишь
-после явного решения менеджера. Helper не запускает этапы менеджера сам;
-страница показывает только то, что было записано. Отказ записи журнала
-(недоступный каталог, занятый lock) не прерывает вызов и фиксируется в
-`result.json` как `progress_status: UNVERIFIED` отдельно от `completed` и
-`ready_for_review`. Чужой файл на месте `progress.jsonl` или `progress.log`
-(символическая или жесткая ссылка, посторонний текст) helper отвергает до
-запуска CLI.
-Копию строк helper печатает в stderr, не дожидаясь читателя: если stderr не
-читают, лишние строки отбрасываются, а их число записывается в `result.json`
-как `progress_observer.console_dropped`; полный журнал остается в `progress.log`.
-ID вызовов и задач CLI локальны для шага: одинаковые ID в разных шагах страница
-показывает как разные вызовы, каждый со своим шагом.
+   ```sh
+   python3 scripts/run_acceptance.py check \
+     --evidence-dir /path/to/run/acceptance --check-id tests --attempt 1
+   ```
 
-### Трассировка разговора и usage
+   The receipt keeps the actual argv, cwd, timeout, exit code, the timeout and interruption flags,
+   the paths and SHA-256 of the logs and the snapshots of the tree before and after; the whole
+   snapshot of this attempt lies beside it as `<check>-a<N>.snapshot.json`. The `cwd` is resolved
+   before the launch and must stay inside the workspace: a path that leads out through a symlink is
+   refused before the process starts, because the snapshots would watch another tree. `passed` is an
+   observation of the process: exit 0, no timeout, no interruption, no launch error, and the sources
+   unchanged during the run. Hand-written JSON and a statement by a model do not replace it. A check
+   that failed, disappeared or hung, and an edit of the code during the run, do not spoil the
+   receipt: they simply do not produce `passed`.
 
-Рядом с журналом в том же `--progress-dir` лежит `trace.jsonl` (формат
-`trace/1`) и каталог `artifacts/`. Это отдельный контракт: в трассировку
-попадает только публичный текст, числа usage и допустимые метаданные обвязки,
-каждая запись несет источник (`launcher` - записал helper, `native` -
-наблюдение в потоке CLI, `manager`, `import`), попытку, шаг, версию захвата и,
-для файлов, путь оригинала и его SHA-256. Точный оригинал хранится как
-`artifacts/<sha256>.txt`; в записи остается превью до 60 000 байт с пометкой
-усечения. Файл получает каноническое имя одним переименованием, когда все
-байты записаны и размер проверен: прерванная (Ctrl-C), неудавшаяся или убитая
-на середине запись не оставляет под этим именем усеченного файла, и повтор
-сохраняет оригинал; убитая запись может оставить только незарегистрированный
-временный файл `.<sha256>.txt.<случайное>.part`, который не отдается.
-Thinking, аргументы и результаты инструментов, вывод hooks и
-`claude doctor`, тексты внедренных инструкций, окружение и тексты ошибок API в
-трассировку не пишутся; сырой поток остается в `events.jsonl` / `codex.jsonl`
-каталога вызова. Идентификатор сессии Claude (`session_id` из init) и потока
-Codex (`thread_id`) записываются как идентичность сессии.
-
-Что записывается само:
-
-- `run_claude_task.py` при каждом запуске: точный текст `--prompt` как промпт
-  задачи менеджера; до старта CLI - запись `harness` со стадией `selected`
-  (выбранные скиллы, агенты, MCP, внедренные файлы скиллов с SHA-256 и путями,
-  hash инструкций, режим read-only, список инструментов CLI); публичные
-  текстовые блоки ответов (основная сессия и субагенты, помеченные вызовом; блок
-  одного `message.id` имеет номер `block`: отдельные элементы массива `content`
-  одного сообщения - отдельные блоки, даже если один начинается с другого, а
-  растущий снимок того же блока в следующем событии записывается как
-  обновление, а не как новое сообщение); снимки usage по
-  `message.id` (повторы одного сообщения не суммируются); итоговый usage из
-  `result` с разбивкой по моделям, `contextWindow` каждой модели и оценкой
-  стоимости CLI; события `rate_limit_event` со статусом и `api_retry` без
-  текста ошибки; после выхода CLI - записи `harness` со стадиями `doctor`
-  (статус, exit, время, длительность), `audit` (статус сверки, вызовы
-  компонентов Skill/Agent/MCP с результатами, счетчики, отсутствующие агенты,
-  неожиданные вызовы, число ошибок разбора и hook-событий, размеры каталога
-  init как "доступно, не вызвано") и `result` (флаги helper). Ранние записи
-  не заменяются поздними. Отказ трассировки фиксируется в `result.json` как
-  `trace_status: UNVERIFIED` и не влияет на `completed` и `ready_for_review`.
-- `run_codex_review.py` запускает ревьюера принятым профилем
-  (`codex -a never exec --ignore-user-config --disable multi_agent --disable
-  apps --disable plugins --disable hooks --model gpt-6-astra -c
-  'model_reasoning_effort="ultra"' --sandbox read-only --ephemeral --json`),
-  передает промпт через stdin и пишет в журнал `run` / `cli_result` /
-  `cli_exit` фазы `review`, а в трассировку - запрос на ревью, запись
-  `context` с емкостью окна запрошенной модели из каталога моделей Codex CLI
-  (`~/.codex/models_cache.json`, читаются только `context_window`,
-  `effective_context_window_percent`, `max_context_window` совпавшей модели и
-  `fetched_at` / `client_version` файла; другой путь - `--model-catalog`,
-  отключение - `--no-model-catalog`; недоступный каталог оставляет емкость
-  неизвестной и записывается в `result.json` как `context_catalog`), сообщения
-  `agent_message`, usage хода (`cached_input_tokens` входит в
-  `input_tokens`, `reasoning_output_tokens` входит в `output_tokens`) и файл
-  `--output-last-message`. Запрошенная модель записывается отдельно от
-  наблюдаемой; если поток модель не сообщает, она остается неизвестной.
-  Занятость и остаток контекста `exec --json` не сообщает, и страница их не
-  вычисляет. Вердикт ревью и решение по задаче runner не пишет: `review
-  passed/failed`, `triage` и `decision` менеджер записывает через `emit`.
+3. The acceptance review is the same `run_codex_review.py` with `--acceptance-dir`. It adds to your
+   request the terminal role (this call is the independent Check; there are no nested agents or
+   judges), the rendered contract of the plan, the snapshot and the check receipts, asks for a
+   structured answer through `--output-schema` and validates that answer locally:
 
    ```sh
    python3 scripts/run_codex_review.py \
      --workspace /path/to/workspace \
      --prompt /path/to/run/review-1.md \
      --output-dir /path/to/run/review-1 \
-     --progress-dir /path/to/run/progress
+     --progress-dir /path/to/run/progress \
+     --acceptance-dir /path/to/run/acceptance \
+     --check /path/to/run/acceptance/checks/tests-a1.json \
+     --attempt 1
    ```
 
-   Дополнительные флаги Codex передаются как `--codex-arg=--skip-git-repo-check`.
+   Write the request from [templates/review.md](../../../templates/review.md), including the question
+   of whether the tests actually verify the requirement; the text actually sent is saved as
+   `prompt.md` and in the trace. The reviewer is bound to the plan before the CLI starts, exactly as
+   the implementer is: a plan of another workspace, a `--run-id` that contradicts it, an attempt
+   outside a requested limit and a `baseline.json` that is missing or no longer matches the freeze
+   stop the launch. Without `--run-id` the journal and the trace take the run of the plan, so the
+   receipt, the prompt and the records name one run. Validated locally: exactly one answer per criterion, the statuses
+   PASS / FAIL / UNVERIFIED, a severity and a criterion id on every finding, an overall PASS that
+   contradicts neither a FAIL, nor an UNVERIFIED key criterion, nor a blocking finding, and a final
+   text that matches the last message of the captured stream. The same JSON counts as a match: an
+   extra newline or another indent does not matter, a different value does. An unfinished turn, a
+   damaged stream, a missing final answer and a visible attempt in the stream or in stderr to start a
+   nested judge produce no receipt: `verified: false`, a non-zero exit code and the reason in
+   `result.json`. The reviewer profile already disables multi_agent, so any `collab` record counts as
+   such an attempt; stderr is scanned whole rather than by its first chunk, and diagnostics that could
+   not be read to the end (the file did not open or is longer than the scan bound) leave the review
+   unverified by themselves: unread bytes do not prove that no nested judge existed. Delegation that
+   left no trace in the stream or in stderr is not caught by this check. A stream line that could not
+   be parsed (too long or not JSON) also leaves the review unverified: what is not in the parsed
+   stream cannot be treated as absent. That applies to the end of the file too: if the process closed
+   the stream mid-line, the remainder counts as an unparsed segment rather than as emptiness. The raw
+   stream is kept and hashed either way. If the stream named a model and it is not the requested one,
+   the review is not accepted; if it named none, the model stays unknown and is not invented. In
+   acceptance mode the reviewer profile is fixed: `--codex-arg` is refused by argument parsing,
+   before the executable is started, and the choice inside the profile is `--model` and `--effort`. A
+   validated FAIL is a normal review result (exit code 0); it simply does not open COMPLETE. The raw
+   answer of the model stays in `last-message.md` and `codex.jsonl`; the readable `review-report.md`
+   is built from the validated structure, not from the raw text. Without `--acceptance-dir` the run
+   still works as a recording of a review and proves no acceptance.
 
-Что записывает менеджер явно (идентичность берется из журнала, как у `emit`;
-`--attempt`, `--step-id`, `--phase` уточняют ее):
+4. Run the gate before COMPLETE. It recomputes the snapshot of the workspace and compares the plan,
+   the attempt, every receipt, the hashes of their logs, the review and the area of change:
 
    ```sh
-   python3 scripts/run_trace.py register --progress-dir /path/to/run/progress --role user --kind user_prompt --file /path/to/run/user-request.md
-   python3 scripts/run_trace.py register --progress-dir /path/to/run/progress --role manager --kind feedback --phase triage --file /path/to/run/review-1-triage.md
-   python3 scripts/run_trace.py register --progress-dir /path/to/run/progress --role manager --kind decision --phase decision --text "RETRY: 2 CONFIRMED, см. review-1-triage.md"
-   python3 scripts/run_trace.py register --progress-dir /path/to/run/progress --role codex --kind review --model gpt-6-astra --file /path/to/run/review-0.md
-   python3 scripts/run_trace.py budget --progress-dir /path/to/run/progress --tokens 2000000 --note "договоренность с пользователем"
+   python3 scripts/run_acceptance.py complete \
+     --evidence-dir /path/to/run/acceptance --attempt 1 \
+     --check /path/to/run/acceptance/checks/tests-a1.json \
+     --review /path/to/run/acceptance/reviews/review-1-a1.json
+   python3 scripts/run_progress.py emit --progress-dir /path/to/run/progress \
+     --phase decision --status complete --run-id <run> --attempt 1 \
+     --evidence /path/to/run/acceptance/completions/<run>-a1.json
    ```
 
-`--file` сохраняет точный оригинал как артефакт; `--text` и stdin подходят для
-коротких заметок. Бюджет по умолчанию не задан, и страница остаток не
-вычисляет; `budget` пишется только по явной договоренности.
+   What blocks COMPLETE: code changed after the checks; a rewritten plan, criteria, argv or logs; a
+   receipt that is missing, duplicated or belongs to another run, attempt or workspace; a review
+   without a validated PASS; a FAIL or an UNVERIFIED key criterion; an edit outside the allowed scope
+   or inside the protected one. The files the review was built from - the raw stream, the `stderr.log`
+   diagnostics, the final message, the prompt that was sent and the answer schema - are hashed again
+   both before `review passed` and before COMPLETE: a changed or lost artifact removes the trust in
+   the recorded `verified`. The diagnostics belong to that list because the decision about a nested
+   judge was made from them: a review whose `stderr.log` can no longer be re-read has lost its own
+   basis. All the reasons are printed as a list to stderr, and no receipt is written on refusal.
+   `emit` re-verifies the gate receipt, so a stale COMPLETE does not pass even with the file ready.
+   Any record with `--evidence` requires explicit `--run-id` and `--attempt` that match the receipt,
+   otherwise a genuine receipt of one attempt would be filed as the result of another. For
+   `tests passed` and `review passed`, `emit` checks the receipt itself, its plan and the hashes of
+   its logs and artifacts, but does not recompute the tree snapshot: the gate does that before
+   COMPLETE.
 
-Старые запуски импортируются по запросу в отдельную трассировку, старый
-журнал при этом не переписывается. `--launcher-dir` указывает каталог вывода
-старого helper: из него берутся `events.jsonl` / `codex.jsonl`, `prompt.md`,
-`last-message.md`, а для Claude еще `invocation.json` (выбор обвязки),
-`harness-audit.json`, `doctor.json` и `result.json`; отсутствующий файл
-отмечается как отсутствующий, а не восстанавливается. Время наблюдения
-берется из `started_at` / `finished_at` этих артефактов или из
-`--observed-at`; без них записи помечаются "время наблюдения неизвестно".
-Импорт публикуется целиком одной записью под блокировкой трассировки: запись,
-оборвавшаяся на середине (кончилось место, ошибка ввода-вывода, Ctrl-C),
-откатывается, и тот же файл можно импортировать повторно в ту же трассировку.
-Только убитый процесс оставляет префикс импорта (`import_started` без
-`import_finished`); та же команда, запущенная снова, дописывает под прежними
-attempt/step только недостающие записи (в выводе `resumed` - сколько записей
-уже было). Свои записи она узнает по идентичности `import_started`, поэтому
-дописывание работает и после повторного убийства, и когда между фрагментами
-импорта другие вызовы уже писали в трассировку; записи сравниваются по одной
-и по порядку, так что одинаковые записи разных ходов не склеиваются. Команда,
-записи которой не продолжают оставшиеся фрагменты (другой промпт, каталог
-helper, время наблюдения, модель), отвергается. Убитая запись, оборвавшая
-записи helper до строки `import_started`, якоря не оставляет: следующий импорт
-считается новым, и записи helper (не сообщения и не usage) окажутся в
-трассировке дважды. Повторный или одновременный импорт уже импортированного
-файла отвергается:
+What this gives and what it does not. The gate protects against stale and unsupported statements in
+the supported flow of commands. It is not a signature and no defence against the same user with the
+same rights: whoever rewrites the sources, the plan and every receipt will get past it too. Whether
+the criteria are the right ones, and whether the review is correct, stays with the manager and the
+reviewer. For questions, design reviews and analyses the manager can still call native agents
+(`judge`, `code-reviewer`), but their message is not an acceptance receipt: the code gate is closed
+only by a captured external review, never by a PASS copied by hand.
 
-   ```sh
-   python3 scripts/run_trace.py import-claude --progress-dir /path/to/run/progress --launcher-dir /path/to/old/build-3 --attempt 3 --step-id build-3
-   python3 scripts/run_trace.py import-claude --progress-dir /path/to/run/progress --events /path/to/old/build-3/events.jsonl --prompt /path/to/old/build-3/prompt.md --observed-at 2026-09-06T21:49:11Z --attempt 3 --step-id build-3
-   python3 scripts/run_trace.py import-codex --progress-dir /path/to/run/progress --launcher-dir /path/to/old/review-3 --model gpt-6-astra --attempt 3 --step-id review-3
-   ```
+## Checking the attempt and handing the report back
 
-Для старого ревью Codex, от которого остался только текст, используй
-`register --role codex --kind review`: его токены остаются неизвестными.
+5. After EVERY launched call, including an error or a timeout, the launcher runs `claude doctor`
+   (diagnostics timeout 30 seconds) and saves `doctor.json`, `doctor.stdout.log`,
+   `doctor.stderr.log`. Read the output: exit 0 and the status RECORDED mean the diagnostics were
+   collected, not that the installation is proven healthy. The command checks the installation and
+   settings from the cwd, not the execution of the task and not the exact MCP or permission
+   configuration of the previous launch. This is the shell `claude doctor`, not the interactive
+   `/doctor`, which may offer fixes. Then read `harness-audit.json`: the init catalogue, the
+   instructions passed, the real calls and their results are separated there. A missed mandatory
+   agent, an unselected component or an unreadable journal produce UNVERIFIED. A successful return of
+   an Agent does not yet confirm the quality of its work. An optional MCP server that was not called
+   is not an error; a successful hook does not prove that the whole skill was followed. Check
+   `result.json`: `completed` describes the completion of the CLI, `ready_for_review` also requires
+   recorded diagnostics and the harness comparison. No flag means COMPLETE of the task, and
+   `completed: false` is not by itself a defect of the code: find the reason (timeout, a CLI refusal,
+   a model mismatch, a permission denial) in the logs through VERIFY. A doctor or harness error calls
+   for VERIFY, not for an automatic edit of the product code. Check the actual model. Run the checks
+   of the current code through `run_acceptance.py check` by the frozen plan: the commands, the exit
+   code and the raw logs are kept by the receipt rather than retold. A crashed process or a skipped
+   check means neither PASS nor a proven defect of the code.
 
-Как читать страницу. Этапы по попыткам берутся только из записей: "работает"
-(желтый) - есть `run` без `cli_exit`, свежесть считается по обоим потокам
-(журнал и трассировка); "тишина N: состояние не подтверждено" (серый пунктир)
-- записей нет дольше двух минут, и это не завершение; незавершенный вызов
-никогда не скрывается завершенным вызовом той же фазы, параллельные вызовы
-перечисляются; "CLI завершил успешно; приемка менеджером не записана"
-(синий) - `cli_result: success` и выход с кодом 0, ненулевой код или ошибка
-хода - красный; "ожидает менеджера" (сиреневый) - предыдущий этап записан,
-следующий еще нет; зеленый, красный и "не начат" - по статусам записей.
-Карточка "Этап" показывает незавершенные вызовы, даже если позже менеджер
-записал другой этап. Следующий шаг выводится из той же цепочки. Токены: по
-завершенным вызовам итог из `result` / `turn.completed`, по идущим -
-промежуточная сумма снимков разных `message.id` (выход "не менее"),
-сгруппированная по моделям; шаги без захвата показаны как неизвестные, не как
-ноль; счетчик, который сообщили не все вызовы, показывается как "не менее".
-Вход Claude = без кеша + создание кеша + чтение кеша; у Codex кешированный
-вход - подмножество входа; рассуждения входят в выход и не прибавляются.
-Контекст - размер последнего запроса основной сессии (вход + кеш последнего
-сообщения; не сумма по ходам и не текущая занятость с учетом ответа и
-результатов инструментов), емкость окна - из `modelUsage.contextWindow` той
-модели, которой принадлежит последний запрос, а для Codex - из каталога
-моделей CLI с его датой; занятость и остаток контекста headless-потоки не
-сообщают, и страница пишет "неизвестно". Лимиты аккаунта - только из
-`rate_limit_event` потока, с их статусом; импортированные значения помечены
-как исторические и не вытесняют живые. Оценка стоимости - расчет CLI, не
-списание. Раздел "Вызовы LLM: обвязка и контекст сессий" дает по каждому
-запуску блок с выбором менеджера, внедренными скиллами (имя, hash, путь),
-наблюдаемыми вызовами компонентов, сверкой, doctor, итогом helper и
-контекстом сессии; активный вызов раскрыт, остальные свернуты. Внедренный
-текст скилла не доказывает его соблюдение, каталог init - доступные, а не
-вызванные компоненты, флаги helper не доказывают корректность задачи.
-Текст модели рендерится как текст, ссылки на оригиналы ведут только на
-зарегистрированные артефакты, измененный или подмененный файл сервер не отдает.
+6. Run the Check of self-correct. The independent review of meaning is a fresh Codex context with
+   `gpt-6-astra`, effort `ultra` (or the user's latest explicit choice), started with
+   `run_codex_review.py --acceptance-dir` (step 3 of the acceptance section). Let it read the
+   `agents/code-reviewer.md` of this harness and the relevant skills, all the criteria, the sources,
+   the current diff and the new files, the verified snapshot and the real logs. The user's profile
+   outranks the `model` in the agent frontmatter. The reviewer only reads and returns a verdict, and
+   it is the last instance: there is no reviewer above the reviewer. If the review is unavailable,
+   record `review blocked` or `unverified` and say so; rereading your own session is not called an
+   independent review.
 
-## Проверка и отчет Claude
+7. Ask explicitly whether the checks verify the intended behaviour. A green check that would stay
+   green on a wrong implementation supports no criterion: name the criterion it was supposed to
+   protect and treat the gap as a finding, not as coverage. This question belongs to the review
+   request and to your own triage.
 
-5. После КАЖДОГО запущенного вызова, включая ошибку или таймаут, helper выполняет
-   `claude doctor` (таймаут диагностики 30 секунд), сохраняет `doctor.json`,
-   `doctor.stdout.log`, `doctor.stderr.log`. Менеджер читает вывод: exit 0 и статус
-   RECORDED означают сбор диагностики, а не доказанную исправность установки.
-   Команда проверяет установку/настройки из cwd, не исполнение задачи и не точную
-   конфигурацию MCP/прав из флагов предыдущего запуска. Это shell `claude doctor`,
-   а не интерактивный `/doctor`, который может предлагать исправления.
-   Затем прочитай `harness-audit.json`: каталог init, переданные инструкции,
-   реальные вызовы и результаты разделены. Пропущенный обязательный агент,
-   невыбранный компонент или нечитаемый журнал дают UNVERIFIED. Успешный возврат
-   Agent еще не подтверждает качество его работы. Невызванный необязательный MCP
-   не является ошибкой; успешный hook не доказывает соблюдение всего skill.
-   Проверь `result.json`: `completed` описывает завершение CLI, `ready_for_review`
-   дополнительно требует записанной диагностики и сверки обвязки. Ни один флаг
-   не означает COMPLETE задачи, и `completed: false` сам по себе не является
-   дефектом кода: причину (таймаут, отказ CLI, несовпадение модели, отказ в
-   правах) выясняй по журналам через VERIFY. Ошибка doctor/обвязки требует
-   VERIFY, а не автоматической правки продуктового кода. Проверь фактическую
-   модель. Запусти применимые проверки текущего кода; сохрани команды, exit
-   code и сырые результаты. Падение процесса или пропущенная проверка не
-   означает ни PASS, ни доказанный дефект кода.
-6. Проведи Check из self-correct. Для независимого смыслового ревью создай новый
-   контекст Codex с `gpt-6-astra`, effort `ultra` (или последним явным выбором
-   пользователя). Дай ему прочитать `agents/code-reviewer.md` этой обвязки и
-   релевантные skills, все критерии, источники, текущий diff и новые файлы,
-   проверенный снимок и реальные журналы. Пользовательский профиль имеет приоритет
-   над `model` в frontmatter агента. Ревьюер только читает и выносит заключение.
-   Если отдельный агент недоступен, сообщи об этом; не называй повторное чтение
-   своей сессией независимым ревью.
-7. Сохрани полный отчет итерации: идентификатор/хеш проверенной версии, результат
-   каждого критерия, замечания с местом, входом/состоянием, фактическим и ожидаемым
-   поведением, основанием и проверенными защитами. Ноль замечаний - допустимый
-   результат. Отчет исполнителя приходит по шаблону
-   [templates/implementation-report.md](../../../templates/implementation-report.md);
-   его утверждения проверяются по источникам и результатам команд, а не
-   принимаются на слово. Для каждого замечания менеджер фиксирует CONFIRMED /
-   REFUTED / UNVERIFIED и основание. Подтверждением служит воспроизведение или
-   проверяемая цепочка по коду/контракту, а не согласие второй модели и не
-   повторный вопрос.
-8. Передай Claude отчет после КАЖДОЙ проверки. При RETRY сохрани полный отчет
-   дословно, приложи решения менеджера и все первоначальные критерии. Править
-   разрешено только CONFIRMED. REFUTED не порождает правок; UNVERIFIED требует
-   ограниченного сбора оснований. При новом поведении ошибки сначала воспроизведи
-   ее тестом, когда это практически применимо; ошибка компиляции теста не считается
-   воспроизведением. После правок повтори полный Check текущей версии.
+8. Save the full report of the iteration: the identifier or hash of the version checked, the result
+   of every criterion, the findings with their place, input or state, actual and expected behaviour,
+   evidence and the protections that were verified. Zero findings is a valid result. The
+   implementer's report arrives in the form of
+   [templates/implementation-report.md](../../../templates/implementation-report.md); its statements
+   are checked against sources and command results, not taken on trust. For every finding the manager
+   records CONFIRMED / REFUTED / UNVERIFIED and the evidence. Confirmation is reproduction or a
+   checkable chain through the code or the contract, not the agreement of a second model and not a
+   repeated question.
 
-При PASS отправь итоговый отчет Claude в режиме `--read-only` с поручением
-прочитать его и завершить работу без правок. Этот handoff не является новым
-Build/Check и не расходует попытку. Сверь неизменность проверенных файлов.
-Если все замечания опровергнуты, повторная проверка выполняется без изменения кода
-и расходует попытку по общему счетчику. Не принимай спорное замечание автоматически.
+9. Hand Claude the report after EVERY check. The full report of the iteration is saved as a file in
+   the run directory and pasted whole into the "Previous check" section of the next prompt following
+   [templates/task.md](../../../templates/task.md); the same file is registered in the trace
+   (`run_trace.py register --role manager --kind feedback --phase triage --file ...`), so that what
+   was handed over matches what was recorded. On RETRY keep the full report verbatim and attach the
+   manager's decisions; the criteria themselves travel with the contract and are not retyped. Only
+   CONFIRMED findings may be fixed. REFUTED produces no edits; UNVERIFIED calls for a bounded
+   collection of evidence. For new error behaviour, reproduce it with a test first where that is
+   practical; a compilation error in the test is not a reproduction. After the edits, repeat the full
+   Check of the current version.
 
-## Завершение
+## Decisions
 
-Применяй COMPLETE/ESCALATE и stop rules основного skill, включая общий лимит
-попыток и повтор Critical. При ESCALATE также передай Claude финальный отчет
-без разрешения правок и сообщи пользователю конкретное препятствие. Переспрос
-пользователя не начинает новую итерацию и не является основанием менять код.
+- **A confirmed defect of the implementation while the requirements hold: RETRY.** The contract does
+  not change, the attempt counter does.
+- **A missing basis, an unclear environment or a refuted technical assumption: a bounded VERIFY**
+  and a revision of the way the work is implemented. The acceptance criteria do not change by
+  themselves, and the `plan_id` stays the same.
+- **The requirements themselves changed: a new contract with its reason.** A change of the user's
+  goal or a widening of permissions is not derived from a wish to pass the tests. Do not edit the
+  frozen plan and do not weaken the criteria for a green result. Creating a new plan directory does
+  not by itself carry over the original baseline and the attempts already made: the existing code
+  does not provide that. Until such a transition is prepared and checked, acceptance of the changed
+  task stays unfinished, and that is said to the user instead of being closed as COMPLETE.
+- **ESCALATE** by the stop conditions of the main skill: a real blocker only. A missing source with
+  no other way to verify it, an authorisation or an input only the user can give, or a limit the user
+  themselves set. The same Critical twice is a signal to find the deeper cause, not a stop by itself,
+  and a number of attempts is not a reason to stop at all.
+- **COMPLETE** only for the current verified version, after the gate and `emit --status complete
+  --evidence`.
 
-Финальный ответ содержит проверенный результат и ссылки на отчеты. Commit,
-push, применение патча в исходную копию и публикация выполняются только в
-авторизованном пользователем объеме; сам цикл такого разрешения не добавляет.
+On PASS, send the final report to Claude in `--read-only` mode with the instruction to read it and
+finish without edits. This handoff is not a new Build or Check and takes no attempt number; it needs
+no plan. Check that the verified files did not change. If every finding was refuted, the repeated
+check runs without changing the code and takes the next attempt number. Do not accept a contested
+finding automatically.
 
-После COMPLETE или ESCALATE обнови локальный handoff по
-[docs/memory.md](../../../docs/memory.md): путь и ревизия проверенной версии,
-дата проверки, подтвержденные исправления, нерешенные вопросы. Сырые
-артефакты запуска остаются в каталоге запуска и в память не копируются.
+## Finishing
+
+Apply the COMPLETE/ESCALATE rules and the stop conditions of the main skill: acceptance, a user
+interruption, a real blocker, or a limit the user set. COMPLETE is recorded only after the
+`run_acceptance.py complete` gate and `emit --status complete --evidence`; a decision without a
+receipt is not accepted by the
+CLI and should not be accepted by you. On ESCALATE, also hand Claude the final report without
+permission to edit and tell the user the concrete obstacle. A repeated question from the user does
+not start a new iteration and is not a reason to change the code.
+
+The final answer to the user is in Russian and contains the verified result and links to the
+reports. Commit, push, applying the patch to the original copy and publication happen only within the
+scope the user authorised; the loop itself adds no such permission.
+
+After COMPLETE or ESCALATE, update the local handoff following
+[docs/memory.md](../../../docs/memory.md): the path and revision of the verified version, the date of
+the check, the confirmed fixes, the open questions. Add a short retrospective to that same handoff
+entry, in three lines and from what was already recorded (attempts, usage, the journal):
+
+- what failed or repeated across attempts, and which check caught it (or which check should have and
+  did not);
+- what was lost or done twice: context that had to be collected again, a return caused by an unclear
+  requirement, human intervention (marked separately from the manager's own actions; if the human's
+  time was not measured, leave it unknown);
+- one justified process change, or "no grounds to change the process".
+
+Do not build a new evaluator, dashboard or metric of "skill success" for this: the retrospective is
+three lines in the existing handoff, and the raw artifacts of the run stay in the run directory and
+are not copied into memory.
+
+## Observability
+
+The progress journal, the trace and the monitor page have their own reference:
+[docs/observability.md](../../../docs/observability.md). It holds the fields, the statuses, the
+`emit` and `run_trace.py` commands, the import of old runs and how to read the page. Two commands
+cover the ordinary case:
+
+```sh
+tail -f /path/to/run/progress/progress.log
+python3 scripts/run_progress.py serve --progress-dir /path/to/run/progress
+```
+
+All the calls of one task share a `--progress-dir` outside the workspace. The journal is not
+acceptance: stages with `passed` and the COMPLETE decision require the receipts of the section above.

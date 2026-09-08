@@ -1,107 +1,99 @@
 ---
-description: Разобрать эпик по методу epic-decomposition и оформить результат в формате планирования текущего проекта
-argument-hint: '<текст эпика, путь к файлу или ключ в трекере>'
+description: Decompose an epic with the epic-decomposition method and write the result in the planning format of the current project
+argument-hint: '<epic text, a file path or a tracker key>'
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(date:*), Bash(git log:*), Skill
 ---
 
-Вход: $ARGUMENTS
+Input: $ARGUMENTS
 
-Ты разбираешь эпик для проекта, в котором запущена команда. Метод общий,
-форматы и место результата - из материалов этого проекта.
+You are decomposing an epic for the project the command was run in. The method is common; the
+formats, the language of the document and the place of the result come from the materials of that
+project.
 
-## Шаг 1. Загрузить метод
+## Step 1. Load the method
 
-Обязательно примени skill `epic-decomposition` (входит в эту обвязку): три
-шкалы, калькулятор сложности, правила размеров, порог резки, метод из десяти
-ходов, признаки пятерки против тройки, чек-лист и анти-паттерны. Не
-пересказывай правила по памяти, читай skill. Пороги и калькулятор из skill -
-локальная конвенция; если материалы проекта задают свои, они главнее.
+Apply the `epic-decomposition` skill of this harness: the three scales, the complexity calculator,
+the size rules, the split threshold, the ten-move method, the signs of a five against a three, the
+checklist and the anti-patterns. Do not retell the rules from memory, read the skill. The thresholds
+and the calculator in the skill are a local convention; if the project materials set their own, those
+win.
 
-## Шаг 2. Найти проект и формат результата
+## Step 2. Find the project and the result format
 
-Определи по аргументам, текущей рабочей директории, инструкциям проекта
-(CLAUDE.md или AGENTS.md) и индексу документации, где лежат документы
-планирования и какие форматы там уже есть. Прочитай по одному свежему
-образцу каждого формата, который может подойти: квартальная оценка, разрез
-эпика выше порога, нарезка компонента на задачи, полная нарезка
-эпик - истории - подзадачи, ревью чужой стори. Формат выбирай по входу; если
-правило выбора в материалах не записано и вход неоднозначен, подтверди у
-пользователя через AskUserQuestion.
+From the arguments, the current working directory, the project instructions (CLAUDE.md or AGENTS.md)
+and the documentation index, determine where the planning documents live and which formats already
+exist there. Read one recent example of every format that could fit: a quarterly estimate, a split of
+an epic above the threshold, a decomposition of a component into tasks, a full epic - stories -
+subtasks decomposition, a review of someone else's story. Choose the format by the input; if the
+choice rule is not written in the materials and the input is ambiguous, confirm with the user through
+AskUserQuestion.
 
-Не переноси шапку или секции одного формата в другой: у каждого формата свой
-набор, бери его из образца. Если каталога планирования нет, спроси, куда
-класть результат; не создавай новый каталог молча.
+Do not carry the header or the sections of one format into another: every format has its own set,
+take it from the example. If there is no planning directory, ask where to put the result; do not
+create a new directory in silence.
 
-## Шаг 3. Шапка и основание
+## Step 3. The header and the basis
 
-- H1 с предметом документа и дата (в H1 или отдельной строкой, как в образце).
-- Основание: против чего сверено и на чем построено (ADR, спека, строка
-  квартальной матрицы; для нарезки задач - коммит, ветка, репозитории,
-  миграции, деплой-конфиг). Ссылки в форме, принятой в проекте.
-- Расшифровка аббревиатур и пунктуация по конвенциям проекта.
-- Если в одном документе встречаются числа из разных шкал, оговорка про шкалы
-  обязательна.
-- Для нарезки задач дополнительно: чем документ не является; отношение к
-  трекеру (рабочие метки отделяются от реальных ключей; если у эпика в
-  трекере уже есть своя нарезка, она главнее); строка суммы SP (story points)
-  и явное указание конфликта с капасити, если он есть; порядок выполнения.
+- An H1 with the subject of the document and the date (in the H1 or on a separate line, as in the
+  example).
+- The basis: what it was checked against and what it is built on (an ADR, a spec, a row of the
+  quarterly matrix; for a task decomposition also the commit, the branch, the repositories, the
+  migrations, the deployment configuration). Links in the form the project uses.
+- Abbreviations spelled out and punctuation as the project conventions require.
+- If one document holds numbers from different scales, the note about the scales is mandatory.
+- For a task decomposition, additionally: what the document is not; its relation to the tracker
+  (working labels are separated from real keys; if the epic already has its own decomposition in the
+  tracker, that one wins); the line with the SP (story points) total and an explicit statement of a
+  conflict with capacity if there is one; the order of execution.
 
-## Шаг 4. Считать честно
+## Step 4. Count honestly
 
-- Подзадача только 3 или 5 SP. Других размеров не существует.
-- Сумма подзадач равна оценке истории. Проверь арифметику явно и выпиши
-  разложение.
-- Пятерка это лист, она не режется.
-- Слот разработчика в спринте 8 SP, ровно 5 плюс 3.
-- Оценка эпика калькулятором обязана сопровождаться выписанными чекбоксами.
-  Оценка без чекбоксов - анти-паттерн из skill.
-- Мощность команды: 8 SP на поинтуемого разработчика. Состав пула проверяй по
-  актуальному источнику проекта перед каждой раскладкой, не бери число из
-  старого файла.
-- Правило округления к Фибоначчи при равном расстоянии сверяй с живым
-  калькулятором проекта. Если округление влияет на решение резать или не
-  резать, скажи об этом прямо, не прячь.
+- A subtask is only 3 or 5 SP. No other sizes exist.
+- The subtasks sum to the story estimate. Check the arithmetic explicitly and write the split out.
+- A five is a leaf and is not cut.
+- A developer slot in a sprint is 8 SP, exactly 5 plus 3.
+- An epic estimate from the calculator must come with the ticked boxes written out. An estimate
+  without them is an anti-pattern from the skill.
+- Team capacity: 8 SP per pointed developer. Check the composition of the pool against the current
+  source of the project before every layout; do not take the number from an old file.
+- Check the Fibonacci rounding rule at an equal distance against the live calculator of the project.
+  If the rounding decides whether to split or not, say so directly instead of hiding it.
 
-## Шаг 5. Конец документа
+## Step 5. The end of the document
 
-- Разрез эпика: раздел о порядке и сумме с явной проверкой, что сумма кусков
-  равна исходной оценке; при необходимости примечание, куда делась работа,
-  которую разрез не забрал ни в одну половину. Секций про капасити в этом
-  формате не бывает: капасити считается в story points, а разрез эпика ведется
-  в шкале сложности калькулятора.
-- Нарезка задач: капасити до заведения (сумма против спринт-плана, раскладка
-  по спринтам); раздел "Что всплыло по ходу, завести отдельно" (обязателен
-  даже пустой, тогда так и напиши); для полной нарезки - блок проверок
-  метода: все подзадачи 3 или 5, сумма подзадач равна оценке истории с
-  перечислением разложений, баланс троек и пятерок, сумма после разреза
-  совпадает с оценкой до.
+- A split of an epic: a section about the order and the sum with an explicit check that the pieces
+  sum to the original estimate; where necessary, a note about where the work went that the split took
+  into neither half. This format has no capacity sections: capacity is counted in story points, while
+  a split of an epic is done on the complexity scale of the calculator.
+- A task decomposition: capacity before the tickets are created (the total against the sprint plan,
+  the layout across sprints); the section "Что всплыло по ходу, завести отдельно" (mandatory even
+  when empty, and then say so); for a full decomposition, the block of method checks: every subtask
+  is 3 or 5, the subtasks sum to the story estimate with the splits listed, threes and fives are
+  balanced, and the sum after the split of the epic matches the estimate before it.
 
-## Шаг 6. Имя файла и индекс
+## Step 6. The file name and the index
 
-Схему имени выводи из существующих файлов каталога, а не из одного файла.
-Если индекс документации устроен как карта "вопрос - где ответ", спроси,
-отвечает ли новый файл на вопрос, который стоит внести. Если индекс - перечень
-файлов, допиши строку в его форме и скажи об этом.
+Derive the naming scheme from the existing files of the directory, not from one file. If the
+documentation index is arranged as a map "question - where the answer is", ask whether the new file
+answers a question worth adding. If the index is a list of files, add a line in its form and say so.
 
-## Шаг 7. Чего не выдумывать
+## Step 7. What not to invent
 
-Если материалы проекта не задают правило, не решай за пользователя,
-спрашивай:
+If the project materials set no rule, do not decide for the user, ask:
 
-- как оформлять непоинтуемые и прикидочные задачи;
-- что делать со сложностью выше диапазона калькулятора;
-- как трактовать сложность ровно на пороге резки;
-- обязательны ли MVP-флаг и тип истории;
-- формат ссылки на трекер;
-- где указывать владельца задачи.
+- how to record unpointed and rough tasks;
+- what to do with a complexity above the range of the calculator;
+- how to treat a complexity exactly at the split threshold;
+- whether the MVP flag and the story type are mandatory;
+- the format of a tracker link;
+- where the owner of a task is named.
 
-## Шаг 8. Самопроверка
+## Step 8. Self-check
 
-Прогони чек-лист перед грумингом из skill и явно отчитайся по анти-паттернам:
-слоеная история, подзадача "написать тесты", дробление пятерки, все подзадачи
-одного размера, союз "и" между двумя результатами в названии, спайк без
-таймбокса, смешение шкал, разрез, раздувающий сумму, зависимость на чужую
-подзадачу без зафиксированного контракта.
+Run the pre-grooming checklist from the skill and report explicitly on the anti-patterns: a layered
+story, a "write the tests" subtask, splitting a five, all subtasks of one size, the word "and"
+between two results in a title, a spike without a timebox, mixed scales, a cut that inflates the sum,
+a dependency on someone else's subtask without a fixed contract.
 
-Оформление по конвенциям проекта. В конце покажи путь файла, строку индекса
-(если добавлена) и список того, что ты спросил бы, но решил по умолчанию.
+The formatting follows the project conventions. At the end, show the file path, the index line (if
+you added one) and the list of things you would have asked about but decided by default.

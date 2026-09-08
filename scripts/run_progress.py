@@ -33,6 +33,12 @@ from harness_run_audit import component_for
 SCHEMA = 1
 JOURNAL, LOG, LOCK = "progress.jsonl", "progress.log", ".progress.lock"
 PAGE = Path(__file__).resolve().with_name("run_progress.html")
+# The office scene: two files built once from the pinned Pixel Agents sources and checked in, so the
+# monitor runs with Python alone. Only these two exact paths are ever mapped to a file; the server has
+# no directory handler and never joins a request path onto a directory.
+OFFICE = Path(__file__).resolve().parents[1] / "monitor" / "pixel-office" / "dist"
+OFFICE_FILES = {"/pixel-agents/office.js": (OFFICE / "office.js", "application/javascript; charset=utf-8"),
+                "/pixel-agents/assets.json": (OFFICE / "assets.json", "application/json; charset=utf-8")}
 LOG_HEADER = "# progress.log v1: readable projection of progress.jsonl\n"
 MAX_LINE_BYTES = 16 * 1024
 MAX_NATIVE_LINE_BYTES = 16 * 1024 * 1024
@@ -72,8 +78,11 @@ SOURCE_EVENTS = {
     "manager": ("phase", "finding", "decision"),
 }
 MANAGER_EVENT_BY_PHASE = {"triage": "finding", "decision": "decision"}
+# A recorded pass and COMPLETE are claims about checked work: each needs the matching acceptance
+# receipt, whatever phase or event the emitter names. Everything else is recorded as before.
+EVIDENCE_BY_PHASE = {"review": "review"}
 REQUIRED = ("schema", "event_id", "time", "run_id", "attempt", "step_id", "source", "phase", "event", "status")
-OPTIONAL_TEXT = ("model", "effort", "tool", "component", "hook", "call_id", "parent_call_id", "task_id")
+OPTIONAL_TEXT = ("model", "effort", "tool", "component", "hook", "call_id", "parent_call_id", "task_id", "evidence")
 OPTIONAL_NUMBER = ("duration_seconds", "exit_code", "count")
 KNOWN_FIELDS = frozenset(REQUIRED + OPTIONAL_TEXT + OPTIONAL_NUMBER)
 LABELS = {
@@ -159,7 +168,9 @@ def validate_event(record):
         raise ValueError("invalid time")
     clean["time"] = stamp
     attempt = record.get("attempt")
-    if isinstance(attempt, bool) or not isinstance(attempt, int) or not 1 <= attempt <= 99999:
+    # A positive counter that names one pass of the loop; how many passes a task takes is not this
+    # journal's business, so there is no ceiling to reject a genuine late attempt.
+    if isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1:
         raise ValueError("invalid attempt")
     clean["attempt"] = attempt
     source, phase, event, status = (record.get(key) for key in ("source", "phase", "event", "status"))
@@ -220,6 +231,8 @@ def describe(record):
         details.append("%.1f с" % record["duration_seconds"])
     if record.get("count") is not None:
         details.append("n=" + str(record["count"]))
+    if record.get("evidence"):
+        details.append("evidence " + record["evidence"][:16])
     return label + (" [" + ", ".join(details) + "]" if details else "")
 
 
@@ -370,8 +383,7 @@ class ProgressJournal:
             raise ValueError("Unknown progress phase or source")
         if run_id is not None and identifier(run_id) is None:
             raise ValueError("Invalid run id")
-        if attempt is not None and (isinstance(attempt, bool) or not isinstance(attempt, int)
-                                    or not 1 <= attempt <= 99999):
+        if attempt is not None and (isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1):
             raise ValueError("Attempt must be a positive integer")
         if step_id is not None and identifier(step_id) is None:
             raise ValueError("Invalid step id")
@@ -664,6 +676,21 @@ class LineTailer:
         if self.pending_size > MAX_NATIVE_LINE_BYTES:
             self.pending, self.pending_size, self.discarding = [], 0, True
 
+    def finish(self):
+        """Account for what the writer left behind at EOF; a tail without a newline is data, not silence.
+
+        Called once the writer is closed, so the buffer can no longer grow: the residual segment is
+        parsed like any line, and a tail already dropped for exceeding the line bound is counted as
+        oversized. A live poll must not do this, because there an unterminated tail is simply a line
+        that is still being written.
+        """
+        pending, discarding = b"".join(self.pending), self.discarding
+        self.pending, self.pending_size, self.discarding = [], 0, False
+        if discarding:
+            self.oversized_lines += 1
+        if pending:
+            self.line(pending.rstrip(b"\r"))
+
     def line(self, line):
         if not line.strip():
             return
@@ -831,6 +858,10 @@ def stop_observer(thread, observer, stop, timeout=JOIN_TIMEOUT):
         alive = True
     if alive and not observer.error:
         observer.error = "observer thread did not stop within %.0f s" % timeout
+    if not alive:
+        # The writer is gone and the tailer has stopped, so this is the stream's EOF: whatever it left
+        # unparsed is accounted for here. A thread still running is not touched from another one.
+        observer.finish()
     journal = observer.journal
     failed = observer.error or journal.error
     journal.record("observer", "failed" if failed else "stopped", count=observer.events)
@@ -841,14 +872,24 @@ def stop_observer(thread, observer, stop, timeout=JOIN_TIMEOUT):
             "oversized_lines": observer.oversized_lines, "records": journal.records}
 
 
-def csp_for(page):
-    """Hash the bundled inline script and style so nothing else can run on the page."""
+def sri(data):
+    """The subresource integrity form of a digest: the same value the page pins in its script tag."""
+    return "sha256-" + base64.b64encode(hashlib.sha256(data).digest()).decode()
+
+
+def csp_for(page, scripts=()):
+    """Hash the bundled inline script and style so nothing else can run on the page.
+
+    A local built script is authorized by the digest of its own bytes; the page carries the same digest
+    as integrity metadata, which is what makes a hash source usable for an external script at all.
+    """
     def hashes(tag):
         return " ".join("'sha256-" + base64.b64encode(hashlib.sha256(block.encode("utf-8")).digest()).decode() + "'"
                         for block in re.findall("<%s>(.*?)</%s>" % (tag, tag), page, re.DOTALL))
+    script_src = " ".join(["'%s'" % sri(data) for data in scripts] + [hashes("script")]).strip()
     return ("default-src 'none'; script-src %s; style-src %s; connect-src 'self'; "
             "img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-            % (hashes("script") or "'none'", hashes("style") or "'none'"))
+            % (script_src or "'none'", hashes("style") or "'none'"))
 
 
 class ProgressHandler(http.server.BaseHTTPRequestHandler):
@@ -877,6 +918,8 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
         if parsed.path == "/":
             return self.send(200, self.server.page, "text/html; charset=utf-8",
                              (("Content-Security-Policy", self.server.csp),))
+        if parsed.path in OFFICE_FILES:
+            return self.office(parsed.path)
         query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
         if parsed.path == "/api/artifact":
             return self.artifact(query)
@@ -899,6 +942,13 @@ class ProgressHandler(http.server.BaseHTTPRequestHandler):
                 record["label"] = describe(record)
             page.update(now=utc_now(), log=str(self.server.log))
         self.send(200, json.dumps(page, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
+
+    def office(self, path):
+        """Serve one of the two built office files from the snapshot read at startup, or say it is missing."""
+        body = self.server.office.get(path)
+        if body is None:
+            return self.send(503, b"office bundle is not built\n", "text/plain; charset=utf-8")
+        return self.send(200, body, OFFICE_FILES[path][1])
 
     def artifact(self, query):
         """Serve one registered artifact as inert text; nothing outside the artifact store is reachable."""
@@ -929,12 +979,57 @@ class ProgressServer(http.server.ThreadingHTTPServer):
         import run_trace
         self.trace_module, self.trace = run_trace, directory / run_trace.TRACE
         self.page = PAGE.read_bytes()
-        self.csp = csp_for(self.page.decode("utf-8"))
+        # Page and bundle are read once together: the authorized digest always describes the bytes served.
+        self.office = {}
+        for path, (source, _) in OFFICE_FILES.items():
+            try:
+                self.office[path] = source.read_bytes()
+            except OSError:
+                self.office[path] = None
+        bundle = self.office["/pixel-agents/office.js"]
+        self.csp = csp_for(self.page.decode("utf-8"), [bundle] if bundle is not None else [])
         super().__init__(("127.0.0.1", port), ProgressHandler)
 
     @property
     def url(self):
         return "http://127.0.0.1:%d/" % self.server_address[1]
+
+
+def required_evidence(phase, event, status):
+    """The acceptance receipt a claim needs, or None when the record claims nothing checked."""
+    if event == "decision" and status == "complete":
+        return "completion"
+    if event == "phase" and status == "passed":
+        return EVIDENCE_BY_PHASE.get(phase, "check")
+    return None
+
+
+def evidence_id(args, event):
+    """Validate the receipt behind a claim before anything is written; returns its id or None."""
+    kind = required_evidence(args.phase, event, args.status)
+    if kind is None:
+        if args.evidence is not None:
+            raise ValueError("--evidence belongs to a recorded pass or COMPLETE, not to %s %s"
+                             % (event, args.status))
+        return None
+    if args.evidence is None:
+        raise ValueError("%s %s in phase %s requires --evidence with a %s receipt of run_acceptance.py; "
+                         "a bare record would claim checked work that nothing supports"
+                         % (event, args.status, args.phase, kind))
+    # The identity of the record is required explicitly here, before it is chosen. Left to the
+    # journal's defaults it could differ from the receipt's own run and attempt, and the event would
+    # file genuine evidence of one attempt under another.
+    if args.run_id is None or args.attempt is None:
+        raise ValueError("%s %s carries a %s receipt, so it needs an explicit --run-id and --attempt: the record is "
+                         "written under that identity and must be the one the receipt was issued for"
+                         % (event, args.status, kind))
+    # The acceptance module reads this one's identifiers, so it is imported when a claim needs it.
+    import run_acceptance
+    problems = run_acceptance.evidence_for(kind, args.evidence, attempt=args.attempt, run_id=args.run_id)
+    if problems:
+        raise ValueError("The %s receipt does not support %s %s:\n  - %s"
+                         % (kind, event, args.status, "\n  - ".join(problems)))
+    return run_acceptance.load_receipt(args.evidence, kind)["receipt_id"]
 
 
 def emit(args):
@@ -943,7 +1038,8 @@ def emit(args):
         raise ValueError("Status %s is not allowed for %s events; allowed: %s"
                          % (args.status, event, ", ".join(EVENTS[event])))
     fields = {"model": args.model, "effort": args.effort, "component": args.component,
-              "exit_code": args.exit_code, "duration_seconds": args.duration, "count": args.count}
+              "exit_code": args.exit_code, "duration_seconds": args.duration, "count": args.count,
+              "evidence": evidence_id(args, event)}
     ProgressJournal.open(args.progress_dir, source="manager", phase=args.phase, run_id=args.run_id,
                          attempt=args.attempt, step_id=args.step_id or args.phase, echo=sys.stdout,
                          first=(event, args.status, fields))
@@ -971,15 +1067,20 @@ def main():
     emitter.add_argument("--phase", required=True, choices=PHASES)
     emitter.add_argument("--status", required=True)
     emitter.add_argument("--event", choices=SOURCE_EVENTS["manager"], help="Default: by phase")
-    emitter.add_argument("--attempt", type=int, help="Default: latest attempt in the journal")
+    emitter.add_argument("--attempt", type=int, help="Default: latest attempt in the journal; required with --evidence")
     emitter.add_argument("--step-id", help="Default: the phase name")
-    emitter.add_argument("--run-id", help="Default: the journal's run id or the directory name")
+    emitter.add_argument("--run-id", help="Default: the journal's run id or the directory name; "
+                                          "required with --evidence")
     emitter.add_argument("--model")
     emitter.add_argument("--effort")
     emitter.add_argument("--component")
     emitter.add_argument("--exit-code", type=int)
     emitter.add_argument("--duration", type=float, help="Seconds")
     emitter.add_argument("--count", type=int)
+    emitter.add_argument("--evidence", type=Path,
+                         help="Acceptance receipt of run_acceptance.py: a captured check for a passed phase, a "
+                              "validated review for review passed, a completion receipt for decision complete; "
+                              "the record is written under the explicit --run-id and --attempt of that receipt")
     server = commands.add_parser("serve", help="Serve the page and the event API on 127.0.0.1")
     server.add_argument("--progress-dir", required=True, type=Path)
     server.add_argument("--port", type=int, default=0, help="0 selects a free port; the URL is printed")

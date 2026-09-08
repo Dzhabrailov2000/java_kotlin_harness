@@ -1,89 +1,88 @@
-# Задача <ID>: <название>
+# Task <ID>: <title>
 
-Шаблон промпта для внешнего исполнителя. Заполняется менеджером после чтения
-проекта, локального указателя источников и выбора компонентов; шаблон сам
-промпт не составляет. Удали пояснения в угловых скобках. Все, что попадает в
-этот файл, уходит модели как обычный запрос: не включай секреты и лишний
-корпоративный контекст.
+Prompt template for the external implementer, written in English like every internal exchange of
+this pipeline. The manager fills it in after reading the project, the local pointer to sources and
+the selected components; the template does not compose the prompt by itself. Delete the notes in
+angle brackets. Everything in this file goes to the model as an ordinary request: no secrets, no
+corporate context the task does not need.
 
-## Режим и попытка
+The acceptance criteria, the required checks with their literal argv, the allowed and protected
+scope, the run and plan identity and any attempt limit are not written here. They are rendered from
+the frozen plan by `run_acceptance.py` and appended to this prompt by the launcher, so the
+implementer and the reviewer read one text. What follows is the task context around that contract;
+it never redefines it. If the contract itself is wrong, that is a new contract, not a longer prompt.
 
-- Роль: внешний исполнитель. Менеджер владеет self-correct, независимым ревью,
-  triage замечаний и приемкой. Не запускай собственный цикл проверки, внешний
-  review или другие модели.
-- Попытка <N> из <M> (лимит из Define; по умолчанию 3, включая первую).
-- Компоненты не расширять: каталог из reminder hook - инвентарь, не поручение.
-  Недостающую возможность верни менеджеру с причиной.
+## Mode and attempt
 
-## Цель
+- Role: external implementer. The manager owns self-correct, the independent review, the triage of
+  findings and acceptance. Do not run your own verification loop, external review or other models.
+- Report in English; the user talks to the manager in Russian, the manager answers the user in
+  Russian, and everything between manager, implementer and reviewer stays English.
+- The launch carries `--acceptance-dir` and `--attempt`; the attempt number and any limit the user
+  explicitly requested come with the contract below the prompt. Without such a limit there is no
+  attempt quota, and no wall-clock, turn, token or cost cutoff is imposed on this call: work until
+  the task is done, the user interrupts, or a blocker needs input only they can give.
+- Do not widen the component set: the installed catalogue (`/harness`) is inventory, not an
+  assignment. Return a missing capability to the manager with the reason.
 
-<Одно-два предложения: что должно измениться и зачем.>
+## Goal
 
-## Критерии приемки
+<One or two sentences: what must change and why.>
 
-| ID | Требование | Ключевой | Проверяет |
-| --- | --- | --- | --- |
-| C1 | <проверяемая формулировка> | да/нет | тесты / ревью / менеджер |
-| C2 | ... | | |
+## Sources and revision
 
-<Критерии - исходные из Define, полностью и дословно; не заменяй их
-замечаниями прошлой проверки.>
+- Repository: <path>, branch <branch>, HEAD <sha>.
+- Implementer workspace: <path to the worktree or directory>.
+- Ground truth documents (read-only): <path and revision or date>, ...
+- Baseline snapshot: <path>.
+- Applicable instructions: <paths to the CLAUDE.md / AGENTS.md that apply here>.
 
-## Источники и ревизия
+## Implementation context
 
-- Репозиторий: <путь>, ветка <ветка>, HEAD <sha>.
-- Рабочая копия исполнителя: <путь к worktree или каталогу>.
-- Документы-основания (read-only): <путь и ревизия или дата>, ...
-- Снимки исходного состояния: <путь к baseline>.
-- Применимые инструкции: <пути к CLAUDE.md / AGENTS.md, которые действуют>.
+<What the contract does not say: the shape of the existing code, the decision already taken, the
+approach agreed with the user, what changed since the previous stage. Nothing here narrows,
+extends or reinterprets a criterion.>
 
-## Разрешенные и защищенные пути
+## Selected components and why
 
-- Можно менять: <явный список файлов и каталогов, включая допустимые новые>.
-- Запрещено менять: <источники, ADR, чужие репозитории, настройки, память>.
-- Запрещенные действия: commit, push, merge, установка в реальный дом,
-  запуск моделей и агентов вне выбора, <другое по задаче>.
-- Если нужная правка выходит за разрешенный список: сначала сообщи с
-  основанием, не правь.
+- Skills (`--skill`): <name - why it was selected and what it should change>; scope-fence and
+  evidence-before-claim are always sent.
+- Agents (`--agent`): <name - the work assigned to it> or "none".
+- MCP (`--mcp-config`): <server - the question it answers> or "none".
+- Priority: the existing stack and the project rules outrank the examples inside a skill.
 
-## Выбранные компоненты и причины
+## Checks
 
-- Skills (`--skill`): <имя - зачем и какой результат ожидается>; scope-fence и
-  evidence-before-claim передаются всегда.
-- Агенты (`--agent`): <имя - назначенная работа> или "нет".
-- MCP (`--mcp-config`): <сервер - какой вопрос закрывает> или "нет".
-- Приоритет: существующий стек и правила проекта главнее примеров из skills.
+- Commands the implementer runs itself and attaches the output of: <command 1>, <command 2>.
+- The required checks are frozen in the plan and captured by the manager with
+  `run_acceptance.py check`. The implementer may run them, but the receipt is the manager's.
+- Acceptance rests on the captured checks and the independent review. An implementer's note that
+  something "was verified", without the output of the command, is not accepted, and COMPLETE
+  without the gate receipt is not recorded.
 
-## Проверки
+## Unknown
 
-- Команды, которые исполнитель запускает сам и прикладывает вывод:
-  <команда 1>, <команда 2>.
-- Приемку определяют проверки менеджера и независимое ревью; отметки
-  исполнителя "проверено" без вывода команды не принимаются.
+<What is not established: unavailable sources, open questions. Such points stay UNVERIFIED and are
+not filled in with guesses.>
 
-## Неизвестное
+## Previous check (only on RETRY)
 
-<Что заранее не установлено: недоступные источники, открытые вопросы. Такие
-пункты остаются UNVERIFIED, их не заполняют предположениями.>
+The full report of the previous check, verbatim:
 
-## Предыдущая проверка (только при RETRY)
+<paste it whole>
 
-Полный отчет предыдущей проверки, дословно:
+Manager decisions on each finding:
 
-<вставить целиком>
-
-Решения менеджера по каждому замечанию:
-
-| Замечание | Статус | Основание |
+| Finding | Status | Evidence |
 | --- | --- | --- |
-| <место, суть> | CONFIRMED / REFUTED / UNVERIFIED | <воспроизведение, file:line, вывод команды> |
+| <place, substance> | CONFIRMED / REFUTED / UNVERIFIED | <reproduction, file:line, command output> |
 
-Правятся только CONFIRMED. REFUTED не трогать. UNVERIFIED - собрать
-ограниченное основание в указанных источниках, не гадать.
+Only CONFIRMED is fixed. REFUTED is left alone. UNVERIFIED needs a bounded collection of evidence
+in the named sources, not a guess.
 
-## Отчет
+## Report
 
-Запиши отчет в <путь вне репозитория> по шаблону
-[implementation-report.md](implementation-report.md): измененные файлы и
-причины, покрытие критериев, реальные команды и результаты, неизвестное,
-недоступные возможности, что не сделано и почему.
+Write the report to <path outside the repository> following
+[implementation-report.md](implementation-report.md): changed files and why, criteria coverage, the
+commands actually run and their results, what is unknown, capabilities you could not use, and what
+you did not do and why.

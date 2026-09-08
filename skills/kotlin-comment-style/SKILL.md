@@ -1,51 +1,60 @@
 ---
 name: kotlin-comment-style
-description: Стандарт комментариев команды для Kotlin-сервисов. KDoc на публичном API, комментарии на русском, документировать "почему" а не "что", ASCII-пунктуация, расшифровка неочевидных аббревиатур. Применять при написании и ревью комментариев и документации в коде.
+description: The team comment standard for Kotlin services. KDoc on the public API, comments written in Russian, document the "why" and not the "what", ASCII punctuation, non-obvious abbreviations spelled out. Apply it when writing and when reviewing comments and in-code documentation.
 ---
 
-# Стандарт комментариев Kotlin
+# Kotlin comment standard
 
-Единый стиль комментариев и документации для Kotlin-сервисов команды. Применяй при написании нового кода и при ревью комментариев. Цель - чтобы комментарии были единообразны, объясняли причину, а не пересказывали код, и не гнили.
+One style of comments and documentation for the team's Kotlin services. Apply it when writing new
+code and when reviewing comments. The goal: comments that are uniform, explain the reason instead of
+retelling the code, and do not rot.
 
-## Когда применять
+## When to apply
 
-- Пишу или правлю комментарии и KDoc в Kotlin-коде
-- Ревьюю комментарии в pull request
-- Документирую публичный API (Application Programming Interface)
+- Writing or editing comments and KDoc in Kotlin code
+- Reviewing comments in a pull request
+- Documenting a public API (Application Programming Interface)
 
-## Язык
+## Language
 
-- Комментарии и KDoc на русском языке.
-- Идентификаторы (имена классов, функций, свойств) остаются на английском по конвенции Kotlin.
-- Неочевидные и доменные аббревиатуры расшифровывать при первом упоминании в файле: "LwM2M (Lightweight Machine to Machine)". Общеизвестные (HTTP, JSON, SQL, ID) расшифровывать не нужно.
+- Comments and KDoc are written in Russian. This is a team requirement of the code base, not a
+  language preference of the session: the surrounding comments are Russian and the new ones match.
+- Identifiers (class, function and property names) stay English by the Kotlin convention.
+- Non-obvious and domain abbreviations are spelled out at their first mention in the file:
+  "LwM2M (Lightweight Machine to Machine)". Well known ones (HTTP, JSON, SQL, ID) are not.
 
-## Пунктуация
+## Punctuation
 
-- Только ASCII-пунктуация, как при ручном наборе: без длинного тире (используй дефис), без стрелок, ёлочек, многоточия одним символом, галочек.
+- ASCII punctuation only, as when typing by hand: no em dash (use a hyphen), no arrows, no
+  guillemets, no single-character ellipsis, no check marks.
 
-## Формат
+## Format
 
-- Публичный API (классы, публичные функции и свойства) обязан иметь KDoc через `/** */`.
-- Внутренние детали (`private`, `internal`) комментируем только когда логика неочевидна.
-- Однострочные пояснения по месту через `//`.
-- KDoc-теги по необходимости: `@param`, `@return`, `@throws`, `@property`, `@see`. Документируй исключения, которые вызывающий обязан обрабатывать.
+- The public API (classes, public functions and properties) must have KDoc through `/** */`.
+- Internal details (`private`, `internal`) are commented only where the logic is not obvious.
+- One-line explanations go in place through `//`.
+- KDoc tags as needed: `@param`, `@return`, `@throws`, `@property`, `@see`. Document the exceptions
+  the caller is obliged to handle.
 
-## Что документировать
+## What to document
 
-- Документируй ПОЧЕМУ, а не ЧТО. Код уже сообщает "что"; комментарий объясняет причину, контекст, ограничение, неочевидное решение.
-- Побочные эффекты, инварианты, граничные случаи, потокобезопасность.
-- Ссылки на ADR (Architecture Decision Record) или тикет, когда решение неочевидно.
+- Document WHY, not WHAT. The code already says what; the comment explains the reason, the context,
+  the constraint, the non-obvious decision.
+- Side effects, invariants, edge cases, thread safety.
+- References to an ADR (Architecture Decision Record) or a ticket when the decision is not obvious.
 
-## Запрещено
+## Forbidden
 
-- Закомментированный код. Удаляй, история есть в git.
-- Комментарии, противоречащие коду (источник comment rot).
-- `TODO`/`FIXME` без ссылки на тикет. Правильно: `// TODO(JIRA-123): краткая суть`.
-- Комментарии-пересказы, дублирующие имя или очевидное действие.
+- Commented-out code. Delete it; the history is in git.
+- Comments that contradict the code (the source of comment rot).
+- `TODO` or `FIXME` without a ticket reference. Correct: `// TODO(JIRA-123): краткая суть`.
+- Retelling comments that duplicate the name or an obvious action.
 
-## Примеры
+## Examples
 
-### Хорошо: KDoc публичной функции
+The examples are in the required output language: the comments themselves are Russian.
+
+### Good: KDoc of a public function
 
 ```kotlin
 /**
@@ -62,7 +71,7 @@ description: Стандарт комментариев команды для Kot
 fun register(endpoint: String, lifetime: Long): Result<RegistrationId>
 ```
 
-### Хорошо: комментарий "почему" по месту
+### Good: a "why" comment in place
 
 ```kotlin
 // Берём блокировки в порядке возрастания id, чтобы исключить взаимоблокировку
@@ -70,7 +79,7 @@ fun register(endpoint: String, lifetime: Long): Result<RegistrationId>
 ids.sorted().forEach { lockManager.acquire(it) }
 ```
 
-### Плохо
+### Bad
 
 ```kotlin
 // эта функция регистрирует устройство   // пересказ имени, бесполезно
@@ -81,7 +90,7 @@ fun register(endpoint: String, lifetime: Long): Result<RegistrationId>
 // TODO пофиксить потом                  // без тикета и без сути
 ```
 
-## Связь с обвязкой
+## Relation to the harness
 
-- Агент `comment-analyzer` проверяет существующие комментарии против качества (точность, гниль, пересказ).
-- Правила ASCII-пунктуации и расшифровки аббревиатур наследуются из общих предпочтений пользователя.
+- The `comment-analyzer` agent checks existing comments for quality (accuracy, rot, retelling).
+- The ASCII punctuation and abbreviation rules are inherited from the user's general preferences.

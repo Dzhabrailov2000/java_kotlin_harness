@@ -1,0 +1,40 @@
+{
+  "run_id": "task-2026-09-07",
+  "max_attempts": null,
+  "criteria": [
+    {
+      "id": "C1",
+      "description": "The requirement from Define, verbatim and as observable behaviour: what the change must do, and which wrong result the listed check would catch",
+      "key": true,
+      "checks": ["tests"]
+    },
+    {
+      "id": "C2",
+      "description": "A criterion only the independent review can close: its list of checks is empty",
+      "key": true,
+      "checks": []
+    },
+    {
+      "id": "C3",
+      "description": "A non-key criterion: leaving it UNVERIFIED does not block COMPLETE",
+      "key": false,
+      "checks": ["compile"]
+    }
+  ],
+  "commands": {
+    "tests": {
+      "argv": ["python3", "-B", "-m", "unittest", "discover", "-s", "tests"],
+      "cwd": ".",
+      "timeout": 900
+    },
+    "compile": {
+      "argv": ["python3", "-m", "compileall", "-q", "scripts"],
+      "cwd": ".",
+      "timeout": 300
+    }
+  },
+  "scope": {
+    "allowed": ["scripts/", "tests/", "docs/components.md"],
+    "protected": ["settings.reference.json", "scripts/run_claude_task.py"]
+  }
+}

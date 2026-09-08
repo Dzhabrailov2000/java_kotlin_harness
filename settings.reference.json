@@ -1,6 +1,6 @@
 {
-  "model": "claude-fable-5-1",
-  "effortLevel": "max",
+  "model": "claude-opus-5",
+  "effortLevel": "xhigh",
   "theme": "light",
   "statusLine": {
     "type": "command",
@@ -8,16 +8,6 @@
     "padding": 0
   },
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$HOME/.claude/hooks/harness-reminder.js\""
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",

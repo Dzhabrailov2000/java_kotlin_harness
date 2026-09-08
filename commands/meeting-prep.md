@@ -1,36 +1,34 @@
 ---
-description: Собрать prep-документ к встрече по материалам текущего проекта: рамка, повестка с таймингом, развилки к решению, риски
-argument-hint: '<тема встречи> [дата]'
+description: Build a preparation document for a meeting from the materials of the current project - the frame, an agenda with timing, the forks to decide, the risks
+argument-hint: '<meeting topic> [date]'
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(date:*)
 ---
 
-Вход: $ARGUMENTS
+Input: $ARGUMENTS
 
-Ты готовишь пользователя к встрече как ведущего или как архитектора. База
-знаний - документация проекта, в котором запущена команда; ее точку входа,
-конвенции и образцы найди в материалах проекта, а не бери из памяти.
+You are preparing the user for a meeting, as its host or as the architect. The knowledge base is the
+documentation of the project the command was run in; find its entry point, conventions, examples and
+document language in the project materials rather than taking them from memory.
 
-## Шаг 0. Найти базу знаний
+## Step 0. Find the knowledge base
 
-По аргументам, текущей рабочей директории и инструкциям проекта (CLAUDE.md
-или AGENTS.md) определи индекс документации. Из него найди: индекс ADR
-(Architecture Decision Record) как единственный источник истины по статусам
-решений; справочники и контракты; документы планирования; каталог протоколов
-встреч и их индекс. Если индекса нет или он не покрывает тему, скажи об этом
-и спроси, где искать.
+From the arguments, the current working directory and the project instructions (CLAUDE.md or
+AGENTS.md), determine the documentation index. From it find: the ADR (Architecture Decision Record)
+index as the single source of truth for decision statuses; the reference documents and contracts; the
+planning documents; the directory of meeting minutes and its index. If there is no index, or it does
+not cover the topic, say so and ask where to look.
 
-## Шаг 1. Собрать контекст до того, как писать
+## Step 1. Gather the context before writing
 
-Прочитай по теме встречи: статусы решений в индексе ADR; сами ADR, которых
-тема касается; контракты и справочники; текущие нарезки и оценки; предыдущие
-протоколы встреч, чтобы не переоткрывать закрытое и явно назвать, что уже
-решено. Утверждения в prep-документе привязывай к источникам ссылками.
+Read on the topic of the meeting: the decision statuses in the ADR index; the ADRs the topic touches;
+the contracts and reference documents; the current decompositions and estimates; the previous
+minutes, so that closed questions are not reopened and what is already decided is named explicitly.
+Tie the statements in the preparation document to sources with links.
 
-## Шаг 2. Структура prep-документа
+## Step 2. The structure of the preparation document
 
-Если в проекте уже есть prep-документы, возьми структуру самого свежего за
-образец и скажи, какой именно. Если образца нет, используй каркас ниже и
-назови его своим предложением:
+If the project already has preparation documents, take the structure of the most recent one as the
+model and say which one. If there is no model, use the frame below and call it your proposal:
 
 ```
 ## 1. Цель (держать как рамку)
@@ -42,24 +40,24 @@ allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(
 ## 7. Заметки по итогам (заполнить на встрече)
 ```
 
-Шапка: H1 вида `# Подготовка к <тип встречи>: <тема>`, подзаголовок с ролью
-пользователя на встрече и список связанных документов и ADR.
+The header: an H1 of the form `# Подготовка к <тип встречи>: <тема>`, a subtitle with the user's role
+at the meeting and a list of related documents and ADRs.
 
-Приемы, которые делают документ рабочим:
+The devices that make the document usable:
 
-- Повестка с поминутным таймингом, в сумме дающим заявленную длительность.
-- Каркас задач размечен приоритетом (обязательно / можно позже), разбит по
-  эпикам с владельцем-ролью, у каждого пункта обязательное пояснение "Зачем:".
-- Блок "Как читать" с объяснением терминологии для тех, кто не в контексте.
-- Решения даны как явные развилки с рекомендацией автора. Рекомендация
-  обязательна: встреча не место для открытого перебора.
-- Раздел итогов - пустой каркас с полями "Принятые решения:", "Взятые в
-  спринт задачи / владельцы:", "Открытые вопросы:", "Следующий шаг:".
+- An agenda with minute-level timing that adds up to the declared duration.
+- The task frame marked with priority (mandatory / can wait), split by epic with an owning role, and
+  every item carries a mandatory "Зачем:" explanation.
+- A "how to read" block explaining the terminology for those without the context.
+- Decisions are given as explicit forks with the author's recommendation. The recommendation is
+  mandatory: a meeting is not the place for an open enumeration.
+- The results section is an empty frame with the fields "Принятые решения:", "Взятые в спринт задачи
+  / владельцы:", "Открытые вопросы:", "Следующий шаг:".
 
-## Шаг 3. Второй тип prep: стратегия захода
+## Step 3. The second type of preparation: the approach strategy
 
-Если у другой стороны уже есть свой план и встреча про стыковку, документ
-другой: не параллельный план, а дельта и решения. Разделы:
+If the other side already has its own plan and the meeting is about fitting them together, the
+document is different: not a parallel plan but the delta and the decisions. The sections:
 
 ```
 ## A. Добавить в план команды (наша дельта - этого у них нет)
@@ -69,31 +67,29 @@ allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(
 ## Как подать на встрече (одна фраза)
 ```
 
-Установка: заходить достраивающим и фиксирующим. Источник истины по задачам
-реализации - план другой стороны, здесь только дельта и решения. Документ
-заканчивается заготовленной репликой в кавычках для произнесения вслух.
+The stance: come in as someone who completes and records, not as someone who competes. The source of
+truth for implementation tasks is the other side's plan; only the delta and the decisions live here.
+The document ends with a prepared line in quotes to be said out loud.
 
-Спроси у пользователя, какой из двух типов нужен, если из темы это не следует
-однозначно.
+Ask the user which of the two types is needed when the topic does not settle it.
 
-## Шаг 4. Куда положить файл
+## Step 4. Where to put the file
 
-Следуй конвенции проекта, если она записана или видна по существующим
-prep-документам. Если правила нет, предложи каталог рядом с протоколами
-встреч, назови это своим предложением, а не конвенцией, и спроси. Не
-создавай новых каталогов молча. Предложи взаимные ссылки между
-prep-документом и будущим протоколом встречи, если в проекте они не приняты.
+Follow the project convention if it is written down or visible in the existing preparation documents.
+If there is no rule, propose a directory next to the meeting minutes, call that your proposal rather
+than a convention, and ask. Do not create new directories in silence. Propose mutual links between
+the preparation document and the future minutes if the project does not already have them.
 
-## Шаг 5. Правила оформления
+## Step 5. Formatting rules
 
-- Оформление (пунктуация, расшифровка аббревиатур, вид ссылок) по конвенциям
-  проекта; если их нет, следуй стилю соседних документов.
-- Не дописывать непринятые или спекулятивные детали. Развилка это развилка, а
-  не решение. Все неутвержденное помечать явно.
-- Статусы решений не дублировать: ссылаться на индекс ADR.
+- The formatting (punctuation, spelled-out abbreviations, the form of links) follows the project
+  conventions; if there are none, follow the style of the neighbouring documents.
+- Do not add unaccepted or speculative detail. A fork is a fork, not a decision. Mark everything
+  unapproved explicitly.
+- Do not duplicate decision statuses: refer to the ADR index.
 
-## Шаг 6. Отдать пользователю
+## Step 6. Hand it to the user
 
-Покажи путь файла, повестку с таймингом отдельным блоком и список развилок, по
-которым ты дал рекомендацию, чтобы пользователь мог оспорить их до встречи.
-Отдельно перечисли, чего не нашел в материалах проекта.
+Show the file path, the agenda with its timing as a separate block, and the list of forks where you
+gave a recommendation, so the user can contest them before the meeting. List separately what you did
+not find in the project materials.

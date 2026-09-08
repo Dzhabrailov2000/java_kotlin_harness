@@ -1,49 +1,71 @@
 ---
 name: lead-with-outcome
-description: Дисциплина отчетов - главный вывод первым предложением, полные предложения вместо фрагментов и стрелочных цепочек, краткость через отбор фактов, а не сжатие стиля. Применять в каждом содержательном ответе - итоги диагностики, ревью, исследования, сводка сделанного за сессию, тексты ADR и резюме для команды.
+description: Report discipline - the main conclusion in the first sentence, full sentences instead of fragments and arrow chains, brevity by selecting facts rather than by compressing the style. Apply it in every substantive answer - results of diagnosis, review and research, a summary of what a session did, ADR texts and summaries for the team.
 ---
 
-# Вывод первым предложением
+# The conclusion in the first sentence
 
-Отчет читает человек, который не видел процесса. Он не знает придуманных по дороге коднеймов, не видел промежуточных выводов и не будет перечитывать дважды. Если ради краткости текст стал нечитаемым, экономия отрицательная: читатель переспросит, и весь сэкономленный объем вернется диалогом.
+The report is read by a person who did not watch the process. They do not know the code names you
+invented along the way, they did not see the intermediate conclusions and they will not read the
+text twice. If brevity made the text unreadable, the saving is negative: the reader asks again, and
+everything you saved comes back as dialogue.
 
-## Когда применять
+## When to apply
 
-- Финальное сообщение любого рабочего хода: что сделано, что найдено, что сломано.
-- Итоги диагностики, ревью, сверки, исследования.
-- Тексты, которые пойдут людям: ADR, резюме для команды, описание MR.
+- The final message of any working turn: what was done, what was found, what broke.
+- Results of diagnosis, review, a conformance check, research.
+- Texts that go to people: an ADR, a summary for the team, a merge request description.
 
-## Когда НЕ применять
+## When NOT to apply
 
-- Односложные ответы на простые вопросы - там дисциплина сводится к "ответь прямо, без заголовков".
-- Сырые данные по явной просьбе (дамп, листинг) - их не надо превращать в эссе.
+- One-line answers to simple questions; there the discipline is only "answer directly, no headers".
+- Raw data asked for explicitly (a dump, a listing): do not turn it into an essay.
 
-## Правила
+## Rules
 
-1. **Первое предложение отвечает "что в итоге".** То, что читатель попросил бы как TLDR: починено или нет, причина найдена или нет, соответствует или нет. Причины, метод и детали - после, для тех, кто читает дальше.
+1. **The first sentence answers "what came of it".** What the reader would ask for as a TLDR: fixed
+   or not, cause found or not, conforms or not. Reasons, method and details come after, for whoever
+   reads on.
 
-2. **Краткость - это отбор, а не компрессия.** Короче делают выкидыванием фактов, которые не меняют следующее действие читателя. Не делают короче фрагментами, аббревиатурами, цепочками вида "A -> B -> fail" и жаргоном. Что оставил - пиши полными предложениями с расшифрованными терминами.
+2. **Brevity is selection, not compression.** You get shorter by dropping facts that do not change
+   the reader's next action. You do not get shorter with fragments, abbreviations, chains like
+   "A -> B -> fail" and jargon. Whatever you keep is written in full sentences with the terms
+   spelled out.
 
-3. **Не ссылайся на то, чего читатель не видел.** "Вариант 2 из моего анализа", внутренние нумерации, коднеймы из середины сессии - либо расшифровать на месте, либо убрать. Каждое место в тексте самодостаточно.
+3. **Do not refer to what the reader has not seen.** "Option 2 from my analysis", internal
+   numbering, code names from the middle of the session: either explain them on the spot or remove
+   them. Every place in the text stands on its own.
 
-4. **Финальное сообщение хода самодостаточно.** Все важное, что всплыло по дороге (в размышлениях, между вызовами инструментов), повторяется в нем. Читатель видит только финал.
+4. **The final message of the turn is self-contained.** Everything important that surfaced along the
+   way (in the reasoning, between tool calls) is repeated in it. The reader sees only the end.
 
-5. **Форма следует вопросу.** Простой вопрос - прямой ответ прозой. Заголовки и секции - когда частей действительно несколько. Таблица - только для коротких перечислимых фактов, объяснения - в прозе вокруг, не в ячейках.
+5. **The form follows the question.** A simple question gets a direct answer in prose. Headers and
+   sections appear when there really are several parts. A table is for short enumerable facts;
+   explanations live in the prose around it, not in the cells.
 
-6. **Плохие новости - прямо и первыми.** Тесты упали - это первое предложение и вывод ошибки, а не сноска после списка успехов. Пропущенный шаг называется пропущенным.
+6. **Bad news comes first and plainly.** Tests failed: that is the first sentence and the error
+   output, not a footnote after a list of successes. A skipped step is called skipped.
 
-7. **ASCII-пунктуация.** Никаких длинных и средних тире - дефис, запятая, двоеточие, скобки. Это стандарт всех текстов: ответов, ADR, комментариев, коммитов.
+7. **ASCII punctuation.** No em or en dashes: hyphen, comma, colon, parentheses. This is the
+   standard for every text: answers, ADRs, comments, commits.
 
-## Анти-паттерны
+## Anti-patterns
 
-- **Хронологический отчет.** "Сначала я посмотрел... потом я..." - процесс вместо результата. Хронология интересна только когда сам путь и есть ответ.
-- **Вывод на дне.** Ключевая фраза в последнем абзаце после трех экранов контекста.
-- **Телеграфный стиль.** "auth fail -> retry loop -> OOM. fix: backoff" - выглядит эффективно, читается трижды.
-- **Отчет-витрина.** Заголовки, эмодзи, таблица из двух строк - структура ради вида на простом ответе.
-- **Похороненный провал.** Пять абзацев успехов и "правда, тесты пока падают" в конце.
+- **A chronological report.** "First I looked at... then I..." is process instead of result.
+  Chronology is interesting only when the path itself is the answer.
+- **The conclusion at the bottom.** The key sentence in the last paragraph after three screens of
+  context.
+- **Telegraph style.** "auth fail -> retry loop -> OOM. fix: backoff" looks efficient and is read
+  three times.
+- **A showcase report.** Headers, emoji and a two-row table: structure for the look of it on a
+  simple answer.
+- **A buried failure.** Five paragraphs of successes and "though the tests still fail" at the end.
 
-## Связь с обвязкой
+## Relation to the harness
 
-- Тексты ADR по `architecture-decision-records` подчиняются тем же правилам: решение и его цена - в начало, хронология обсуждения - никуда.
-- Комментарии в коде - отдельный стандарт `kotlin-comment-style` (он совместим: та же ASCII-пунктуация, то же "почему, а не что").
-- Результаты субагентов (см. `context-hygiene`) перед показом пользователю пересказываются по этим же правилам - сырой вывод агента не является отчетом.
+- ADR texts written with `architecture-decision-records` follow the same rules: the decision and its
+  price go first, the chronology of the discussion goes nowhere.
+- Comments in code follow their own standard, `kotlin-comment-style`; it is compatible: the same
+  ASCII punctuation, the same "why, not what".
+- Results of subagents (see `context-hygiene`) are retold by these rules before they are shown to the
+  user: the raw output of an agent is not a report.

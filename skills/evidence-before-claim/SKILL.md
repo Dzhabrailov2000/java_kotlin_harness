@@ -1,51 +1,75 @@
 ---
 name: evidence-before-claim
-description: Не утверждать и не менять состояние без проверки против живой системы. Каждое утверждение о коде, конфиге или среде либо привязано к источнику (file:line, вывод команды), либо явно помечено как предположение. Применять при диагностике, ревью, сверках соответствия (ADR, контракты) и перед любым state-changing действием.
+description: Do not state anything and do not change state without checking against the live system. Every statement about code, configuration or environment is either tied to a source (file:line, command output) or explicitly marked as an assumption. Apply it in diagnosis, review, conformance checks (ADRs, contracts) and before any state-changing action.
 ---
 
-# Доказательство раньше утверждения
+# Evidence before the claim
 
-Память модели и паттерн-матчинг производят гипотезы, а не факты. Гипотеза, высказанная тоном факта, - самый дорогой класс ошибок агента: она выглядит убедительно, распространяется в доки и решения, и ломается позже всего.
+The model's memory and pattern matching produce hypotheses, not facts. A hypothesis stated in the
+tone of a fact is the most expensive class of agent error: it looks convincing, it spreads into
+documents and decisions, and it breaks last.
 
-## Когда применять
+## When to apply
 
-- Диагностика: "падает потому что X".
-- Ревью и сверки: "сервис соответствует ADR-0011", "контракт совпадает с реализацией".
-- Отчеты о состоянии: "тесты проходят", "эндпоинт существует", "флаг включен".
-- Перед командой, меняющей состояние: рестарт, удаление, миграция, правка конфига.
+- Diagnosis: "it crashes because of X".
+- Review and conformance checks: "the service conforms to ADR-0011", "the contract matches the
+  implementation".
+- Status reports: "the tests pass", "the endpoint exists", "the flag is on".
+- Before a command that changes state: restart, deletion, migration, a configuration edit.
 
-## Когда НЕ применять
+## When NOT to apply
 
-- Общеизвестные факты языка/платформы, не зависящие от этого репозитория.
-- Черновой брейншторм, явно поданный как брейншторм.
+- Common knowledge about the language or platform that does not depend on this repository.
+- A rough brainstorm, presented explicitly as a brainstorm.
 
-## Правила
+## Rules
 
-1. **Три статуса у каждого утверждения: проверено / выведено / предположено.** Проверено - я видел источник (file:line, вывод команды, строка документа). Выведено - следует из проверенного через названную логику. Предположено - все остальное, и это слово должно стоять в тексте. Смешивать статусы в одной фразе нельзя.
+1. **Every statement has one of three statuses: verified, derived, assumed.** Verified: I saw the
+   source (file:line, command output, a line of the document). Derived: it follows from something
+   verified through logic you can name. Assumed: everything else, and the word must appear in the
+   text. Statuses cannot be mixed inside one sentence.
 
-2. **Симптом, похожий на знакомую проблему, может иметь другую причину.** Совпадение сигнатуры ошибки с известным кейсом - повод проверить, а не диагноз. Проверка: найти в живой системе тот механизм, который известный кейс предполагает.
+2. **A symptom that resembles a familiar problem may have another cause.** An error signature
+   matching a known case is a reason to check, not a diagnosis. The check: find in the live system
+   the mechanism that the known case assumes.
 
-3. **Перед state-changing действием - сверка "поддерживает ли evidence именно ЭТО действие".** Не "рестарт обычно помогает", а "я видел в логе X, что означает зависший Y, который лечится рестартом". Если цепочка не строится - сначала достроить, потом действовать.
+3. **Before a state-changing action, check that the evidence supports THIS action.** Not "a restart
+   usually helps" but "I saw X in the log, which means Y is stuck, and a restart clears it". If the
+   chain does not hold, complete it first, then act.
 
-4. **Перед удалением или перезаписью посмотри на цель.** Если содержимое противоречит тому, как его описали, или файл создан не тобой, - остановись и подними это наверх, а не продолжай.
+4. **Before deleting or overwriting, look at the target.** If its content contradicts how it was
+   described, or the file was not created by you, stop and raise it instead of continuing.
 
-5. **"Тесты прошли" значит "я запустил и видел зеленый вывод".** Не "должны пройти", не "проходили раньше". То же с билдом, линтером, миграцией. Упали - доложить как упали, с выводом, без смягчений.
+5. **"The tests passed" means "I ran them and saw green output".** Not "they should pass", not "they
+   passed before". The same goes for the build, the linter and a migration. If they failed, report
+   the failure with its output and without softening.
 
-6. **Знание протухает.** Рекомендация из памяти, старого дока или чужого README - проверь, что файл, флаг, эндпоинт еще существуют, прежде чем советовать. В этом репозитории контракты и ADR правятся часто; ссылка недельной давности - уже гипотеза.
+6. **Knowledge goes stale.** Before recommending a file, a flag or a command from memory, an old
+   document or someone else's README, check that it still exists. In this repository contracts and
+   ADRs change often; a week-old reference is already a hypothesis.
 
-7. **Цитируй адресно.** Утверждение о коде сопровождается `file.kt:42`, утверждение о поведении - командой и ее выводом. Читатель должен мочь проверить за минуту.
+7. **Quote precisely.** A statement about code comes with `file.kt:42`, a statement about behaviour
+   with the command and its output. The reader must be able to check it in a minute.
 
-## Анти-паттерны
+## Anti-patterns
 
-- **Диагноз по памяти.** "Это известная проблема Redis" без единого взгляда в конфиг и логи этого Redis.
-- **Уверенный тон на предположении.** "Сервис использует X" когда правда "обычно такие сервисы используют X".
-- **Действие по паттерну.** Рестарт/удаление/правка, потому что "в таких случаях помогает", без проверки, что случай тот.
-- **Отчет желаемого.** "Все работает" после правки, которую никто не запускал.
-- **Слепая вера сверке.** "Соответствует ADR" на основании того, что в коде есть файл с похожим именем.
+- **A diagnosis from memory.** "This is a known Redis problem" without a single look at the config
+  and the logs of that Redis.
+- **A confident tone over an assumption.** "The service uses X" when the truth is "services like this
+  usually use X".
+- **Acting by pattern.** A restart, a deletion or an edit because "it usually helps in these cases",
+  without checking that this is one of those cases.
+- **Reporting what you wanted.** "Everything works" after a change nobody ran.
+- **Blind trust in a conformance check.** "It conforms to the ADR" because the code contains a file
+  with a similar name.
 
-## Связь с обвязкой
+## Relation to the harness
 
-- Конвейер `arch-conformance` живет этим правилом: каждая строка вердикта должна указывать на конкретное место в коде сервиса, а не на ожидание.
-- Встроенный `/verify` - механизация правила 5 для диффов: прогнать затронутый поток вживую, а не только тесты.
-- Агент `silent-failure-hunter` ищет места, где код сам нарушает это правило (глотает ошибки и рапортует успех).
-- Пара к скиллу `adversarial-self-check`: этот скилл про то, как собирать утверждения, тот - про то, как их атаковать перед сдачей.
+- The `arch-conformance` pipeline lives by this rule: every line of the verdict must point at a
+  concrete place in the service code, not at an expectation.
+- The built-in `/verify` mechanises rule 5 for diffs: run the affected flow for real, not only the
+  tests.
+- The `silent-failure-hunter` agent looks for places where the code itself breaks this rule (it
+  swallows errors and reports success).
+- It pairs with `adversarial-self-check`: this skill is about how to build statements, that one is
+  about how to attack them before handing over.

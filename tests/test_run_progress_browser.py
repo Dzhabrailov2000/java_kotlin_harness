@@ -44,6 +44,9 @@ DRIVER = textwrap.dedent("""\
     const problems = [], ignored = [];
     const browser = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + path.join(workDir, 'profile'),
       '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--disable-extensions', '--disable-background-networking',
+      // A driven tab is not a foreground tab: without these the 1 s poll of the page is clamped and the
+      // driver would be measuring the throttling of the browser instead of the behaviour of the page.
+      '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding',
       '--disable-sync', '--window-size=1400,1000', 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
     const endpoint = new Promise((resolve, reject) => {
@@ -94,6 +97,15 @@ DRIVER = textwrap.dedent("""\
       const deadline = Date.now() + timeoutMs;
       while (!fs.existsSync(file)) { if (Date.now() > deadline) { throw new Error('timeout waiting for ' + file); } await sleep(100); }
     }
+    // Poll for the page to reach a state instead of assuming how fast its own 1 s poll got there.
+    async function waitUntil(what, expression, timeoutMs) {
+      const deadline = Date.now() + timeoutMs;
+      for (;;) {
+        if (await evaluate(expression)) { return; }
+        if (Date.now() > deadline) { throw new Error('timeout waiting for ' + what); }
+        await sleep(150);
+      }
+    }
     (async () => {
       socket = await connect(await endpoint);
       const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
@@ -104,6 +116,8 @@ DRIVER = textwrap.dedent("""\
       await send('Page.navigate', { url });
       await loadedPromise;
       await sleep(1800);
+      await evaluate(`document.getElementById('details-open').click()`);
+      await sleep(600);
       // The entry under test is the first one whose collapsed preview is really clipped by layout: the long task prompt.
       const state = () => evaluate(`(function () {
         var box = document.getElementById('conversation');
@@ -130,6 +144,20 @@ DRIVER = textwrap.dedent("""\
                  reducedMotion: getComputedStyle(document.querySelector('.stage.s-pending') || document.body).animationName,
                  unknownCells: Array.prototype.slice.call(document.querySelectorAll('#usage-rows td')).filter(function (td) { return td.textContent === 'неизвестно'; }).length };
       })()`);
+      // Only the chosen section is rendered, so the invocation blocks are measured under their own tab first;
+      // the conversation is then measured under its own, which is also where the reader starts.
+      await evaluate(`document.getElementById('tab-sessions').click()`);
+      await sleep(400);
+      const sessions = await state();
+      const toggled = await evaluate(`(function () {
+        var blocks = document.querySelectorAll('#invocations details'), closed = Array.prototype.filter.call(blocks, function (block) { return !block.open && block.querySelector('summary').textContent.indexOf('review-old') >= 0; })[0];
+        if (!closed) { return { found: false }; }
+        closed.querySelector('summary').click();
+        var lines = Array.prototype.slice.call(closed.querySelectorAll('.line'));
+        return { found: true, open: closed.open, summary: closed.querySelector('summary').textContent, visibleLines: lines.filter(function (line) { return (typeof line.checkVisibility === 'function' ? line.checkVisibility() : line.getClientRects().length > 0); }).length, lines: lines.map(function (line) { return line.textContent; }) };
+      })()`);
+      await evaluate(`document.getElementById('tab-talk').click()`);
+      await sleep(400);
       const initial = await state();
       const expanded = await evaluate(`(function () {
         var pre = window.__clipped, button = pre.parentNode.querySelector('button'); button.click();
@@ -147,40 +175,48 @@ DRIVER = textwrap.dedent("""\
         var button = pre.parentNode.querySelector('button'); button.click();
         return { found: true, className: pre.className, client: pre.clientHeight, scroll: pre.scrollHeight, label: button.textContent };
       })()`);
-      // The collapsed invocation block opens on a real click of its summary and shows its lines.
-      const toggled = await evaluate(`(function () {
-        var blocks = document.querySelectorAll('#invocations details'), closed = Array.prototype.filter.call(blocks, function (block) { return !block.open && block.querySelector('summary').textContent.indexOf('review-old') >= 0; })[0];
-        if (!closed) { return { found: false }; }
-        closed.querySelector('summary').click();
-        var lines = Array.prototype.slice.call(closed.querySelectorAll('.line'));
-        return { found: true, open: closed.open, summary: closed.querySelector('summary').textContent, visibleLines: lines.filter(function (line) { return (typeof line.checkVisibility === 'function' ? line.checkVisibility() : line.getClientRects().length > 0); }).length, lines: lines.map(function (line) { return line.textContent; }) };
-      })()`);
       await evaluate(`(function () { var box = document.getElementById('conversation'); box.scrollTop = 0; box.dispatchEvent(new Event('scroll')); return box.scrollTop; })()`);
       await sleep(300);
       fs.writeFileSync(path.join(workDir, 'phase1.json'), JSON.stringify({ initial, expanded, collapsed, expandedResponse, toggled }));
       await waitFor(path.join(workDir, 'release'), 30000);
-      await sleep(2500);
+      await waitUntil('the appended records to arrive', `document.getElementById('decision').textContent === 'RETRY' && document.querySelectorAll('#conversation article.entry').length === 16`, 30000);
       const afterAppend = await state();
       fs.writeFileSync(path.join(workDir, 'phase2.json'), JSON.stringify({ afterAppend }));
       // The test now stops the server: the page must say so instead of presenting stale states as confirmed.
       await waitFor(path.join(workDir, 'stopped'), 30000);
-      await sleep(4500);
+      await waitUntil('the page to report the lost connection', `document.getElementById('connection').textContent.indexOf('нет связи') === 0`, 30000);
       const disconnected = await state();
       const jumped = await evaluate(`(function () { document.getElementById('jump-latest').click(); var box = document.getElementById('conversation'); return { scrollTop: box.scrollTop, scrollHeight: box.scrollHeight, clientHeight: box.clientHeight, jump: document.getElementById('jump-latest').textContent }; })()`);
       const filtered = await evaluate(`(function () { var select = document.getElementById('filter-cycle'); select.value = '2'; select.dispatchEvent(new Event('change')); return { articles: document.querySelectorAll('#conversation article.entry').length, count: document.getElementById('conversation-count').textContent }; })()`);
+      // A filter, a reading position and an expanded entry survive closing and reopening the inspector.
+      await evaluate(`(function () { var box = document.getElementById('conversation'); box.scrollTop = 0; box.dispatchEvent(new Event('scroll')); document.getElementById('follow').checked = false; document.getElementById('follow').dispatchEvent(new Event('change')); })()`);
+      await sleep(300);
+      await evaluate(`document.getElementById('inspector-close').click()`);
+      await sleep(400);
+      await evaluate(`document.getElementById('details-open').click()`);
+      await sleep(600);
+      const reopened = await evaluate(`(function () {
+        var box = document.getElementById('conversation');
+        return { open: document.getElementById('inspector').open, scrollTop: box.scrollTop, articles: document.querySelectorAll('#conversation article.entry').length,
+                 filter: document.getElementById('filter-cycle').value, follow: document.getElementById('follow').checked,
+                 count: document.getElementById('conversation-count').textContent };
+      })()`);
       // Everything above ran without a reported problem; the injection probe below is expected to be blocked and logged by CSP.
       const problemsBeforeProbe = problems.slice();
       const csp = await evaluate(`(function () { try { var s = document.createElement('script'); s.textContent = 'window.__injected = 1'; document.body.appendChild(s); } catch (e) {} return window.__injected === 1; })()`);
       await sleep(300);
       const cspReported = problems.slice(problemsBeforeProbe.length).some(function (line) { return line.indexOf('Content Security Policy') >= 0; });
       // Layout widths: the document itself must not overflow at a narrow desktop width or at the default one.
+      await evaluate(`document.getElementById('inspector-close').click()`);
+      await sleep(400);
       const widths = {};
       for (const width of [390, 1400]) {
         await send('Emulation.setDeviceMetricsOverride', { width: width, height: 900, deviceScaleFactor: 1, mobile: false });
         await sleep(400);
         widths[width] = await evaluate(`({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, bodyScroll: document.body.scrollWidth })`);
       }
-      process.stdout.write(JSON.stringify({ initial, expanded, collapsed, expandedResponse, toggled, afterAppend, disconnected, jumped, filtered, inlineScriptRan: csp, cspReported, widths, problems: problemsBeforeProbe, ignored }));
+      process.stdout.write(JSON.stringify({ initial, sessions, expanded, collapsed, expandedResponse, toggled,
+        afterAppend, disconnected, jumped, filtered, reopened, inlineScriptRan: csp, cspReported, widths, problems: problemsBeforeProbe, ignored }));
       await send('Target.closeTarget', { targetId }).catch(() => {});
       socket.close();
       browser.kill('SIGKILL');
@@ -361,7 +397,7 @@ class BrowserSmokeTest(unittest.TestCase):
         self.assertNotIn("review-old", initial["cards"]["models"], "a step with a recorded exit is not active")
         self.assertTrue(initial["status"].startswith("Состояние:"), "the live region carries a textual status")
         # One block per invocation: the active build is open, the finished review and the failed handoff are collapsed.
-        blocks = {block["summary"].split(" · ")[1]: block for block in initial["invocations"]}
+        blocks = {block["summary"].split(" · ")[1]: block for block in report["sessions"]["invocations"]}
         self.assertEqual(sorted(blocks), ["build-1", "handoff-failed", "review-old", "verify-stale"])
         self.assertTrue(blocks["build-1"]["open"])
         self.assertFalse(blocks["review-old"]["open"])
@@ -397,8 +433,15 @@ class BrowserSmokeTest(unittest.TestCase):
         self.assertGreaterEqual(jumped["scrollTop"] + jumped["clientHeight"], jumped["scrollHeight"] - 2)
         self.assertEqual(jumped["jump"], "к последнему")
         self.assertEqual((report["filtered"]["articles"], report["filtered"]["count"]), (1, "показано 1 из 13"))
+        # Closing and reopening the drawer keeps the reader's filter, follow setting and reading position.
+        reopened = report["reopened"]
+        self.assertTrue(reopened["open"])
+        self.assertEqual((reopened["filter"], reopened["follow"]), ("2", False))
+        self.assertEqual((reopened["articles"], reopened["count"]), (1, "показано 1 из 13"))
+        self.assertEqual(reopened["scrollTop"], 0, "a reopened drawer restores the reading position, it does not jump")
         for width, layout in report["widths"].items():
             self.assertLessEqual(layout["scrollWidth"], layout["innerWidth"], "no horizontal overflow at %s px: %s" % (width, layout))
+
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+{
+  "name": "monitor-pixel-office",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build-only toolchain for the vendored Pixel Agents office engine: decodes the original assets and bundles the monitor adapter into dist/.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "pngjs": "7.0.0"
+  }
+}

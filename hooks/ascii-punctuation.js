@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// PostToolUse-хук (Write|Edit): контроль ASCII-пунктуации в тексте, который пишет Claude.
-// Проверяется только записанный фрагмент (content/new_string), а не весь файл,
-// чтобы не срабатывать на тире, уже лежавшие в файле до правки.
+// PostToolUse hook (Write|Edit): ASCII punctuation control over the text Claude writes.
+// Only the written fragment (content/new_string) is checked, not the whole file, so a dash that
+// was already in the file before the edit does not block the write.
 let raw = '';
 process.stdin.on('data', (d) => (raw += d));
 process.stdin.on('end', () => {
@@ -9,7 +9,7 @@ process.stdin.on('end', () => {
   try {
     input = JSON.parse(raw);
   } catch {
-    process.exit(0); // битый вход - не блокируем работу
+    process.exit(0); // malformed input: never block the work over it
   }
   const ti = (input && input.tool_input) || {};
   const text = ti.content != null ? ti.content : ti.new_string != null ? ti.new_string : '';
@@ -21,16 +21,16 @@ process.stdin.on('end', () => {
   text.split('\n').forEach((line, i) => {
     if (bad.test(line)) hits.push(i + 1);
   });
-  const file = ti.file_path || 'файл';
+  const file = ti.file_path || 'the file';
   console.log(
     JSON.stringify({
       decision: 'block',
       reason:
-        'ASCII-пунктуация: в записанном тексте (' +
+        'ASCII punctuation: the written text (' +
         file +
-        ') есть длинное/среднее тире, строки фрагмента: ' +
+        ') contains an em or en dash, at these lines of the fragment: ' +
         hits.join(', ') +
-        '. Замени на дефис, двоеточие или запятую по смыслу и перезапиши.',
+        '. Replace it with a hyphen, a colon or a comma as the sentence needs, then write again.',
     })
   );
   process.exit(0);

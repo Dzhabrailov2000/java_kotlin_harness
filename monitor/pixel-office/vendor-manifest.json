@@ -1,0 +1,497 @@
+{
+  "repository": "https://github.com/pixel-agents-hq/pixel-agents",
+  "commit": "3537e140c2094761beae748592aeb92ece8edfdd",
+  "version": "v1.4.1",
+  "license": "MIT, Copyright (c) 2026 Pablo De Lucca; see vendor/LICENSE",
+  "note": "Byte-exact upstream copies at the pinned commit; upstream relative paths preserved. Character art credits the MetroCity source pack, see the upstream README.",
+  "files": {
+    "LICENSE": {
+      "sha256": "20729e3cb9d06d64cdf78d43070ead3eae96e67a5b35b1aa35b5520906cb8ab5",
+      "bytes": 1071
+    },
+    "core/src/assets/build.ts": {
+      "sha256": "4e4b151b2cbfd150c09fe0f96df46171e9f642eb1461a21369bcfc60672729d4",
+      "bytes": 5000
+    },
+    "core/src/assets/colorUtils.ts": {
+      "sha256": "c943c0416bbd17b34a30400902afcb35c1efd2b47a2ef83359b9234fb78473e3",
+      "bytes": 487
+    },
+    "core/src/assets/constants.ts": {
+      "sha256": "c7e8765ee01b3d86c10dea41615e8c80ebad9c27e1f2fa48bf78a72a9a53533f",
+      "bytes": 1464
+    },
+    "core/src/assets/loader.ts": {
+      "sha256": "6a6e6fa606c2ed04c93226ad550c205d2506586958237166692b0f7bf1d3353f",
+      "bytes": 3335
+    },
+    "core/src/assets/manifestUtils.ts": {
+      "sha256": "eae9723287ca3d521f2ce1c3aa0f03b4ac02c0c003e1fd9e50182b32c843a076",
+      "bytes": 5098
+    },
+    "core/src/assets/pngDecoder.ts": {
+      "sha256": "6d675aadf017eaf4f1e768ded80469713051336a74387cdf0154615eeb246dbf",
+      "bytes": 10478
+    },
+    "core/src/assets/types.ts": {
+      "sha256": "0c7b252ee931fec65a1e27314b9c486dfccfe5a311f24046fac38fce7300f8e5",
+      "bytes": 1449
+    },
+    "core/src/paletteUtils.ts": {
+      "sha256": "2ab445e24ea5cf197bb50a8303b66e077c261acbf27180fa5b75b50d08d7eb42",
+      "bytes": 1569
+    },
+    "webview-ui/public/assets/carpets/carpet_0.png": {
+      "sha256": "a3a2b9789dd7b6e4345fe9f6204e668aa3b0ec52ae13cbc567e9abdac708a385",
+      "bytes": 394
+    },
+    "webview-ui/public/assets/carpets/carpet_1.png": {
+      "sha256": "5fdc496323782dd846c0fa485b51da8827a907dc85058005905329d8d8d7b05e",
+      "bytes": 380
+    },
+    "webview-ui/public/assets/carpets/carpet_2.png": {
+      "sha256": "926017fb0052dd8466b88618a309889edaa5c37b83b3b4f24ea52a00d84ce72e",
+      "bytes": 363
+    },
+    "webview-ui/public/assets/characters/char_0.png": {
+      "sha256": "9ece93c20765abb876e3dacfe01e0cd1801323eff41c1779be0c47369886c09a",
+      "bytes": 3956
+    },
+    "webview-ui/public/assets/characters/char_1.png": {
+      "sha256": "f935f033726b06f73dbbe590db5a23cfb20d2d02c1329fd5d67d57a262e9b05e",
+      "bytes": 5022
+    },
+    "webview-ui/public/assets/characters/char_2.png": {
+      "sha256": "9f63ee7be4577e1d60de3b64d198d387d1c09794bed3a608958e77c7b955575d",
+      "bytes": 5221
+    },
+    "webview-ui/public/assets/characters/char_3.png": {
+      "sha256": "ee5ebe0847471e4834e367f8a4108e6caf2f402ed506bbfebd90c64a43a79348",
+      "bytes": 4930
+    },
+    "webview-ui/public/assets/characters/char_4.png": {
+      "sha256": "fcf72626bbee3045d0f3e10bb87a41dab19a331d1affdfc53b483567f9c083aa",
+      "bytes": 5488
+    },
+    "webview-ui/public/assets/characters/char_5.png": {
+      "sha256": "4b2c639a50e089a4e3b87be440ffb52b5c5c8cfd6473a386f325b25f99db7381",
+      "bytes": 5071
+    },
+    "webview-ui/public/assets/default-layout-1.json": {
+      "sha256": "ac4a7ea4bb9ddaedead465dd2a9cd0761dc46361f19b1a609cfbf5cd3e7ff616",
+      "bytes": 14425
+    },
+    "webview-ui/public/assets/floors/floor_0.png": {
+      "sha256": "7ac83e6dafab1d73c2ee346880929718920123a7057b0cd9ee34dec6543eacc2",
+      "bytes": 1719
+    },
+    "webview-ui/public/assets/floors/floor_1.png": {
+      "sha256": "6199f7135d3f5e233e0f33a925a20e348fcc17e396347799ac7573241c1416b8",
+      "bytes": 3590
+    },
+    "webview-ui/public/assets/floors/floor_2.png": {
+      "sha256": "ac112a1f1b2bc0068649e7cfd8be47f9c794f343388fb2e4437f140eb2ed0dee",
+      "bytes": 3590
+    },
+    "webview-ui/public/assets/floors/floor_3.png": {
+      "sha256": "8befc77b71238aa01d19cc73d5fe747831e0e85b1a986838c02df2f76cdf2690",
+      "bytes": 3594
+    },
+    "webview-ui/public/assets/floors/floor_4.png": {
+      "sha256": "fdf610ffa4583c688ed72cc3b8c8b9496c4843b341c201ead62ba769804a9cbb",
+      "bytes": 3594
+    },
+    "webview-ui/public/assets/floors/floor_5.png": {
+      "sha256": "b935a21804f12c18e0b0cc4db2ba873e4e39c2c6cf80c59cc9dfa01c00e497bb",
+      "bytes": 3597
+    },
+    "webview-ui/public/assets/floors/floor_6.png": {
+      "sha256": "dc7dc8722e3a03b28385400b76079c168a5d93d50e7b06f6a40ebd1dd8f178b4",
+      "bytes": 3597
+    },
+    "webview-ui/public/assets/floors/floor_7.png": {
+      "sha256": "aa44b7de3ced5e0bb2ef3fbd8bd27e9993a83bf8b901c37da2a97c162d7e6dad",
+      "bytes": 3596
+    },
+    "webview-ui/public/assets/floors/floor_8.png": {
+      "sha256": "653e4534e66844d72ea78fef499c5052ed337f7c10ada4d818d21255ad27bdfe",
+      "bytes": 3592
+    },
+    "webview-ui/public/assets/furniture/BIN/BIN.png": {
+      "sha256": "738129d621fabc15b100f7129b854d1fe36201dbe92c0800bb1e80cb06793284",
+      "bytes": 252
+    },
+    "webview-ui/public/assets/furniture/BIN/manifest.json": {
+      "sha256": "6d3c3d075e3f77bcf4bc2bbd6809bb8b747c34dcc557be881146ca0122dd7e35",
+      "bytes": 227
+    },
+    "webview-ui/public/assets/furniture/BOOKSHELF/BOOKSHELF.png": {
+      "sha256": "bd05119962080fd4cff6697fec0c3730c5a9c3def01b31ca0fa929971144322e",
+      "bytes": 388
+    },
+    "webview-ui/public/assets/furniture/BOOKSHELF/manifest.json": {
+      "sha256": "f162c5c78a8e7e3357d99ac8dc9f9e5ebda30e5756474aa8891888eeb39bda7e",
+      "bytes": 238
+    },
+    "webview-ui/public/assets/furniture/CACTUS/CACTUS.png": {
+      "sha256": "830dbba8ac4912858e22eed1e89d4290202113363a934389e54fffb794ad893b",
+      "bytes": 558
+    },
+    "webview-ui/public/assets/furniture/CACTUS/manifest.json": {
+      "sha256": "78e4ecb0a0ccfe4da323ca5bcb32f1b43a79967f83b573bda44c917bd01605b3",
+      "bytes": 234
+    },
+    "webview-ui/public/assets/furniture/CLOCK/CLOCK.png": {
+      "sha256": "f1ff567d71508dfdba37f2ff94ffde734940b56b3999e29b213ab6774e67b20f",
+      "bytes": 304
+    },
+    "webview-ui/public/assets/furniture/CLOCK/manifest.json": {
+      "sha256": "10a2596fda4958c436bdc7fbae18bc2bd8fe72d58e1dd7a98b5392e6a9568944",
+      "bytes": 230
+    },
+    "webview-ui/public/assets/furniture/COFFEE/COFFEE.png": {
+      "sha256": "6bed27c8de5a4ce98b3646d233803b3192cc5980c8f4caf779eb1344a87f8e0d",
+      "bytes": 223
+    },
+    "webview-ui/public/assets/furniture/COFFEE/manifest.json": {
+      "sha256": "8f671ece319b7ee5b462bc2afe7bf072538ad71f08370ebede83ae926c67ccb8",
+      "bytes": 233
+    },
+    "webview-ui/public/assets/furniture/COFFEE_TABLE/COFFEE_TABLE.png": {
+      "sha256": "0b0fd17c95b29e3b86da00031452166a1400a534c8adff1dc98bb4e5ce72aad3",
+      "bytes": 274
+    },
+    "webview-ui/public/assets/furniture/COFFEE_TABLE/manifest.json": {
+      "sha256": "acca0880e88e6ada927eddef632559ed7941ce3c5bc2d8a576f4a33dd98034cb",
+      "bytes": 246
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_BENCH/CUSHIONED_BENCH.png": {
+      "sha256": "b66ba12ce7921b3ab34515c319bc72775c49351d75ad146c6b29adf46459eaa0",
+      "bytes": 250
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_BENCH/manifest.json": {
+      "sha256": "854d701f00f9dec17141f266edf12868c1faa396ca88596cb1c2c9dd0fc28a27",
+      "bytes": 253
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_BACK.png": {
+      "sha256": "7eba17a7c86115caba0246599988e3169dc766af7814e51c7afa566e0fe40846",
+      "bytes": 205
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_FRONT.png": {
+      "sha256": "30a021a8356125a743be8352da9756ec6d0832e232aca1ae2dd76a5e038a2208",
+      "bytes": 247
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_CHAIR/CUSHIONED_CHAIR_SIDE.png": {
+      "sha256": "ac2d90e87ce198271f50fd3e9161c4c9b8ea4befd3befdb0c5c9720256febb70",
+      "bytes": 255
+    },
+    "webview-ui/public/assets/furniture/CUSHIONED_CHAIR/manifest.json": {
+      "sha256": "a8a1a949ca45f9b0c65ac2ff2726004ec1a3a60db842f448a6de31a1be9cd8ec",
+      "bytes": 976
+    },
+    "webview-ui/public/assets/furniture/DESK/DESK_FRONT.png": {
+      "sha256": "4df9ed2b04efb98dbd901d400d65fa5a1729e4508787ad70eb93e747017220ca",
+      "bytes": 310
+    },
+    "webview-ui/public/assets/furniture/DESK/DESK_SIDE.png": {
+      "sha256": "b5421b3b3fc30b4a295c67c67d4a138877a1d179b532ffe25973200277107ff9",
+      "bytes": 278
+    },
+    "webview-ui/public/assets/furniture/DESK/manifest.json": {
+      "sha256": "2f68f60b61f6ee5aaa40b526af7dcf8581072d936b38ae3a0a25e5caa61cf3db",
+      "bytes": 649
+    },
+    "webview-ui/public/assets/furniture/DOUBLE_BOOKSHELF/DOUBLE_BOOKSHELF.png": {
+      "sha256": "b27bd0cc4c73dab38eebbf6b8ed68257acb8264d23a8e87c2cf5026138842cda",
+      "bytes": 627
+    },
+    "webview-ui/public/assets/furniture/DOUBLE_BOOKSHELF/manifest.json": {
+      "sha256": "e3af4890e8f9e140a58b3db79c1718c6bf742ae4dca21aa17b2dcf235465db91",
+      "bytes": 252
+    },
+    "webview-ui/public/assets/furniture/HANGING_PLANT/HANGING_PLANT.png": {
+      "sha256": "a6e9c025d0a84e960d3c84d55f18d01585eb8e079cd84f9970de08d636877de2",
+      "bytes": 693
+    },
+    "webview-ui/public/assets/furniture/HANGING_PLANT/manifest.json": {
+      "sha256": "200ca5deaef21d2b135dd8d894a4445f96ecf43d325321b904e35c0088c3aed1",
+      "bytes": 246
+    },
+    "webview-ui/public/assets/furniture/LARGE_PAINTING/LARGE_PAINTING.png": {
+      "sha256": "f6355392631f0004ccd49c3d9ddf4df8ef60c59ec8b23d0b3fb1d0dce6c01c2b",
+      "bytes": 1056
+    },
+    "webview-ui/public/assets/furniture/LARGE_PAINTING/manifest.json": {
+      "sha256": "906af931475def2450e40d553e2e900b2b2068f5d990b1301433e622942046bf",
+      "bytes": 248
+    },
+    "webview-ui/public/assets/furniture/LARGE_PLANT/LARGE_PLANT.png": {
+      "sha256": "196a4f1748160cdbf69400e370b1d7d1254b49902b8c091bcabd7676934f3149",
+      "bytes": 1285
+    },
+    "webview-ui/public/assets/furniture/LARGE_PLANT/manifest.json": {
+      "sha256": "3d45775a4c7930f4d53c3436d9eda4527633eb51a572c106acea1f90b4cf5184",
+      "bytes": 245
+    },
+    "webview-ui/public/assets/furniture/PC/PC_BACK.png": {
+      "sha256": "48f3d9aa7f571cc0ce1e5d702977987432bca292995ff67e36d47361d4b6f9a0",
+      "bytes": 349
+    },
+    "webview-ui/public/assets/furniture/PC/PC_FRONT_OFF.png": {
+      "sha256": "a5d6f40f500f14f440cf981950630f5433521faa7578ae0f83684b9ededdc2bf",
+      "bytes": 427
+    },
+    "webview-ui/public/assets/furniture/PC/PC_FRONT_ON_1.png": {
+      "sha256": "d00d95a9c4718f770dee1a93240be8b7dc6d2e8abab4071179dd79c2d73a9337",
+      "bytes": 479
+    },
+    "webview-ui/public/assets/furniture/PC/PC_FRONT_ON_2.png": {
+      "sha256": "dc083d31848be3661b4ea571ee8d8d7e5dcd34cdbcef48d4dd6c444166eb7a69",
+      "bytes": 476
+    },
+    "webview-ui/public/assets/furniture/PC/PC_FRONT_ON_3.png": {
+      "sha256": "773c5e0cfee45ad12669c082ff26c0041f12a6369e4622db3eab35685aeabc0f",
+      "bytes": 485
+    },
+    "webview-ui/public/assets/furniture/PC/PC_SIDE.png": {
+      "sha256": "c327f64a39cc84d3a2c4e97b7165e5a07e355003d0f1a9bca27fc8f8deef9603",
+      "bytes": 451
+    },
+    "webview-ui/public/assets/furniture/PC/manifest.json": {
+      "sha256": "4f33a91b789e22c4e3f5aa05b53eb903581612ef3aa004330143646b8c830f82",
+      "bytes": 2025
+    },
+    "webview-ui/public/assets/furniture/PLANT/PLANT.png": {
+      "sha256": "b9f845e7930e685161a21ac0f1743c2906cb7cbb0bd6b79ef1e4fb5aafff98c6",
+      "bytes": 703
+    },
+    "webview-ui/public/assets/furniture/PLANT/manifest.json": {
+      "sha256": "94bfbdc7ba97c86517a8b6bcefda8b23b7c10128b479eabc433ba72ba1e136f5",
+      "bytes": 232
+    },
+    "webview-ui/public/assets/furniture/PLANT_2/PLANT_2.png": {
+      "sha256": "b0d2e82fefd1f7ebada9656260571aa3e810db55975495e72a62d9ce8a878b42",
+      "bytes": 543
+    },
+    "webview-ui/public/assets/furniture/PLANT_2/manifest.json": {
+      "sha256": "238248bdd213f7f6a18875153ccaee50e5b7d44f916a9f310abbef516197c6ba",
+      "bytes": 234
+    },
+    "webview-ui/public/assets/furniture/POT/POT.png": {
+      "sha256": "cc2889e6fe22350bbeba94d55157f5bb2a38fe40f3a85ef96429f1af88506585",
+      "bytes": 288
+    },
+    "webview-ui/public/assets/furniture/POT/manifest.json": {
+      "sha256": "1e6106dd6e888adae7701597f565e0a9c1741d72918708b6421dafcfb7cb7d5e",
+      "bytes": 228
+    },
+    "webview-ui/public/assets/furniture/SMALL_PAINTING/SMALL_PAINTING.png": {
+      "sha256": "15f370af43455d303b5ccb21429e298f7a603c3b6db10d6ed9270aa62caa71a3",
+      "bytes": 473
+    },
+    "webview-ui/public/assets/furniture/SMALL_PAINTING/manifest.json": {
+      "sha256": "02f09ec0d22404f102f609f8aabc0ca41f3e4d9af4274206167088db95cd13f6",
+      "bytes": 248
+    },
+    "webview-ui/public/assets/furniture/SMALL_PAINTING_2/SMALL_PAINTING_2.png": {
+      "sha256": "148d161726fb08dc7887e75e91f0332bf69d1aadfc649dce6fbc4b2678f5d0f0",
+      "bytes": 473
+    },
+    "webview-ui/public/assets/furniture/SMALL_PAINTING_2/manifest.json": {
+      "sha256": "b023f4e593a868efb5dc98ac283e9a15d923848514849ed6e836944d6605867a",
+      "bytes": 251
+    },
+    "webview-ui/public/assets/furniture/SMALL_TABLE/SMALL_TABLE_FRONT.png": {
+      "sha256": "dc224670ea2c5752830143337fd8b3a080f93980287706d4efd614aaabd4882f",
+      "bytes": 240
+    },
+    "webview-ui/public/assets/furniture/SMALL_TABLE/SMALL_TABLE_SIDE.png": {
+      "sha256": "5568526f6393ad643606b0095eceee5b7674b5588d7105144adc3fb99f0a3f42",
+      "bytes": 225
+    },
+    "webview-ui/public/assets/furniture/SMALL_TABLE/manifest.json": {
+      "sha256": "cfd626759f52304db591b28caab63832813e846a02bd974e4cee43950005e854",
+      "bytes": 692
+    },
+    "webview-ui/public/assets/furniture/SOFA/SOFA_BACK.png": {
+      "sha256": "62a40318fce1d3166f1ea3811ca2081b39ad3161974c6bcd2edb0bdaf9b06d08",
+      "bytes": 192
+    },
+    "webview-ui/public/assets/furniture/SOFA/SOFA_FRONT.png": {
+      "sha256": "7e4c7e98e46d32daa2776651f6f413f68a84252b357b01d722fce6bb2a0ca52f",
+      "bytes": 210
+    },
+    "webview-ui/public/assets/furniture/SOFA/SOFA_SIDE.png": {
+      "sha256": "b583fa6261dbbc4c4020c0a887023d3f707a70b7e5524535d541b453b22f9e94",
+      "bytes": 255
+    },
+    "webview-ui/public/assets/furniture/SOFA/manifest.json": {
+      "sha256": "aa3615e2e2b9de9766d1936d06f630c0a4053030cef7f9f054f16cba6661b8d6",
+      "bytes": 888
+    },
+    "webview-ui/public/assets/furniture/TABLE_FRONT/TABLE_FRONT.png": {
+      "sha256": "fef9638fd372f081f4c80cc52f9bcb4be8db9db194fa46f88968ec08e5463b4a",
+      "bytes": 400
+    },
+    "webview-ui/public/assets/furniture/TABLE_FRONT/manifest.json": {
+      "sha256": "d7868924b6edd92f0b6f135e254fe7c291fe1134c56f84fc3b98b2ca1bc72373",
+      "bytes": 238
+    },
+    "webview-ui/public/assets/furniture/WHITEBOARD/WHITEBOARD.png": {
+      "sha256": "42fb63a8d8041f602c6cd0e7491be3ea95c3f4699b6a5ba6e47851ba8a473059",
+      "bytes": 336
+    },
+    "webview-ui/public/assets/furniture/WHITEBOARD/manifest.json": {
+      "sha256": "70c1924a08f76f042a8bcaf0d56e7fd3724e717ea207f5ab31e0ec9c3ea1dd67",
+      "bytes": 240
+    },
+    "webview-ui/public/assets/furniture/WOODEN_BENCH/WOODEN_BENCH.png": {
+      "sha256": "b2a889a7e67dd1bd59ce1035daffeda8c0b34e696f07658ee0bc8ae514e1af49",
+      "bytes": 208
+    },
+    "webview-ui/public/assets/furniture/WOODEN_BENCH/manifest.json": {
+      "sha256": "cc37d68a0cd451d4329b8efc43e6b01ac157df69f928751b2eca27c96c07407a",
+      "bytes": 247
+    },
+    "webview-ui/public/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_BACK.png": {
+      "sha256": "244fd28f4650e469d836f4287613e834805d3a00b7e14f68ae8415dd30411d5c",
+      "bytes": 290
+    },
+    "webview-ui/public/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_FRONT.png": {
+      "sha256": "fb4c4bf7def68c98e4eedffe1d9ee0cbeaa054fc5bc4aa6785f37cc83b1cd44d",
+      "bytes": 295
+    },
+    "webview-ui/public/assets/furniture/WOODEN_CHAIR/WOODEN_CHAIR_SIDE.png": {
+      "sha256": "b57e3fd470a60e9f9800e9cdfe629b2a187cc0f936ed81314522a17fc7bb2198",
+      "bytes": 261
+    },
+    "webview-ui/public/assets/furniture/WOODEN_CHAIR/manifest.json": {
+      "sha256": "ba184e498776b354b5642f579499c1a60a0b4e5a4fdbe452009d4cca2cc5cc9b",
+      "bytes": 952
+    },
+    "webview-ui/public/assets/pets/claudio/manifest.json": {
+      "sha256": "ccd0ba576f92542087da3a70ace663f21d65fc0969bae7dc5a8d69ec353c07ce",
+      "bytes": 39
+    },
+    "webview-ui/public/assets/pets/claudio/pet.png": {
+      "sha256": "174acbe0a597830bd311c241eed3ac8ad70bd46a55a78b6d9a77ae1728f23185",
+      "bytes": 3267
+    },
+    "webview-ui/public/assets/pets/gitcat/manifest.json": {
+      "sha256": "dea53fd2b975ba95ccf3eab6cf147df935d22226b7657afe9eb6373ed39c6f67",
+      "bytes": 37
+    },
+    "webview-ui/public/assets/pets/gitcat/pet.png": {
+      "sha256": "cb4163bc000da739d988dda58402b4a27cea970ae772d0b107bef515af092a68",
+      "bytes": 2892
+    },
+    "webview-ui/public/assets/walls/wall_0.png": {
+      "sha256": "f2afc6dacc44986a388695a720839ed00da03e9b308d6c727f5292740a62adfa",
+      "bytes": 1738
+    },
+    "webview-ui/src/components/ui/types.ts": {
+      "sha256": "7a9ade9267557821ac33bca98ecf035ee6067fb2d9e6aa843e3faa823b5a2abf",
+      "bytes": 493
+    },
+    "webview-ui/src/constants.ts": {
+      "sha256": "aa3cda0411f8558621149302c9a3aa09a32210c0770a16716d5e3ffd574b82da",
+      "bytes": 17411
+    },
+    "webview-ui/src/office/colorize.ts": {
+      "sha256": "9c1acd0bff5315bb03bd916cb38d97547f5d2464c890e4fcb5fef4af057f48a7",
+      "bytes": 7458
+    },
+    "webview-ui/src/office/engine/characters.ts": {
+      "sha256": "a50f7f2822bf19a2b88b5076f2a9e69f19bdef53b55601717f7e7da3acc2be92",
+      "bytes": 10425
+    },
+    "webview-ui/src/office/engine/gameLoop.ts": {
+      "sha256": "07fc4e15f0e02c7e146b5500e03653303498db94b6bd622f0cb950d8c2188f38",
+      "bytes": 873
+    },
+    "webview-ui/src/office/engine/matrixEffect.ts": {
+      "sha256": "96913fedebf4d3c07e78b1868a667059f19a0f110cfefd83fa1cd27863fd4070",
+      "bytes": 4897
+    },
+    "webview-ui/src/office/engine/matrixEffectState.ts": {
+      "sha256": "55c4508949d14b5dc05498744eaee2e23acdab0275122750221f814c2e1b78a0",
+      "bytes": 2136
+    },
+    "webview-ui/src/office/engine/officeState.ts": {
+      "sha256": "5ea3076a89a946eaa914cf1daa7945983d9c1ed11f9e1eef427963650f7c6ec8",
+      "bytes": 45006
+    },
+    "webview-ui/src/office/engine/petEntity.ts": {
+      "sha256": "fb6edcd6a72a81712bfff227a36b8bea8c2f96e640aabc093c738ad35c4211b9",
+      "bytes": 10736
+    },
+    "webview-ui/src/office/engine/renderer.ts": {
+      "sha256": "41c338e5141458bc6c7583a44dca9c36702632c0e624bd2e9abab10e4797497c",
+      "bytes": 32162
+    },
+    "webview-ui/src/office/engine/seatPlacement.ts": {
+      "sha256": "cef18fb154b31040f112a00d3cb916a77544cf9c0dc5223bd1673d3c0706db6b",
+      "bytes": 1812
+    },
+    "webview-ui/src/office/floorTiles.ts": {
+      "sha256": "86a1279b5119b8059771daa3a59540ede8fdcc1e761a328c280b43eafa22a2be",
+      "bytes": 3061
+    },
+    "webview-ui/src/office/layout/furnitureCatalog.ts": {
+      "sha256": "26c9feacfcf4b6db18a7cdffe5fb10053703ed5398ae5fbeb0f8048fbc6c98c4",
+      "bytes": 15244
+    },
+    "webview-ui/src/office/layout/layoutSerializer.ts": {
+      "sha256": "fdb76d058ad42a4c9cd1f0456a3daf8ade7c4470173cc734c08a694e8e4e722f",
+      "bytes": 13533
+    },
+    "webview-ui/src/office/layout/tileMap.ts": {
+      "sha256": "0564fec7ad749668ab9a2317fb658eb3e5d0cf2aecc9b5c4f63d82a475b54790",
+      "bytes": 3080
+    },
+    "webview-ui/src/office/projection.ts": {
+      "sha256": "dfa409f8f18b10930fe401fa7cc5cf05c22e83061cdcff9a0ce78f44ff58b7ce",
+      "bytes": 2739
+    },
+    "webview-ui/src/office/sprites/bubble-permission.json": {
+      "sha256": "c1c5843455f8a4201eef1aa4d15d3bae41ef30f209ba6936004606f2adc7d8df",
+      "bytes": 938
+    },
+    "webview-ui/src/office/sprites/bubble-pet.json": {
+      "sha256": "d5254d4fdcd1ed0daa471951d56bed5b33afa263272efa5efcbc8ddd2cdede53",
+      "bytes": 900
+    },
+    "webview-ui/src/office/sprites/bubble-waiting.json": {
+      "sha256": "58cadd14f6b18c2f773a8bf3a8b25da82da81333d93d17fff6ce10dd20410c32",
+      "bytes": 933
+    },
+    "webview-ui/src/office/sprites/carpetTiles.ts": {
+      "sha256": "cc09f55aff372298badb346ffd0df510780a46c8b86ed1aadb81043b66b30985",
+      "bytes": 12574
+    },
+    "webview-ui/src/office/sprites/petSpriteData.ts": {
+      "sha256": "4d972482c1ad20e36b08d6be191f3a7c38d5657684228d3d8166cdf172d169fe",
+      "bytes": 3456
+    },
+    "webview-ui/src/office/sprites/spriteCache.ts": {
+      "sha256": "fd615d74508e9dc32ecda030a087a0de2bf0a06b5e242e5cee93e8525b268e60",
+      "bytes": 2399
+    },
+    "webview-ui/src/office/sprites/spriteData.ts": {
+      "sha256": "b6b7153bccb3c12a9d9719b6fab36dcd793b55df71fd53e71e10816072c20bcb",
+      "bytes": 7117
+    },
+    "webview-ui/src/office/toolUtils.ts": {
+      "sha256": "223c39a91a551ad88b03ea83e31890f3564d3844276614953dc0d31c92d08092",
+      "bytes": 1613
+    },
+    "webview-ui/src/office/types.ts": {
+      "sha256": "2e15ac41afa84aa23ea2e178fe76bb349bf356c495c3169c6033da63cda598f1",
+      "bytes": 11350
+    },
+    "webview-ui/src/office/wallTiles.ts": {
+      "sha256": "a292703da788ddb5586c432376a0b9f8ce3e085a672112d63270776240bc188e",
+      "bytes": 6111
+    }
+  }
+}

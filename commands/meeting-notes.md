@@ -1,117 +1,110 @@
 ---
-description: Превратить сырую расшифровку встречи в протокол по конвенциям каталога встреч текущего проекта
-argument-hint: '<путь к расшифровке или вставленный текст> [дата встречи]'
+description: Turn a raw meeting transcript into minutes, following the conventions of the meeting directory of the current project
+argument-hint: '<path to the transcript or the pasted text> [meeting date]'
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion, Bash(ls:*), Bash(date:*), Bash(wc:*)
 ---
 
-Вход: $ARGUMENTS
+Input: $ARGUMENTS
 
-Ты превращаешь сырую расшифровку в протокол встречи для базы знаний проекта, в
-котором запущена команда. Структуру, имя файла и индекс бери из существующих
-протоколов этого проекта, а не из памяти.
+You are turning a raw transcript into meeting minutes for the knowledge base of the project the
+command was run in. Take the structure, the file name, the index and the language of the document
+from the existing minutes of that project, not from memory.
 
-## Шаг 0. Найти дом протоколов
+## Step 0. Find the home of the minutes
 
-По аргументам, текущей рабочей директории, инструкциям проекта (CLAUDE.md или
-AGENTS.md) и индексу документации найди каталог протоколов встреч, его индекс,
-два-три существующих протокола (лучше последние), глоссарий или таблицу замен
-терминов, если они есть, и индекс ADR (Architecture Decision Record). Если
-каталога протоколов нет, скажи об этом и спроси, куда класть.
+From the arguments, the current working directory, the project instructions (CLAUDE.md or AGENTS.md)
+and the documentation index, find the directory of meeting minutes, its index, two or three existing
+minutes (preferably the latest), the glossary or the term replacement table if they exist, and the
+ADR (Architecture Decision Record) index. If there is no minutes directory, say so and ask where to
+put the file.
 
-## Шаг 1. Понять, с чем имеешь дело
+## Step 1. Understand what you are dealing with
 
-Расшифровки обычно приходят сырым выводом ASR (Automatic Speech Recognition)
-без обработки. Чего ждать:
+Transcripts usually arrive as the raw output of ASR (Automatic Speech Recognition), unprocessed. What
+to expect:
 
-- Разметки спикеров нет. Таймкодов нет. Реплики разных людей склеены внутри
-  одного абзаца.
-- Хвост-петля: заметная часть файла в конце может быть одним и тем же
-  мусорным абзацем, повторенным десятки раз.
-- Заикание модели: один и тот же абзац повторен два-три раза подряд.
-- Устная речь не почищена: слова-паразиты и оговорки.
+- No speaker labels. No timecodes. Lines of different people glued inside one paragraph.
+- A tail loop: a noticeable part of the file at the end may be the same junk paragraph repeated
+  dozens of times.
+- Model stutter: the same paragraph repeated two or three times in a row.
+- Spoken language is not cleaned up: filler words and slips.
 
-Прежде чем разбирать, оцени объем и найди, где начинается хвост-петля. Скажи
-пользователю, какую долю файла ты отбросил и с какой строки.
+Before analysing, estimate the volume and find where the tail loop begins. Tell the user which share
+of the file you discarded and from which line.
 
-## Шаг 2. Нормализовать термины
+## Step 2. Normalise the terms
 
-Опора - глоссарий или таблица замен проекта, если есть. Она может покрывать
-диктовку, но не ошибки расшифровки встреч: искажения терминов, имен и
-аббревиатур, слипшиеся и несуществующие слова. Если встретишь искажение,
-которого нет в глоссарии, не угадывай молча: выпиши его отдельным списком в
-конце и спроси. Имена людей восстанавливай только по надежному совпадению;
-сомневаешься - спроси.
+The basis is the project glossary or replacement table, if there is one. It may cover dictation but
+not the errors of meeting transcription: distorted terms, names and abbreviations, glued and
+non-existent words. If you meet a distortion the glossary does not cover, do not guess in silence:
+write it into a separate list at the end and ask. Restore people's names only on a reliable match;
+when in doubt, ask.
 
-## Шаг 3. Структура протокола
+## Step 3. The structure of the minutes
 
-Имя файла и место - по образцу существующих протоколов и индекса. Каркас
-выводи из существующих протоколов; типичный:
+The file name and its place follow the existing minutes and the index. Derive the frame from the
+existing minutes; a typical one:
 
-1. H1 с названием проекта, типом встречи и темой.
-2. Сразу под H1 строки метаданных: дата с ролью и участниками; строка
-   "Источник" с явной декларацией, что протокол собран из расшифровки ASR с
-   нормализацией терминов. Происхождение не скрывай.
-3. Раздел сокращений: маркированный список "термин - расшифровка, короткое
-   пояснение". Раскрывай и бытовые аббревиатуры, не только технические.
-4. Содержательные разделы второго уровня. Их набор не фиксирован и
-   различается между встречами: бери по факту разговора, не подгоняй под
-   чужой список.
-5. Итоговый раздел: что встреча изменила, открытые вопросы, влияние на ADR.
-   Его форму (общая или персональная) бери из образцов или спроси.
+1. An H1 with the project name, the type of meeting and the topic.
+2. Metadata lines right under the H1: the date with the role and the participants; a "source" line
+   stating explicitly that the minutes were assembled from an ASR transcript with normalised terms.
+   Do not hide the provenance.
+3. A section of abbreviations: a bulleted list "term - expansion, a short explanation". Expand the
+   everyday abbreviations too, not only the technical ones.
+4. Second level content sections. Their set is not fixed and differs between meetings: take it from
+   what was actually said, do not force it into someone else's list.
+5. The closing section: what the meeting changed, the open questions, the impact on the ADRs. Take
+   its form (shared or personal) from the examples, or ask.
 
-## Шаг 4. Приемы оформления
+## Step 4. Formatting devices
 
-- Степень достоверности зашивается в заголовок скобкой: "озвученные ставки",
-  "важная оговорка", "предварительно".
-- Ключевой термин пункта выделяется жирным в начале строки, дальше механика и
-  обоснование.
-- Статус решения помечается прямо в тексте: "решено", "рассматривается",
-  "сознательно НЕ делаем", "НЕ решено".
-- Таблицы только там, где их используют существующие протоколы (например
-  стек или владение компонентами).
-- В разделе вопросов и ответов имя спрашивающего в круглых скобках после
-  вопроса. Если спикер не опознан, ставится `(-)`.
-- Прямая речь в двойных кавычках. Неточная передача помечается словами
-  "Цитата по смыслу:".
-- Расхождения с прошлыми встречами фиксируются, а не сглаживаются: новое
-  число рядом с прежним и указанием, где прежнее звучало.
-- Поздняя правка протокола: инлайн курсивом с датой прямо в теле пункта,
-  исходный текст не переписывается.
+- The degree of certainty is carried in the heading in brackets: "stated bets", "an important
+  caveat", "preliminary", in the wording the project uses.
+- The key term of an item is bold at the start of the line, with the mechanics and the reasoning
+  after it.
+- The status of a decision is marked in the text itself: decided, under consideration, deliberately
+  NOT doing, NOT decided, in the wording of the project.
+- Tables only where the existing minutes use them (the stack or component ownership, for example).
+- In the questions and answers section, the name of the asker goes in parentheses after the question.
+  If the speaker is not identified, put `(-)`.
+- Direct speech goes in double quotes. An inexact rendering is marked with a phrase like "quoted by
+  meaning".
+- Divergences from earlier meetings are recorded, not smoothed over: the new number next to the
+  previous one, with a pointer to where the previous one was said.
+- A late edit of the minutes goes inline in italics with the date inside the item; the original text
+  is not rewritten.
 
-## Шаг 5. Влияние на ADR
+## Step 5. Impact on the ADRs
 
-Если на встрече принято или изменено архитектурное решение, заведи раздел о
-влиянии на ADR и раздели его на две части: какие существующие записи надо
-обновить и как, и какие записи надо завести заново.
+If an architectural decision was taken or changed at the meeting, create a section about the impact
+on the ADRs and split it in two: which existing records must be updated and how, and which records
+must be created.
 
-Не правь ADR сам из этой команды. ADR не правятся задним числом: отмененное
-решение получает статус superseded, новое пишется отдельной записью. Для
-заведения записи есть команда `/adr`, скажи пользователю запустить ее.
+Do not edit ADRs from this command. ADRs are not edited after the fact: a cancelled decision gets the
+status superseded, and the new one is written as a separate record. The `/adr` command exists for
+creating a record; tell the user to run it.
 
-## Шаг 6. Чего не выдумывать
+## Step 6. What not to invent
 
-Если материалы проекта не задают правило, спрашивай:
+If the project materials set no rule, ask:
 
-- атрибуция реплик: не приписывай реплику человеку по догадке, либо спроси,
-  либо ставь `(-)`;
-- отдельный раздел "Следующие шаги" с владельцем и сроком, если в образцах
-  его нет;
-- персональная итоговая секция в документе, который читает вся команда;
-- состав строки метаданных (время, участники поименно или числом);
-- сохранять ли сырую расшифровку и куда.
+- attribution of lines: do not attribute a line to a person by guess, either ask or put `(-)`;
+- a separate "next steps" section with an owner and a deadline, if the examples do not have one;
+- a personal closing section in a document the whole team reads;
+- the content of the metadata line (time, participants by name or by number);
+- whether to keep the raw transcript and where.
 
-## Шаг 7. Индекс
+## Step 7. The index
 
-Допиши строку в индекс протоколов в форме существующих строк (например
-дата, тема с форматом встречи и ключевой ролью, файл) и скажи об этом. Если
-сырая расшифровка сохраняется, она идет отдельной строкой с пометкой в форме
-индекса.
+Add a line to the index of minutes in the form of the existing lines (for example the date, the topic
+with the meeting format and the key role, the file) and say so. If the raw transcript is kept, it
+goes as a separate line with a mark in the form of the index.
 
-## Шаг 8. Правила оформления
+## Step 8. Formatting rules
 
-Оформление (пунктуация, расшифровка аббревиатур, вид ссылок) по конвенциям
-проекта. Не дописывай в протокол того, чего на встрече не было: если тезис
-звучал невнятно, пометь его как невнятный, а не достраивай.
+The formatting (punctuation, spelled-out abbreviations, the form of links) follows the project
+conventions. Do not add to the minutes what was not said at the meeting: if a point was voiced
+unclearly, mark it as unclear instead of completing it yourself.
 
-В конце отдай: путь протокола, строку для индекса, список неопознанных
-искажений и список мест, где ты не смог восстановить, кто говорил.
+At the end, hand over: the path of the minutes, the line for the index, the list of unidentified
+distortions and the list of places where you could not restore who was speaking.

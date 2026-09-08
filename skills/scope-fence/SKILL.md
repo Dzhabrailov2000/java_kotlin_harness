@@ -1,60 +1,82 @@
 ---
 name: scope-fence
-description: Дисциплина границ задачи - делать ровно то, что просили. Не больше (без попутных правок и самовольного расширения скоупа) и не меньше (доводить до конца, не заканчивать ход планом или обещанием). Применять в каждой задаче на изменение кода или документов, особенно в длинных агентных сессиях.
+description: Task boundary discipline - do exactly what was asked. Not more (no drive-by edits, no scope you granted yourself) and not less (finish the work, never end a turn with a plan or a promise). Apply it in every task that changes code or documents, especially in long agentic sessions.
 ---
 
-# Границы задачи: не больше и не меньше
+# Task boundaries: not more and not less
 
-У забора две стены. Первая держит от расползания скоупа, вторая - от недоделанной работы. Ломаются они по-разному, но цена одна: пользователь получает не то, что просил.
+The fence has two walls. The first holds back scope creep, the second holds back unfinished work.
+They break in different ways, but the price is the same: the user gets something other than what
+they asked for.
 
-## Когда применять
+## When to apply
 
-- Любая задача на изменение: код, ADR, контракты, конфиги.
-- Длинные сессии, где по дороге всплывают соседние проблемы и соблазны "заодно поправить".
-- Автономная работа, когда пользователь не смотрит в реальном времени.
+- Any change task: code, ADRs, contracts, configuration.
+- Long sessions, where neighbouring problems and the temptation to "fix it while I am here" come up
+  along the way.
+- Autonomous work, when the user is not watching in real time.
 
-## Когда НЕ применять
+## When NOT to apply
 
-- Пользователь явно попросил "почисти все, что найдешь" - тогда широкий скоуп и есть задача.
-- Разговорный вопрос без изменений - там нечего ограждать.
+- The user explicitly asked to "clean up everything you find": then the wide scope is the task.
+- A conversational question with no change: there is nothing to fence.
 
-## Шаг 0: что считается "сделано"
+## Step 0: what counts as done
 
-Перед началом сформулируй в одном предложении критерий завершения. Отдельно проверь режим запроса:
+Before starting, state the completion criterion in one sentence. Check the mode of the request
+separately:
 
-- **Пользователь описывает проблему или думает вслух** - результат это диагноз и оценка, а не патч. Доложи находки и остановись; фикс - после явной просьбы.
-- **Пользователь просит изменение** - результат это работающее изменение, проверенное и доложенное.
+- **The user describes a problem or thinks out loud:** the result is a diagnosis and an assessment,
+  not a patch. Report the findings and stop; the fix comes after an explicit request.
+- **The user asks for a change:** the result is a working change, verified and reported.
 
-Перепутать режимы - самый частый способ сломать обе стены сразу.
+Confusing the two modes is the most common way to break both walls at once.
 
-## Стена "не больше"
+## The "not more" wall
 
-- **Никаких попутных правок.** Заметил грязь, мертвый код, кривое имя рядом с местом работы - упомяни в финальном отчете, не трогай в диффе. Исключение одно: без попутной правки твое изменение некорректно (не компилируется, ломает инвариант).
-- **Не рефакторить работающее ради вкуса.** Код пишется в идиоме окружающего кода, а не переписывается под свою.
-- **Идея посреди задачи** - кандидат в follow-up или ADR, не в текущий дифф.
-- **Реальная развилка скоупа** (два несовместимых прочтения задачи, деструктивное действие, выход за рамки исходной просьбы) - остановиться и спросить. Одобрение в одном контексте не переносится на следующий.
+- **No drive-by edits.** You noticed mess, dead code or a bad name next to where you work: mention
+  it in the final report, do not touch it in the diff. There is one exception: without that edit
+  your change is incorrect (it does not compile, it breaks an invariant).
+- **Do not refactor working code to taste.** Code is written in the idiom of the code around it, not
+  rewritten into yours.
+- **An idea in the middle of a task** is a candidate for a follow-up or an ADR, not for this diff.
+- **A real fork in the scope** (two incompatible readings of the task, a destructive action, a step
+  beyond the original request): stop and ask. Approval in one context does not carry to the next.
 
-## Стена "не меньше"
+## The "not less" wall
 
-- **Не заканчивай ход обещанием.** Если последний абзац ответа - план, список next steps, "дальше нужно..." или "я сделаю X" - это не конец хода, а незакрытая работа. Сделай ее сейчас.
-- **Ошибка инструмента - не повод сдаться.** Ретрай, обходной путь, другой инструмент. Сдаваться можно только когда заблокирован вводом, который есть только у пользователя.
-- **Недостающую информацию сначала ищи сам** - в коде, в доках, в git history, в интернете. Вопрос пользователю о том, что выясняется чтением кода, - это перекладывание своей работы.
-- **Не останавливайся из-за длины сессии.** Усталость контекста - не критерий завершения; критерий - шаг 0.
+- **Do not end a turn with a promise.** If the last paragraph of your answer is a plan, a list of
+  next steps, "what remains is..." or "I will do X", the turn is not finished, the work is. Do it
+  now.
+- **A tool error is not a reason to give up.** Retry, work around it, use another tool. Giving up is
+  allowed only when you are blocked on input that only the user has.
+- **Look for the missing information yourself first:** in the code, in the docs, in the git history,
+  on the internet. Asking the user what reading the code would answer is handing your work back.
+- **Do not stop because the session is long.** Context fatigue is not a completion criterion; step 0
+  is.
 
-## Проверка перед сдачей
+## Check before handing over
 
-Перечитай последний абзац своего ответа. Если это план, анализ без вывода, вопрос, на который можешь ответить сам, или обещание о несделанной работе - ход не закончен.
+Reread the last paragraph of your answer. If it is a plan, an analysis with no conclusion, a
+question you could answer yourself or a promise about work not done, the turn is not finished.
 
-## Анти-паттерны
+## Anti-patterns
 
-- **"Заодно переименовал".** Дифф на 5 строк по задаче и 200 строк косметики вокруг.
-- **Фикс вместо диагноза.** Пользователь спросил "почему падает", а получил молча наложенный патч.
-- **Ход-обещание.** "Теперь осталось прогнать тесты" вместо прогнанных тестов.
-- **Вопрос-перекладывание.** "А какой у вас формат конфига?" когда конфиг лежит в репозитории.
-- **Ползучий скоуп через благие намерения.** Каждая правка по отдельности разумна, суммарно - незапрошенный рефакторинг.
+- **"I renamed it while I was there."** A five-line diff for the task and two hundred lines of
+  cosmetics around it.
+- **A fix instead of a diagnosis.** The user asked "why does it crash" and got a patch applied in
+  silence.
+- **The promise turn.** "Now the tests need to be run" instead of tests that were run.
+- **The question that hands work back.** "What is your config format?" when the config is in the
+  repository.
+- **Creeping scope through good intentions.** Every edit is reasonable on its own; together they are
+  a refactoring nobody asked for.
 
-## Связь с обвязкой
+## Relation to the harness
 
-- Отложенные идеи и найденная по дороге грязь - в финальный отчет; архитектурные - через скилл `architecture-decision-records` как follow-up.
-- Реализация по уже принятому решению - агент `code-architect`; он же держит рамку "что строим", за которую не выходить.
-- Перед сдачей нетривиального диффа - встроенный `/verify` (вторая стена требует не только дописать, но и проверить).
+- Postponed ideas and the mess you found on the way go into the final report; architectural ones go
+  through the `architecture-decision-records` skill as a follow-up.
+- Implementation of a decision already taken belongs to the `code-architect` agent; it also holds the
+  frame of "what we are building", which you do not step outside.
+- Before handing over a non-trivial diff, use the built-in `/verify`: the second wall requires not
+  only finishing the work but checking it.

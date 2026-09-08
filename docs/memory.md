@@ -1,104 +1,121 @@
-# Память и передача знаний между задачами
+# Memory and handover between tasks
 
-Один маршрут, четыре слоя. Ни один слой не копирует другой; каждый следующий
-только указывает на предыдущий. Пути в этом документе условные: конкретные
-локальные пути менеджер прописывает в личных инструкциях на своей машине, в
-переносимую обвязку они не попадают.
+One route, four layers. No layer copies another; each one only points at the
+previous. The paths in this document are placeholders: the manager writes the
+concrete local paths into their personal instructions on their own machine, and
+they never enter the portable harness.
 
-## 1. Источники истины: существующие документы проектов
+This document is part of the internal pipeline, so it is written in English,
+like the task prompts, the reports and the review requests. The user still
+talks to the manager in Russian and gets the final answer in Russian, and
+quotations from project documents keep their own language.
 
-Архитектурные решения, контракты, планы, протоколы встреч и инструкции живут
-в репозиториях своих проектов (каталог ADR, `docs`, CLAUDE.md или AGENTS.md
-проекта, CONTRIBUTING). Они авторитетны и остаются на месте. Обвязка их не
-дублирует, не переносит и не пересказывает; команды `/adr`, `/epic`,
-`/meeting-notes`, `/meeting-prep` находят их по инструкциям проекта и его
-индексу документации.
+## 1. Sources of truth: the existing documents of the projects
 
-## 2. Короткий приватный указатель
+Architectural decisions, contracts, plans, meeting notes and instructions live
+in the repositories of their own projects (the ADR directory, `docs`, the
+project's CLAUDE.md or AGENTS.md, CONTRIBUTING). They are authoritative and
+stay where they are. The harness does not duplicate them, does not move them
+and does not retell them; the `/adr`, `/epic`, `/meeting-notes` and
+`/meeting-prep` commands find them through the instructions of the project and
+its documentation index.
 
-Обычный Markdown-файл вне этого репозитория, в локальном каталоге памяти
-пользователя. Обе сессии (Claude Code и Codex) читают его явно, потому что на
-него указывает их личная инструкция (пользовательский CLAUDE.md и AGENTS.md).
-Это не синхронизация, не общая база и не автоматическая функция клиента:
-файл читается как любой другой документ. Менеджер читает указатель перед
-составлением промпта; исполнитель получает только выдержки, отобранные
-менеджером в промпт.
+## 2. A short private pointer
 
-Содержимое - указатели, не документы:
+An ordinary Markdown file outside this repository, in the user's local memory
+directory. Both sessions (Claude Code and Codex) read it explicitly, because
+their personal instruction points at it (the user's CLAUDE.md and AGENTS.md).
+This is not synchronisation, not a shared database and not an automatic client
+feature: the file is read like any other document. The manager reads the
+pointer before composing the prompt; the implementer receives only the extracts
+the manager selected into that prompt.
+
+The content is pointers, not documents:
 
 ```
-| Что | Где | Роль | Ревизия / дата сверки | Примечание |
+| What | Where | Role | Revision / date checked | Note |
 | --- | --- | --- | --- | --- |
-| Архитектурные решения | <repo-architecture>/docs/adr/README.md | индекс статусов | <sha> / 2026-09-06 | статусы читать из индекса |
-| Контракт сервиса X | <repo-service>/docs/ | текущие материалы, есть незавершенные документы | <sha> / 2026-09-06 | план и нарезка ссылаются друг на друга |
-| Обвязка | <path>/java_kotlin_harness | канонический источник методов и процесса | <sha> / 2026-09-06 | установлена симлинками |
-| Отчеты реализаций | <run-root>/<run>/ | артефакты запусков | дата запуска | не копировать в память |
+| Architectural decisions | <repo-architecture>/docs/adr/README.md | index of statuses | <sha> / 2026-09-06 | read the statuses from the index |
+| Contract of service X | <repo-service>/docs/ | current materials, some documents unfinished | <sha> / 2026-09-06 | the plan and the breakdown reference each other |
+| Harness | <path>/java_kotlin_harness | canonical source of the methods and the process | <sha> / 2026-09-06 | installed through symlinks |
+| Implementation reports | <run-root>/<run>/ | artifacts of the runs | date of the run | do not copy into memory |
 ```
 
-Правила ведения:
+Rules for keeping it:
 
-- Указатель не пересказывает содержание документа и не хранит секреты,
-  учетные данные, токены и стоячие разрешения (например на push): разрешение
-  действует в объеме конкретной задачи и в память не записывается.
-- Изменяемые факты (ветка, статус, вердикт) записываются с ревизией и датой
-  сверки. При следующей задаче источник перечитывается; память ему не главнее.
-- Устаревшая запись обновляется с новой датой или удаляется. Противоречие
-  между памятью и источником решается в пользу источника.
-- Перед тем как рекомендовать файл, флаг или команду из памяти, проверь, что
-  они еще существуют.
-- Ссылка на документ, которого нет по указанному пути, - дефект указателя:
-  замени на существующий проверенный путь или удали.
+- The pointer does not retell the content of a document and does not hold
+  secrets, credentials, tokens or standing permissions (a push, for example):
+  a permission holds for the scope of one task and is not written into memory.
+- Facts that change (a branch, a status, a verdict) are written with the
+  revision and the date they were checked against. On the next task the source
+  is read again; memory does not outrank it.
+- A stale entry is updated with a new date or deleted. A contradiction between
+  memory and the source is resolved in favour of the source.
+- Before recommending a file, a flag or a command from memory, check that it
+  still exists.
+- A link to a document that is not at the given path is a defect of the
+  pointer: replace it with an existing, verified path or delete it.
 
-## 3. Локальный handoff после задачи
+## 3. The local handoff after a task
 
-После решения COMPLETE или ESCALATE менеджер дописывает в локальный handoff
-(тот же указатель или соседний файл в том же каталоге) короткую запись:
+After a COMPLETE or ESCALATE decision the manager appends a short entry to the
+local handoff (the same pointer or a neighbouring file in the same directory):
 
-- путь и ревизия проверенной версии, дата проверки;
-- подтвержденные исправления: что изменено и по какому основанию;
-- какие проверки прошли (команды, не пересказ) и что осталось UNVERIFIED;
-- нерешенные вопросы для следующей задачи.
+- the path and revision of the verified version, and the date of the check;
+- the confirmed fixes: what was changed and on what grounds;
+- which checks passed (the commands, not a retelling) and what stayed
+  UNVERIFIED;
+- the open questions for the next task;
+- a short retrospective in three lines, from what was already recorded (the
+  attempts, the usage, the journal): what failed or repeated across attempts
+  and which check caught it (or which check should have and did not); what was
+  lost or done twice, counting human intervention separately from the
+  manager's own actions (if the human's time was not measured, it stays
+  unknown); one justified process change, or "no grounds to change the
+  process".
 
-Это тоже указатель: детали остаются в отчетах запуска, на которые запись
-ссылается. Опровергнутые замечания в handoff не переносятся.
+This is a pointer too: the details stay in the reports of the run that the
+entry references. Refuted findings are not carried into the handoff. The
+retrospective is three lines in that same entry, not a new database, a
+dashboard or a metric of skill "success".
 
-## 4. Эфемерные артефакты запуска
+## 4. Ephemeral artifacts of a run
 
 `events.jsonl`, `doctor.*`, `harness-audit.json`, `progress.jsonl`,
-`progress.log`, промпты, отчеты ревью и отчеты исполнителя лежат в каталоге
-запуска вне репозитория. На них ссылаются, их не копируют в память, не
-публикуют и не превращают в документы проекта.
+`progress.log`, the prompts, the review reports and the implementer's reports
+lie in the run directory outside the repository. They are referenced, not
+copied into memory, not published and not turned into project documents.
 
-## Как это читают клиенты
+## How the clients read this
 
-- Claude Code: личный CLAUDE.md пользователя содержит одну строку "перед
-  задачей прочитай <путь к указателю>"; native auto-memory клиента остается
-  для коротких предпочтений и указателей, а не для копий документов.
-- Codex: AGENTS.md пользователя содержит ту же строку и маршрутизирует
-  задачи реализации через процесс из `skills/self-correct`.
-- Инструкция Claude только указывает на индекс и роль; она не превращает
-  исполнителя в менеджера внутри вызова helper.
+- Claude Code: the user's personal CLAUDE.md holds one line, "before a task,
+  read <path to the pointer>"; the client's native auto-memory stays for short
+  preferences and pointers, not for copies of documents.
+- Codex: the user's AGENTS.md holds the same line and routes implementation
+  tasks through the process of `skills/self-correct`.
+- The instruction for Claude only points at the index and the role; it does not
+  turn the implementer into a manager inside a helper call.
 
-## Obsidian (по желанию)
+## Obsidian (optional)
 
-Obsidian открывает обычную папку Markdown как vault и подхватывает внешние
-изменения, поэтому существующие каталоги документов и указатель можно открыть
-в нем без миграции и без дубликата. Это удобство просмотра, не часть процесса
-и не требование.
+Obsidian opens an ordinary Markdown folder as a vault and picks up external
+changes, so the existing documentation directories and the pointer can be
+opened in it without a migration and without a duplicate. This is a
+convenience for reading, not part of the process and not a requirement.
 
-## Чего не делаем
+## What we do not do
 
-- Не заводим демон памяти, синхронизацию или экспорт транскриптов, граф,
-  облачное хранилище и MCP-сервер памяти.
-- Не переносим документы проектов в обвязку и не собираем общий документ с
-  копиями материалов разных репозиториев.
-- Не делаем Obsidian обязательным.
+- No memory daemon, synchronisation or transcript export, no graph, no cloud
+  storage and no memory MCP server.
+- Project documents are not moved into the harness, and no shared document is
+  assembled from copies of materials of different repositories.
+- Obsidian is not made mandatory.
 
-## Подключение (делает менеджер локально, после ревью)
+## Setting it up (the manager does this locally, after the review)
 
-1. Создать файл указателя в локальном каталоге памяти и заполнить его
-   существующими проверенными путями с ревизией и датой.
-2. Добавить строку-ссылку на него в личные инструкции обеих сессий.
-3. Пересмотреть старые записи памяти: удалить стоячие разрешения и
-   неразрешимые ссылки, обновить устаревшие пути.
-4. Ничего из этого не коммитить в обвязку.
+1. Create the pointer file in the local memory directory and fill it with
+   existing, verified paths with their revision and date.
+2. Add a line linking to it in the personal instructions of both sessions.
+3. Revisit the old memory entries: delete standing permissions and links that
+   cannot be resolved, and update stale paths.
+4. Commit none of this into the harness.

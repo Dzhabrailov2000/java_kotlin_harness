@@ -1,70 +1,70 @@
-# Отчет исполнителя: задача <ID>, попытка <N> из <M>
+# Implementer report: task <ID>, attempt <N>
 
-Шаблон отчета внешнего исполнителя. Первое предложение - итог: что сделано и
-что не сделано. Каждое утверждение либо привязано к источнику (file:line,
-команда и ее вывод), либо помечено как предположение. Не отмечай проверку
-пройденной, если не запускал ее и не видел результата.
+Report template of the external implementer, written in English. The first sentence is the outcome:
+what is done and what is not. Every statement is either tied to a source (file:line, a command and
+its output) or marked as an assumption. Do not mark a check as passed if you did not run it and see
+the result.
 
-## Итог
+## Outcome
 
-<Одно-два предложения: сделано / сделано частично / заблокировано, и почему.>
+<One or two sentences: done / partly done / blocked, and why.>
 
-## Проверенная версия
+## Version under review
 
-- Рабочая копия: <путь>, ветка <ветка>, базовый HEAD <sha>.
-- Состояние: <незакоммиченные изменения / временный WIP-коммит <sha>>.
-- Список измененных и новых файлов: <как в `git status --short`>.
+- Workspace: <path>, branch <branch>, base HEAD <sha>.
+- State: <uncommitted changes / temporary WIP commit <sha>>.
+- Changed and new files: <as in `git status --short`>.
 
-## Изменения и причины
+## Changes and reasons
 
-| Файл | Что изменено | Почему (критерий или подтвержденное замечание) |
+| File | What changed | Why (criterion or confirmed finding) |
 | --- | --- | --- |
-| <путь> | <кратко> | <C1 / замечание N> |
+| <path> | <briefly> | <C1 / finding N> |
 
-Удалено: <что и почему>. Сохранено сознательно: <что и почему>.
+Removed: <what and why>. Deliberately kept: <what and why>.
 
-## Покрытие критериев
+## Criteria coverage
 
-| ID | Статус | Основание |
+| ID | Status | Evidence |
 | --- | --- | --- |
-| C1 | сделано / частично / не сделано / UNVERIFIED | <file:line, команда, вывод> |
+| C1 | done / partial / not done / UNVERIFIED | <file:line, command, output> |
 
-## Команды и результаты
+## Commands and results
 
-Каждая строка - реально выполненная команда с exit code и ключевым выводом;
-отдельно помечай, что запускалось заново, а что взято из прежнего результата.
+Every line is a command actually run, with its exit code and the output that matters; say explicitly
+what was re-run and what is taken from an earlier result.
 
 ```
-<команда> -> exit <код>; <ключевой вывод>
+<command> -> exit <code>; <key output>
 ```
 
-Не запускалось: <что и почему>.
+Not run: <what and why>.
 
-## Замечания предыдущей проверки (при RETRY)
+## Findings of the previous check (on RETRY)
 
-| Замечание | Статус менеджера | Что сделано |
+| Finding | Manager status | What was done |
 | --- | --- | --- |
-| <место, суть> | CONFIRMED | исправлено: <file:line, проверка> |
-| <место, суть> | REFUTED | не трогал |
-| <место, суть> | UNVERIFIED | основание: <что нашел или не нашел и где искал> |
+| <place, substance> | CONFIRMED | fixed: <file:line, check> |
+| <place, substance> | REFUTED | untouched |
+| <place, substance> | UNVERIFIED | evidence: <what you found or did not, and where you looked> |
 
-## Неизвестное и недостающие входы
+## Unknown and missing input
 
-<Источники, которых не хватило; вопросы, на которые нельзя ответить из
-доступных материалов; допущения, под которыми сделана работа.>
+<Sources that were not enough; questions the available material cannot answer; assumptions the work
+rests on.>
 
-## Недоступные возможности
+## Capabilities you could not use
 
-<Компонент или доступ, который был нужен, но не выбран или не установлен, с
-причиной. Пусто - так и напиши.>
+<A component or access that was needed but not selected or not installed, with the reason. Empty is
+an answer: say so.>
 
-## Не сделано
+## Not done
 
-<Что из запрошенного объема оставлено и почему; что выходило за разрешенные
-пути и требует отдельного решения.>
+<What of the requested scope was left and why; what fell outside the allowed paths and needs a
+separate decision.>
 
-## Ожидает менеджера
+## Waiting for the manager
 
-<Проверки и действия, которые выполняет только менеджер: тесты приемки,
-независимое ревью, установка в реальный дом, обновление указателей, commit.
-Здесь они помечаются как ожидающие, а не выполненные.>
+<Checks and actions only the manager performs: captured acceptance checks, the independent review,
+installation into the real home, updating the pointers, commit. Here they are marked as pending,
+not as done.>

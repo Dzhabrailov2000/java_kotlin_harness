@@ -356,12 +356,25 @@ class StoreTest(unittest.TestCase):
                     self.open_store()
                 self.assertEqual(source.read_bytes(), b"class Service\n")
         self.progress = self.directory / "identity"
-        for label, overrides in (("run id", {"run_id": "bad id"}), ("attempt", {"attempt": 0}), ("step", {"step_id": "<s>"}),
+        for label, overrides in (("run id", {"run_id": "bad id"}), ("attempt", {"attempt": 0}),
+                                 ("negative attempt", {"attempt": -1}), ("boolean attempt", {"attempt": True}),
+                                 ("attempt written as text", {"attempt": "2"}),
+                                 ("fractional attempt", {"attempt": 1.5}), ("step", {"step_id": "<s>"}),
                                  ("source", {"source": "hook"}), ("phase", {"phase": "deploy"}), ("tool", {"tool": "a b"})):
             with self.subTest(case=label):
                 with self.assertRaises(ValueError):
                     self.open_store(**overrides)
         self.assertFalse(self.progress.exists())
+
+    def test_a_high_attempt_number_is_traced_rather_than_capped(self):
+        """The trace numbers passes for evidence; it does not decide how many passes a task may take."""
+        for attempt in (100000, 10 ** 12):
+            with self.subTest(attempt=attempt):
+                self.progress = self.directory / ("late-%d" % attempt)
+                store = self.open_store(attempt=attempt)
+                record = store.record("status", state="cli_started")
+                self.assertEqual((store.attempt, record["attempt"]), (attempt, attempt))
+                self.assertEqual(run_trace.validate_trace(record)["attempt"], attempt)
 
     def test_message_keeps_exact_original_as_artifact_and_bounded_preview(self):
         store = self.open_store(source="manager", provider=None)

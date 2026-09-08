@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
-"""Launch one implementer turn; self-correct's manager owns the review loop."""
+"""Launch one implementer turn; self-correct's manager owns the review loop.
+
+An implementation launch is bound to the frozen plan of run_acceptance.py: the plan is loaded and
+verified before the CLI starts, and its rendered contract travels inside the prompt the model
+actually receives. A plan frozen for another workspace, a run id that contradicts it, an attempt that
+is not a positive number or lies outside a limit the user explicitly requested, or a plan whose
+baseline no longer matches stops the launch instead of producing a turn that worked from a different
+task than the one being accepted.
+
+The turn itself is not put on a clock: there is no default wall-clock, turn, token or cost cutoff, and
+the launcher waits for the CLI to finish or for the user to interrupt it. `--timeout` and
+`--max-budget-usd` exist for a limit the user actually asked for and are absent otherwise.
+
+The read-only handoff after a decision is the other mode: it hands a finished report back without
+tools to change anything, needs no attempt of the plan and is not a build.
+"""
 import argparse
 import datetime
 import hashlib
@@ -13,6 +28,7 @@ import subprocess
 import sys
 import threading
 
+import run_acceptance
 from claude_doctor import run_doctor, stop_group
 from harness_run_audit import audit_run
 from run_progress import ConsoleEcho, NativeObserver, ProgressJournal, identifier, stop_observer
@@ -62,7 +78,7 @@ def skill_bundle(names, workspace, root=ROOT):
         "Use the following installed harness instructions for this task. "
         "The manager selects the harness for this invocation. Apply the supplied skills; "
         "the user's task, existing project stack and scope take precedence over examples. "
-        "Hook catalogs are inventory, not instructions to select additional components. "
+        "The installed component catalogue is inventory, not an instruction to select more. "
         "Do not add skills, agents or MCP servers yourself. If something is missing, "
         "report the needed capability and reason to the manager. "
         "You implement or fix code. The calling manager owns self-correct, "
@@ -71,6 +87,31 @@ def skill_bundle(names, workspace, root=ROOT):
         "Only the explicitly selected implementation subagents may be invoked.\n"
         + "".join(texts), sources
     )
+
+
+def acceptance_contract(args, workspace):
+    """Load the frozen plan this launch belongs to and render the contract the implementer receives.
+
+    Everything that could make the turn work from another task than the one being accepted is refused
+    here, before the output directory exists and long before the CLI starts: another workspace, a run
+    id that contradicts the plan, an attempt outside its bound, a rewritten plan or a baseline that no
+    longer matches the one the plan was frozen on.
+    """
+    plan = run_acceptance.load_plan(args.acceptance_dir)
+    declaration = plan["declaration"]
+    if declaration["workspace"] != str(workspace):
+        raise ValueError("The plan was frozen for another workspace: %s, not %s"
+                         % (declaration["workspace"], workspace))
+    if args.run_id is not None and args.run_id != declaration["run_id"]:
+        raise ValueError("The plan belongs to run %s, not to the requested %s"
+                         % (declaration["run_id"], args.run_id))
+    problem = run_acceptance.attempt_problem(args.attempt, declaration["max_attempts"])
+    if problem:
+        raise ValueError(problem)
+    # The baseline is half of the plan identity, so a plan whose baseline file no longer matches is
+    # not this plan any more: the scope of the task would be judged against a tree nobody recorded.
+    run_acceptance.load_baseline(plan)
+    return plan, run_acceptance.contract_text(plan, args.attempt)
 
 
 def summarize_events(path, expected_model):
@@ -135,6 +176,12 @@ def run(args):
                      "MCP servers are available only when the task needs them; do not make dummy calls. "
                      "Report work performed, evidence and any capability you could not use.\n")
     prompt = prompt_file.read_text()
+    # The plan is read before anything is created: a launch that would work from another task than the
+    # one being accepted must cost neither an output directory, nor a journal step, nor a model call.
+    plan, request = None, prompt
+    if args.acceptance_dir is not None:
+        plan, contract = acceptance_contract(args, workspace)
+        request = prompt.rstrip("\n") + "\n\n" + contract
     executable = shutil.which("claude")
     if not executable:
         raise ValueError("Claude CLI is not on PATH")
@@ -147,7 +194,10 @@ def run(args):
         raise ValueError("Progress directory must be outside the implementation workspace")
     out.mkdir(parents=True, exist_ok=False)
     phase = args.phase or ("handoff" if args.read_only else "build")
-    identity = {"run_id": args.run_id, "attempt": args.attempt, "step_id": args.step_id, "step_base": out.name}
+    # The journal identity of a bound launch is the contract's own: the run of the plan and the attempt
+    # this turn belongs to, never a value guessed from the journal.
+    run_id = plan["declaration"]["run_id"] if plan else args.run_id
+    identity = {"run_id": run_id, "attempt": args.attempt, "step_id": args.step_id, "step_base": out.name}
     # Console copies of the records are queued for a daemon writer: a stalled stderr reader costs
     # dropped console lines, never a delayed record, observer stop, doctor or result.
     console = ConsoleEcho.for_stream(sys.stderr)
@@ -181,10 +231,12 @@ def run(args):
         trace = TraceStore.unavailable(progress_dir, error, **trace_identity)
         console.write("trace UNVERIFIED: " + trace.error + "\n")
     trace.record("status", state="cli_started", model=identifier(args.model), effort=identifier(args.effort))
-    trace.message("manager", "task_prompt", prompt, original=prompt.encode("utf-8"), origin=str(prompt_file),
-                  title=title_of(prompt))
+    # The effective prompt is what the implementer received: the manager's request plus the rendered
+    # contract of the frozen plan. It is kept as prompt.md and traced as that same text.
+    trace.message("manager", "task_prompt", request, original=request.encode("utf-8"),
+                  origin=str(out / "prompt.md") if plan else str(prompt_file), title=title_of(request))
     (out / "instructions.md").write_text(instructions)
-    (out / "prompt.md").write_text(prompt)
+    (out / "prompt.md").write_text(request)
     (out / "selection.json").write_text(json.dumps(selection, ensure_ascii=False, indent=2) + "\n")
     for source in agent_sources:
         (out / ("agent-" + source["agent"] + ".md")).write_bytes(Path(source["path"]).read_bytes())
@@ -217,7 +269,12 @@ def run(args):
               "agent_sources": agent_sources, "selection": selection,
               "mcp_config_source": str(mcp_config) if mcp_config else None,
               "mcp_config_sha256": digest(mcp_bytes),
-              "prompt_source": str(prompt_file), "prompt_sha256": digest(prompt.encode()),
+              "prompt_source": str(prompt_file), "prompt_source_sha256": digest(prompt.encode()),
+              "prompt_sha256": digest(request.encode()),
+              "acceptance": None if plan is None else {
+                  "plan": plan["path"], "plan_id": plan["plan_id"], "run_id": plan["declaration"]["run_id"],
+                  "attempt": args.attempt, "max_attempts": plan["declaration"]["max_attempts"],
+                  "baseline": plan["baseline"]},
               "read_only_tools": args.read_only, "timeout_seconds": args.timeout,
               "max_budget_usd": args.max_budget_usd, "trace": trace.status(),
               "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat()}
@@ -246,7 +303,7 @@ def run(args):
                               "model": args.model, "effort": args.effort}), flush=True)
             watcher.start()
             try:
-                process.communicate(prompt, timeout=args.timeout)
+                process.communicate(request, timeout=args.timeout)
             except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
                 timed_out = isinstance(error, subprocess.TimeoutExpired)
                 interrupted = isinstance(error, KeyboardInterrupt)
@@ -312,30 +369,46 @@ def run(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--prompt", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--skill", action="append", default=[])
     parser.add_argument("--agent", action="append", default=[], help="Installed subagent required this iteration")
     parser.add_argument("--mcp-config", type=Path, help="JSON config containing only manager-selected MCP servers")
-    parser.add_argument("--model", default="claude-fable-5-1")
-    parser.add_argument("--effort", default="max")
-    parser.add_argument("--timeout", type=int, default=1800)
-    parser.add_argument("--max-budget-usd", type=float)
+    parser.add_argument("--model", default="claude-opus-5")
+    parser.add_argument("--effort", default="xhigh")
+    parser.add_argument("--timeout", type=int,
+                        help="Seconds after which this call is stopped. Default: none, the call runs until the "
+                             "CLI exits or the user interrupts it. Pass it only for a limit the user requested")
+    parser.add_argument("--max-budget-usd", type=float,
+                        help="Cost limit for this call; default: none. Pass it only for a budget the user set")
     parser.add_argument("--read-only", action="store_true")
     parser.add_argument("--progress-dir", type=Path,
                         help="Shared pipeline journal (progress.jsonl, progress.log); default: the output directory")
-    parser.add_argument("--attempt", type=int, help="Self-correct attempt number; default: latest in the journal")
+    parser.add_argument("--acceptance-dir", type=Path,
+                        help="Evidence directory of run_acceptance.py: the frozen plan of this task, whose "
+                             "rendered contract is sent with the prompt. Required for an implementation launch")
+    parser.add_argument("--attempt", type=int,
+                        help="Attempt of the plan this launch belongs to; required with --acceptance-dir. "
+                             "Without a plan (read-only handoff): the journal's latest attempt")
     parser.add_argument("--step-id", help="Journal step identity; default: the output directory name")
     parser.add_argument("--run-id", help="Pipeline identity; default: the journal's run id")
     parser.add_argument("--phase", choices=("build", "verify", "handoff"),
                         help="Recorded phase; default: handoff with --read-only, otherwise build")
     args = parser.parse_args()
-    if args.timeout <= 0 or (args.max_budget_usd is not None and args.max_budget_usd <= 0):
-        parser.error("Timeout and an explicit budget must be positive")
+    # An absent limit is the default; a requested one has to be a real limit rather than an instant stop.
+    if (args.timeout is not None and args.timeout <= 0) or (args.max_budget_usd is not None and args.max_budget_usd <= 0):
+        parser.error("An explicitly requested timeout or budget must be positive; omit it for no limit")
     if args.attempt is not None and args.attempt <= 0:
         parser.error("Attempt must be positive")
+    # An implementation launch works from the frozen contract or does not happen: there is no mode in
+    # which the implementer builds from prose alone while acceptance is judged against a plan.
+    if args.acceptance_dir is None and not args.read_only:
+        parser.error("--acceptance-dir is required for an implementation launch: the frozen plan is the task "
+                     "contract, and it travels with the prompt. --read-only hands a report back instead")
+    if args.acceptance_dir is not None and args.attempt is None:
+        parser.error("--attempt is required with --acceptance-dir: the launch belongs to one attempt of the plan")
     try:
         return run(args)
     except (OSError, ValueError) as error:

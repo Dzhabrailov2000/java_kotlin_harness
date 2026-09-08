@@ -109,8 +109,13 @@ def sha256(data):
 
 
 def number(value, minimum=0, maximum=2 ** 53):
-    """An integer within bounds, or None; booleans and floats are not counts."""
-    if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= maximum:
+    """An integer within bounds, or None; booleans and floats are not counts.
+
+    maximum=None leaves the value bounded from below only, for a counter that must not be capped.
+    """
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        return None
+    if maximum is not None and value > maximum:
         return None
     return value
 
@@ -334,7 +339,8 @@ def validate_trace(record):
         if key == "time" or stamp is not None:
             _require(isinstance(stamp, str) and TIME.fullmatch(stamp), "invalid " + key)
             clean[key] = stamp
-    _require(number(record.get("attempt"), 1, 99999) is not None, "invalid attempt")
+    # The attempt is a positive counter of passes, not a quota: it has no upper bound here either.
+    _require(number(record.get("attempt"), 1, None) is not None, "invalid attempt")
     clean["attempt"] = record["attempt"]
     source = record.get("source")
     _require(isinstance(source, str) and source in SOURCES, "invalid source")
@@ -708,7 +714,7 @@ class TraceStore:
         directory = Path(directory).resolve()
         if identifier(run_id) is None or identifier(step_id) is None or identifier(tool) is None:
             raise ValueError("Invalid trace identity")
-        if number(attempt, 1, 99999) is None:
+        if number(attempt, 1, None) is None:
             raise ValueError("Attempt must be a positive integer")
         if source not in SOURCES or (phase is not None and phase not in PHASES):
             raise ValueError("Unknown trace source or phase")

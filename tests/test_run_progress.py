@@ -26,6 +26,7 @@ SCRIPTS = ROOT / "scripts"
 LAUNCHER, PROGRESS = SCRIPTS / "run_claude_task.py", SCRIPTS / "run_progress.py"
 sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+run_acceptance = importlib.import_module("run_acceptance")
 run_progress = importlib.import_module("run_progress")
 run_trace = importlib.import_module("run_trace")
 from test_run_trace import MODEL as TRACE_MODEL, PUBLIC, claude_stream, codex_stream  # noqa: E402 - native-shaped fixtures shared with the trace tests
@@ -33,6 +34,18 @@ from test_run_trace import MODEL as TRACE_MODEL, PUBLIC, claude_stream, codex_st
 NODE = shutil.which("node")
 
 MODEL = "claude-progress-test-model"
+RUN = "progress-launcher-run"
+# The frozen plan every launch of the fixture is bound to. It sets no attempt limit, because none was
+# asked for; the identity of the journal and the trace comes from its run id, not from a directory name.
+PLAN_DECLARATION = {
+    "run_id": RUN,
+    "max_attempts": None,
+    "criteria": [{"id": "C1", "description": "The launcher records what the CLI actually did", "key": True,
+                  "checks": ["tests"]},
+                 {"id": "C2", "description": "Ревью подтверждает область", "key": False, "checks": []}],
+    "commands": {"tests": {"argv": [sys.executable, "-B", "-c", "print('two words')"], "cwd": ".", "timeout": 60}},
+    "scope": {"allowed": ["src/"], "protected": ["settings.reference.json"]},
+}
 # Every raw field the safe journal must exclude carries its own sentinel.
 SENTINELS = {
     "prompt": "PROMPT-SENTINEL-7f3a",
@@ -96,30 +109,93 @@ PAGE_HARNESS = textwrap.dedent("""\
     ['innerHTML', 'outerHTML'].forEach(function (name) {
       Object.defineProperty(Stub.prototype, name, { get() { throw new Error(name + ' is forbidden'); }, set() { throw new Error(name + ' is forbidden'); } });
     });
+    // A hidden section has no layout in a browser, so everything inside it reports zero geometry. The
+    // stub models that for the conversation: a page that saves the scroll of a hidden section saves a zero.
+    Object.defineProperty(Stub.prototype, 'hidden', {
+      get() { return this.isHidden; },
+      set(value) {
+        this.isHidden = value;
+        if (this.elementId === 'section-talk' && value && elements.conversation) {
+          elements.conversation.scrollTop = 0; elements.conversation.scrollHeight = 0; elements.conversation.clientHeight = 0;
+        }
+      }
+    });
     Stub.prototype.insertAdjacentHTML = function () { throw new Error('insertAdjacentHTML is forbidden'); };
     Stub.prototype.appendChild = function (child) { this.children.push(child); return child; };
     Stub.prototype.setAttribute = function (name, value) { this.attributes[name] = String(value); };
     Stub.prototype.getAttribute = function (name) { return this.attributes[name] == null ? null : this.attributes[name]; };
     Stub.prototype.addEventListener = function (name, handler) { (this.handlers[name] = this.handlers[name] || []).push(handler); };
     Stub.prototype.fire = function (name) { (this.handlers[name] || []).forEach(function (handler) { handler({ target: this }); }, this); };
-    const CHECKED = { follow: true, 'follow-events': true, 'show-user': true, 'show-manager': true, 'show-claude': true, 'show-codex': true };
+    // The on-demand inspector is a native dialog: the stub models opening, closing, Escape and focus so the
+    // page can call them without a branch, and a test can read where the focus went.
+    Stub.prototype.showModal = function () { this.open = true; };
+    Stub.prototype.close = function () { this.open = false; this.fire('close'); };
+    Stub.prototype.escape = function () { this.fire('cancel'); this.close(); };
+    Stub.prototype.focus = function () { globalThis.__focused = this; };
+    const CHECKED = { follow: true, 'follow-events': true, 'show-user': true, 'show-manager': true, 'show-claude': true, 'show-codex': true, 'office-motion': true };
     const elements = {};
     globalThis.document = {
-      getElementById(id) { if (!elements[id]) { elements[id] = new Stub('div'); elements[id].checked = !!CHECKED[id]; } return elements[id]; },
+      getElementById(id) { if (!elements[id]) { elements[id] = new Stub('div'); elements[id].elementId = id; elements[id].checked = !!CHECKED[id]; } return elements[id]; },
       createElement(tag) { return new Stub(tag); },
       createTextNode: textNode
     };
-    let round = 0, timers = [];
-    globalThis.fetch = function (url) {
+    // Timers on a clock the test moves by hand: a deadline the page forgets to clear, or clears instead of
+    // the timer it meant to, stays visible here as a leftover rather than being swallowed by a no-op stub.
+    let round = 0, clock = 0, sequence = 0;
+    const timers = new Map(), requests = [];
+    globalThis.setInterval = function () { return 0; };
+    globalThis.setTimeout = function (fn, delay) { const id = ++sequence; timers.set(id, { fn: fn, due: clock + (delay || 0) }); return id; };
+    globalThis.clearTimeout = function (id) { timers.delete(id); };
+    // One step of the clock runs the timers that were already waiting, earliest first, and drains the
+    // microtasks after each of them: an answer that has arrived is delivered before the next timer, exactly
+    // as the browser orders them. Timers set during the step wait for the next one, so a poll cannot chase
+    // its own tail here and a deadline is only reached when the test asks for that much time to pass.
+    async function advance(ms) {
+      const target = clock + ms, waiting = sequence;
+      for (;;) {
+        let next = null;
+        timers.forEach(function (timer, id) { if (id <= waiting && timer.due <= target && (next === null || timer.due < timers.get(next).due)) { next = id; } });
+        if (next === null) { break; }
+        const timer = timers.get(next);
+        timers.delete(next);
+        clock = timer.due;
+        timer.fn();
+        await settle();
+      }
+      clock = target;
+    }
+    // The network of one round per feed. 'ok' answers the page below; the rest are the ways a local request
+    // ends badly. An aborted request rejects exactly as the platform aborts it, before headers or in the
+    // middle of a body, and never delivers that body afterwards - except in 'late', which delivers it anyway
+    // so that the page's own guard against a stale answer is what the test measures.
+    globalThis.fetch = function (url, options) {
       const current = input.rounds[Math.min(round, input.rounds.length - 1)];
       const feed = String(url).indexOf('/api/trace') === 0 ? 'trace' : 'events';
       const page = current[feed] || { events: [], cursor: 0, discard: false, invalid_lines: 0, more: false, journal: false, reset: false, now: '2026-09-06T10:00:00.000Z' };
-      if (input.fail && input.fail[feed]) { return Promise.resolve({ ok: false, status: 500 }); }
+      const mode = (current.network && current.network[feed]) || (input.fail && input.fail[feed] ? 'status' : 'ok');
+      const signal = options && options.signal;
+      requests.push({ round: round, feed: feed, mode: mode, at: clock });
+      const onAbort = function (reject) {
+        if (!signal) { return; }
+        const fail = function () { const error = new Error('The user aborted a request.'); error.name = 'AbortError'; reject(error); };
+        if (signal.aborted) { fail(); } else { signal.addEventListener('abort', fail); }
+      };
+      if (mode === 'status') { return Promise.resolve({ ok: false, status: 500 }); }
+      if (mode === 'refused') { return Promise.reject(new TypeError('Failed to fetch')); }
+      if (mode === 'headers') { return new Promise(function (resolve, reject) { onAbort(reject); }); }
+      if (mode === 'body') {
+        return new Promise(function (resolve, reject) {
+          onAbort(reject);
+          resolve({ ok: true, json: function () { return new Promise(function (settled, failed) { onAbort(failed); }); } });
+        });
+      }
+      if (mode === 'late') {
+        return Promise.resolve({ ok: true, json: function () {
+          return new Promise(function (resolve) { globalThis.setTimeout(function () { resolve(page); }, current.lateAfter || 30000); });
+        } });
+      }
       return Promise.resolve({ ok: true, json: function () { return Promise.resolve(page); } });
     };
-    globalThis.setInterval = function () { return 0; };
-    globalThis.setTimeout = function (fn) { timers.push(fn); return timers.length; };
-    globalThis.clearTimeout = function () {};
     vm.runInThisContext(fs.readFileSync(process.argv[2], 'utf8'));
     function settle() { return new Promise(function (resolve) { let n = 0; (function tick() { if (++n > 20) { return resolve(); } setImmediate(tick); })(); }); }
     function walk(node, out) { out.push(node); (node.children || []).forEach(function (child) { walk(child, out); }); return out; }
@@ -136,11 +212,18 @@ PAGE_HARNESS = textwrap.dedent("""\
         const button = walk(articles[action[1]], []).filter(function (node) { return node.tagName === 'button'; })[0];
         button.fire('click');
       }
+      else if (name === 'escape') { document.getElementById('inspector').escape(); }
     }
     (async function () {
       await settle();
       for (let index = 0; index < input.rounds.length; index++) {
-        if (index > 0) { round = index; const due = timers.splice(0); due.forEach(function (fn) { fn(); }); await settle(); }
+        if (index > 0) {
+          round = index;
+          // Far enough for any poll the page schedules, including its longest backoff; a round that wants to
+          // stop between a deadline and the answer that follows it names its own step.
+          await advance(input.rounds[index].advance == null ? 60000 : input.rounds[index].advance);
+          await settle();
+        }
         (input.rounds[index].actions || []).forEach(act);
         await settle();
       }
@@ -170,10 +253,62 @@ PAGE_HARNESS = textwrap.dedent("""\
         return { tag: block.tagName, open: block.attributes.open != null, summary: block.children[0].textContent,
                  lines: block.children.filter(function (child) { return child.className.indexOf('line') === 0; }).map(function (child) { return child.textContent; }) };
       });
-      process.stdout.write(JSON.stringify({ steps: rows('steps'), agents: rows('agents'), events: rows('events').length, usage: rows('usage-rows'),
+      // The office bundle is never loaded here: the stub DOM has no canvas, so the page must fall back to
+      // its readable actor controls and say why the scene is missing.
+      const office = {
+        status: document.getElementById('office-status').textContent,
+        statusClass: document.getElementById('office-status').className,
+        actors: [1, 2, 3].map(function (id) {
+          const button = document.getElementById('office-actor-' + id);
+          return { className: button.className, pressed: button.getAttribute('aria-pressed'),
+                   parts: button.children.map(function (part) { return part.textContent; }) };
+        }),
+        details: document.getElementById('office-details').children.map(function (block) {
+          const all = walk(block, []);
+          return { tag: block.tagName, className: block.className, text: block.textContent,
+                   links: all.filter(function (item) { return item.tagName === 'a'; }).map(function (item) { return item.attributes.href; }),
+                   flags: all.filter(function (item) { return (item.className || '').indexOf('flag') === 0; }).map(function (item) { return item.textContent; }) };
+        })
+      };
+      // The minimal main screen keeps the five loop nodes and the return arc; everything else moved behind
+      // one on-demand inspector, so its open state, section and selected context are read here too.
+      const control = function (id) {
+        const button = document.getElementById(id);
+        return { className: button.className, pressed: button.getAttribute('aria-pressed'), hidden: !!button.hidden,
+                 label: button.getAttribute('aria-label'), parts: button.children.map(function (part) { return part.textContent; }) };
+      };
+      const loop = {
+        nodes: ['build', 'tests', 'review', 'triage', 'decision'].map(function (phase) { return control('loop-node-' + phase); }),
+        chips: ['verify', 'handoff'].map(function (phase) { return control('loop-chip-' + phase); }),
+        arc: { className: document.getElementById('loop-return').className, label: document.getElementById('loop-return-label').textContent },
+        state: document.getElementById('loop-state').textContent
+      };
+      const inspector = {
+        open: !!document.getElementById('inspector').open,
+        expanded: document.getElementById('details-open').getAttribute('aria-expanded'),
+        title: document.getElementById('inspector-title').textContent,
+        contextHidden: !!document.getElementById('inspector-context').hidden,
+        actorHidden: !!document.getElementById('office-details').hidden,
+        phaseHidden: !!document.getElementById('loop-details').hidden,
+        sections: ['talk', 'sessions', 'metrics', 'journal'].map(function (name) {
+          return { name: name, hidden: !!document.getElementById('section-' + name).hidden,
+                   selected: document.getElementById('tab-' + name).getAttribute('aria-selected') };
+        }),
+        phase: document.getElementById('loop-details').children.map(function (block) {
+          const all = walk(block, []);
+          return { tag: block.tagName, className: block.className, text: block.textContent,
+                   links: all.filter(function (item) { return item.tagName === 'a'; }).map(function (item) { return item.attributes.href; }) };
+        }),
+        focused: globalThis.__focused ? globalThis.__focused.elementId || null : null
+      };
+      process.stdout.write(JSON.stringify({ office: office, loop: loop, inspector: inspector, steps: rows('steps'), agents: rows('agents'),
+        events: rows('events').length, usage: rows('usage-rows'),
         tools: document.getElementById('tools').children.map(function (chip) { return chip.textContent; }), cards: cards, cardClass: cardClass, stages: stages,
         conversation: conversation, filters: { cycle: options('filter-cycle'), step: options('filter-step') }, created: created,
-        invocations: invocations, scrollTop: document.getElementById('conversation').scrollTop }));
+        invocations: invocations, scrollTop: document.getElementById('conversation').scrollTop,
+        // What the page left behind: every request it made and every timer it still holds. One waiting timer
+        // is the next poll; anything more is a deadline that outlived the request it was bounding.
+        network: { requests: requests, pending: timers.size } }));
     })().catch(function (error) { process.stderr.write(String(error && error.stack || error)); process.exit(2); });
     """)
 
@@ -273,7 +408,11 @@ class ContractTest(unittest.TestCase):
             ("negative count", dict(valid, count=-1)),
             ("boolean exit code", dict(valid, exit_code=True)),
             ("nan duration", dict(valid, duration_seconds=float("nan"))),
-            ("oversized attempt", dict(valid, attempt=100000)),
+            ("zero attempt", dict(valid, attempt=0)),
+            ("negative attempt", dict(valid, attempt=-1)),
+            ("boolean attempt", dict(valid, attempt=True)),
+            ("attempt written as text", dict(valid, attempt="2")),
+            ("fractional attempt", dict(valid, attempt=1.5)),
             ("free-form time", dict(valid, time="yesterday")),
             ("not an object", ["run"]),
         ]
@@ -281,6 +420,14 @@ class ContractTest(unittest.TestCase):
             with self.subTest(case=label):
                 with self.assertRaises(ValueError):
                     run_progress.validate_event(record)
+
+    def test_a_late_attempt_is_recorded_rather_than_capped(self):
+        """The attempt is a positive counter of passes; the journal sets no ceiling on how many there are."""
+        for attempt in (1, 100000, 10 ** 12):
+            with self.subTest(attempt=attempt):
+                record = run_progress.validate_event(json.loads(record_line(attempt=attempt)))
+                self.assertEqual(record["attempt"], attempt)
+                self.assertIn("#%d" % attempt, run_progress.format_line(record))
 
     def test_readable_line_is_generated_from_validated_fields_only(self):
         record = run_progress.validate_event(json.loads(record_line(
@@ -531,12 +678,20 @@ class JournalTest(unittest.TestCase):
 
     def test_invalid_identity_arguments_are_rejected_before_any_file_is_created(self):
         for label, overrides in (("run id", {"run_id": "bad id"}), ("attempt", {"attempt": 0}),
-                                 ("boolean attempt", {"attempt": True}), ("step id", {"step_id": "<b>"}),
+                                 ("negative attempt", {"attempt": -3}),
+                                 ("boolean attempt", {"attempt": True}),
+                                 ("attempt written as text", {"attempt": "2"}), ("step id", {"step_id": "<b>"}),
                                  ("phase", {"phase": "deploy"})):
             with self.subTest(case=label):
                 with self.assertRaises(ValueError):
                     self.open_launcher(**overrides)
         self.assertFalse(self.progress.exists())
+
+    def test_a_high_attempt_number_opens_a_journal_like_any_other(self):
+        """Nothing here rations attempts: a late pass is recorded under its own number."""
+        journal = self.open_launcher(attempt=100000)
+        self.assertEqual(journal.attempt, 100000)
+        self.assertEqual({record["attempt"] for record in journal_records(journal.journal)}, {100000})
 
 
 class ConsoleEchoTest(unittest.TestCase):
@@ -765,6 +920,40 @@ class ObserverTest(unittest.TestCase):
         self.assertEqual(outline(self.native()), [("native", "init", "observed")])
         self.assertIsNone(self.observer.error)
 
+    def test_what_eof_left_unparsed_is_counted_when_the_stream_is_finished(self):
+        stop = threading.Event()
+        stop.set()
+        thread = threading.Thread(target=self.observer.follow, args=(stop,))
+        self.assertEqual(self.feed({"type": "system", "subtype": "init", "model": MODEL}, raw=b'{"unfinished":'), 1)
+        self.assertEqual((self.observer.invalid_lines, self.observer.oversized_lines), (0, 0),
+                         "while the writer is alive the tail is a line still being written")
+        thread.start()
+        progress = run_progress.stop_observer(thread, self.observer, stop)
+        self.assertEqual((progress["invalid_lines"], progress["oversized_lines"]), (1, 0))
+        self.assertEqual(outline(self.native()), [("native", "init", "observed")])
+        self.assertIsNone(self.observer.error)
+
+    def test_an_oversized_tail_dropped_before_eof_is_counted_too(self):
+        stop = threading.Event()
+        stop.set()
+        thread = threading.Thread(target=self.observer.follow, args=(stop,))
+        with mock.patch.object(run_progress, "MAX_NATIVE_LINE_BYTES", 512):
+            self.assertEqual(self.feed(raw=b"y" * 600), 0)
+            thread.start()
+            progress = run_progress.stop_observer(thread, self.observer, stop)
+        self.assertEqual((progress["invalid_lines"], progress["oversized_lines"]), (0, 1))
+        self.assertEqual(self.native(), [])
+
+    def test_a_complete_last_line_without_a_newline_is_the_event_it_holds(self):
+        stop = threading.Event()
+        stop.set()
+        thread = threading.Thread(target=self.observer.follow, args=(stop,))
+        self.feed(raw=json.dumps({"type": "system", "subtype": "init", "model": MODEL}).encode("utf-8"))
+        thread.start()
+        progress = run_progress.stop_observer(thread, self.observer, stop)
+        self.assertEqual((progress["invalid_lines"], progress["oversized_lines"]), (0, 0))
+        self.assertEqual(outline(self.native()), [("native", "init", "observed")])
+
     def test_truncated_stream_restarts_from_the_beginning(self):
         self.feed({"type": "system", "subtype": "init", "model": MODEL})
         self.events.write_bytes(b"")
@@ -888,7 +1077,7 @@ class ServerTest(unittest.TestCase):
             with self.subTest(query=query):
                 self.assertEqual(self.get("/api/events?" + query)[0], 400)
 
-    def test_page_is_self_contained_and_csp_pins_its_inline_code(self):
+    def test_page_carries_only_its_inline_code_and_the_pinned_office_bundle(self):
         status, headers, body = self.get("/")
         self.assertEqual(status, 200)
         html = body.decode("utf-8")
@@ -896,11 +1085,22 @@ class ServerTest(unittest.TestCase):
         csp = headers["Content-Security-Policy"]
         self.assertIn("default-src 'none'", csp)
         self.assertIn("connect-src 'self'", csp)
+        self.assertIn("img-src 'none'", csp)
         self.assertNotIn("unsafe-inline", csp)
+        self.assertNotIn("unsafe-eval", csp)
         self.assertNotIn("http", csp)
         script = re.search("<script>(.*?)</script>", html, re.DOTALL).group(1)
         digest = base64.b64encode(hashlib.sha256(script.encode("utf-8")).digest()).decode("ascii")
-        self.assertIn("script-src 'sha256-" + digest + "'", csp)
+        self.assertIn("'sha256-" + digest + "'", csp)
+        # The office bundle is the only external script: authorized by the digest of the very bytes the
+        # server holds, and pinned in the page by the same value as integrity metadata.
+        external = re.findall(r"<script ([^>]*)></script>", html)
+        self.assertEqual(len(external), 1, external)
+        attributes = dict(re.findall(r'(\w+)="([^"]*)"', external[0]))
+        self.assertEqual(attributes["src"], "/pixel-agents/office.js")
+        bundle = run_progress.sri(self.server.office["/pixel-agents/office.js"])
+        self.assertEqual(attributes["integrity"], bundle)
+        self.assertIn("script-src '" + bundle + "' 'sha256-" + digest + "'", csp)
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
         self.assertEqual(headers["Cache-Control"], "no-store")
         for forbidden in ("http://", "https://", "<link", "<img", "<iframe", "innerHTML", "outerHTML",
@@ -909,6 +1109,52 @@ class ServerTest(unittest.TestCase):
         self.assertIn("textContent", html)
         self.assertIn("tail -f", html)
         self.assertIn("COMPLETE только по явному событию менеджера", html)
+
+    def test_office_bundle_is_served_from_two_exact_paths_only(self):
+        for path, content_type, head in (("/pixel-agents/office.js", "application/javascript; charset=utf-8", b"/* Pixel Agents"),
+                                         ("/pixel-agents/assets.json", "application/json; charset=utf-8", b'{"characters"')):
+            with self.subTest(path=path):
+                status, headers, body = self.get(path)
+                self.assertEqual(status, 200)
+                self.assertEqual(headers["Content-Type"], content_type)
+                self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+                self.assertTrue(body.startswith(head), body[:40])
+                self.assertEqual(body, (run_progress.OFFICE / Path(path).name).read_bytes())
+        # Nothing else under the prefix is reachable: the two URLs above are mapped to two fixed files,
+        # no request path is ever joined onto a directory, and no other file of the repository is served.
+        for path in ("/pixel-agents/", "/pixel-agents", "/pixel-agents/office.js/", "/pixel-agents/build-manifest.json",
+                     "/pixel-agents/../prompt.md", "/pixel-agents/%2e%2e/prompt.md", "/pixel-agents/office.js%00.txt",
+                     "/pixel-agents//office.js", "/PIXEL-AGENTS/office.js", "/monitor/pixel-office/dist/office.js",
+                     "/pixel-agents/vendor/LICENSE"):
+            with self.subTest(path=path):
+                status, _, body = self.get(path)
+                self.assertEqual(status, 404, path)
+                assert_no_sentinel(self, body.decode("utf-8"), path)
+        # A query cannot select another file: the route is the whole path, and the path alone picks the file.
+        self.assertEqual(self.get("/pixel-agents/office.js?file=../../prompt.md")[2],
+                         (run_progress.OFFICE / "office.js").read_bytes())
+        self.assertEqual(self.get("/pixel-agents/office.js", host="example.com")[0], 403)
+        self.assertEqual(self.get("/pixel-agents/office.js", method="POST")[0], 501)
+
+    def test_a_missing_bundle_is_reported_and_authorizes_nothing(self):
+        """Without the built bundle the page says so instead of loading an unauthorized script."""
+        with mock.patch.dict(run_progress.OFFICE_FILES,
+                             {"/pixel-agents/office.js": (self.progress / "absent.js", "application/javascript; charset=utf-8")}):
+            server = run_progress.ProgressServer(self.progress, 0)
+            self.addCleanup(server.server_close)
+            thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
+            thread.start()
+            self.addCleanup(thread.join, 5)
+            self.addCleanup(server.shutdown)
+            self.assertNotIn("'sha256-" + base64.b64encode(hashlib.sha256(b"").digest()).decode(), server.csp)
+            self.assertEqual(server.csp.count("'sha256-"), 2, server.csp)
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=10)
+            try:
+                connection.request("GET", "/pixel-agents/office.js")
+                response = connection.getresponse()
+                self.assertEqual((response.status, response.read()), (503, b"office bundle is not built\n"))
+            finally:
+                connection.close()
 
     def test_api_pages_with_cursor_and_reports_journal_state(self):
         status, headers, body = self.get("/api/events")
@@ -981,11 +1227,16 @@ class PageViewTest(unittest.TestCase):
             server.server_close()
             thread.join(5)
 
-    def snapshot(self, cursors=(0, 0), actions=()):
-        """One poll round of real API pages after the given cursors, plus the user actions to run afterwards."""
+    def snapshot(self, cursors=(0, 0), actions=(), **network):
+        """One poll round of real API pages after the given cursors, plus the user actions to run afterwards.
+
+        `network` names how this round's requests behave when the answer is not a plain one: `network`
+        maps a feed to `refused`, `headers` (the request never gets any), `body` (headers arrive, the
+        body never ends) or `late` (the body arrives, after `lateAfter` ms, whatever the page asked).
+        """
         events = self.api("/api/events?cursor=%d&limit=2000" % cursors[0])
         trace = self.api("/api/trace?cursor=%d&limit=2000" % cursors[1])
-        return {"events": events, "trace": trace, "actions": list(actions)}
+        return dict({"events": events, "trace": trace, "actions": list(actions)}, **network)
 
     def view(self, rounds=None, actions=(), fail=None):
         """Run the page script on real API responses; the default is one round over the current files."""
@@ -1325,6 +1576,94 @@ class PageViewTest(unittest.TestCase):
         self.assertEqual(absent["cardClass"]["notice"], "notice warn")
         self.assertEqual(absent["cards"]["trace"], "trace.jsonl отсутствует")
         self.assertEqual(absent["cards"]["usage"], "неизвестно")
+
+    def working(self):
+        """A page state with one answered poll behind it and the worker observably busy."""
+        journal, observer = self.step()
+        self.feed(observer, {"type": "system", "subtype": "init", "model": MODEL},
+                  {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_1", "name": "Edit",
+                                                                 "input": {"file_path": SENTINELS["path"]}}]}})
+        return observer, self.snapshot()
+
+    def next_snapshot(self, previous, **network):
+        return self.snapshot(cursors=(previous["events"]["cursor"], previous["trace"]["cursor"]), **network)
+
+    def assertBusy(self, view, why):
+        self.assertEqual(view["cards"]["connection"], "связь с сервером есть", why)
+        self.assertIn("работает", " ".join(view["office"]["actors"][2]["parts"]), why)
+
+    def assertLost(self, view, why):
+        self.assertEqual(view["cards"]["connection"], "нет связи, повтор через 2 с", why)
+        self.assertEqual(view["cardClass"]["notice"], "notice bad", why)
+        self.assertIn("состояния этапов не подтверждены", view["cards"]["notice"], why)
+        self.assertEqual([any("нет связи" == part for part in actor["parts"]) for actor in view["office"]["actors"]],
+                         [True, True, True], why)
+        self.assertIn("нет связи с сервером", view["loop"]["state"], why)
+
+    def test_a_request_that_never_answers_expires_instead_of_confirming_the_connection(self):
+        """A local request has a deadline of its own; without one it would neither confirm nor deny anything."""
+        observer, first = self.working()
+        for hang in ("headers", "body"):
+            with self.subTest(hang=hang):
+                # The poll goes out and the answer never comes: before its deadline the page still shows the
+                # connection it did confirm a moment ago, and its own deadline is the timer that is waiting.
+                sent = self.next_snapshot(first, network={"events": hang})
+                pending = self.view(rounds=[first, sent])
+                self.assertBusy(pending, "the previous poll was answered and nothing has expired yet")
+                self.assertEqual(pending["network"]["pending"], 1, "the waiting timer is this request's deadline")
+                self.assertEqual([request["feed"] for request in pending["network"]["requests"]],
+                                 ["events", "trace", "events"], "the hung request blocks the rest of its own poll")
+
+                # The deadline passes. The request is given up on, the connection claim goes with it, and the
+                # records already accepted stay on the page as the last thing known rather than as current work.
+                expired = self.view(rounds=[first, sent, self.next_snapshot(first)])
+                self.assertLost(expired, "an expired observation confirms nothing")
+                self.assertEqual(expired["events"], len(first["events"]["events"]),
+                                 "what was read before the loss is kept, and nothing was added by the failure")
+                self.assertEqual(expired["network"]["pending"], 1, "the deadline is released and only the retry waits")
+
+                # The next poll is reached at all, and a normal answer restores both the connection and the feed.
+                self.feed(observer, {"type": "user", "message": {"content": [
+                    {"type": "tool_result", "tool_use_id": "toolu_1", "is_error": False, "content": SENTINELS["tool_result"]}]}})
+                recovered = self.view(rounds=[first, sent, self.next_snapshot(first), self.next_snapshot(first)])
+                self.assertEqual(recovered["cards"]["connection"], "связь с сервером есть", "polling recovers by itself")
+                self.assertGreater(recovered["events"], expired["events"], "the poll after the failure is really made")
+                self.assertEqual(recovered["network"]["pending"], 1, "one timer waits: the next poll")
+
+    def test_an_answer_that_arrives_after_its_deadline_is_history_not_a_live_state(self):
+        """The page gave up on this observation; the bytes that turn up afterwards may not undo that."""
+        observer, first = self.working()
+        # The body of this poll is delivered long after the deadline that abandoned it, whatever the page asked
+        # of the request. It carries new records, and none of them may reach the view or revive the worker.
+        self.feed(observer, {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "toolu_2", "name": "Bash",
+                                                                          "input": {"command": SENTINELS["tool_input"]}}]}})
+        late = self.next_snapshot(first, network={"events": "late"}, lateAfter=30000)
+        self.assertGreater(len(late["events"]["events"]), 0, "the late answer really carries records")
+
+        view = self.view(rounds=[first, late, self.next_snapshot(first)])
+        self.assertLost(view, "a late answer cannot resurrect the connection it missed")
+        self.assertEqual(view["events"], len(first["events"]["events"]),
+                         "records from an abandoned observation are not accepted")
+        self.assertEqual(view["network"]["pending"], 1, "the abandoned request leaves no timer behind")
+
+        # The same records are accepted the moment a poll of its own brings them, so nothing was lost, only refused.
+        after = self.view(rounds=[first, late, self.next_snapshot(first), self.next_snapshot(first)])
+        self.assertEqual(after["cards"]["connection"], "связь с сервером есть")
+        self.assertEqual(after["events"], len(late["events"]["events"]) + len(first["events"]["events"]))
+
+    def test_a_refused_request_is_reported_and_the_page_keeps_polling(self):
+        """A rejected request and a refused connection end the same way: said out loud, then retried."""
+        observer, first = self.working()
+        refused = self.next_snapshot(first, network={"events": "refused"})
+        view = self.view(rounds=[first, refused])
+        self.assertLost(view, "a refused request is a lost connection, not a quiet pause")
+        self.assertEqual(view["network"]["pending"], 1)
+
+        self.feed(observer, {"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "toolu_1", "is_error": False, "content": SENTINELS["tool_result"]}]}})
+        recovered = self.view(rounds=[first, refused, self.next_snapshot(first)])
+        self.assertEqual(recovered["cards"]["connection"], "связь с сервером есть")
+        self.assertGreater(recovered["events"], view["events"], "the retry after the refusal is really made")
 
     def test_reused_native_ids_in_another_step_are_separate_calls(self):
         agent = {"type": "tool_use", "id": "call-1", "name": "Agent",
@@ -1754,6 +2093,14 @@ class LauncherFixture(unittest.TestCase):
         self.directory = Path(temporary.name)
         self.workspace = self.directory / "workspace"
         self.workspace.mkdir()
+        # An implementation launch works from a frozen plan, so the workspace is a repository the
+        # acceptance snapshot can read, and the plan is frozen once for the whole fixture.
+        subprocess.run(["git", "-C", str(self.workspace), "init", "-q", "."], check=True, capture_output=True,
+                       timeout=60)
+        self.acceptance = self.directory / "acceptance"
+        declaration = self.directory / "acceptance-plan.json"
+        declaration.write_text(json.dumps(PLAN_DECLARATION), encoding="utf-8")
+        self.plan = run_acceptance.freeze_plan(self.acceptance, declaration, self.workspace)
         home = self.directory / "home"
         home.mkdir()
         self.prompt = self.directory / "task.md"
@@ -1795,8 +2142,25 @@ class LauncherFixture(unittest.TestCase):
                                  encoding="utf-8")
 
     def command(self, output, extra=(), timeout="15"):
+        """A launch of this fixture: the frozen plan travels with it unless it is a read-only handoff.
+
+        The explicit --timeout belongs to this test, not to the launcher: nothing is cut off by default,
+        but a fake that hangs must not hold the suite.
+        """
+        extra = list(extra)
+        contract = [] if "--read-only" in extra else ["--acceptance-dir", str(self.acceptance)]
+        if contract and "--attempt" not in extra:
+            contract += ["--attempt", "1"]
         return [sys.executable, str(LAUNCHER), "--workspace", str(self.workspace), "--prompt", str(self.prompt),
-                "--output-dir", str(output), "--model", MODEL, "--effort", "max", "--timeout", timeout, *extra]
+                "--output-dir", str(output), "--model", MODEL, "--effort", "max", "--timeout", timeout,
+                *contract, *extra]
+
+    def contract_text(self, attempt=1):
+        return run_acceptance.contract_text(run_acceptance.load_plan(self.acceptance), attempt)
+
+    def effective_prompt(self, attempt=1):
+        """What a bound launch actually sends: the manager's request plus the rendered contract."""
+        return self.prompt.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + self.contract_text(attempt)
 
     def invoke(self, events=None, *, output=None, extra=(), exit_code=0):
         self.index += 1
@@ -1901,7 +2265,8 @@ class LauncherIntegrationTest(LauncherFixture):
         self.assertEqual(launcher.returncode, 0, stdout + stderr)
         first = json.loads(stdout.splitlines()[0])
         self.assertEqual((first["progress"], first["run_id"], first["attempt"], first["step_id"]),
-                         (str(progress.resolve()), "pipeline", 1, "builder"))
+                         (str(progress.resolve()), RUN, 1, "builder"),
+                         "the run identity of a bound launch is the plan's, not the directory name")
         last = json.loads(stdout.splitlines()[-1])
         self.assertEqual((last["completed"], last["ready_for_review"], last["progress_status"]), (True, True, "RECORDED"))
         result = read_json(output / "result.json")
@@ -1935,36 +2300,49 @@ class LauncherIntegrationTest(LauncherFixture):
         self.assertTrue((output / "progress.log").read_text(encoding="utf-8").startswith(run_progress.LOG_HEADER))
         result = read_json(output / "result.json")
         self.assertEqual((result["progress_status"], result["progress_dir"]), ("RECORDED", str(output.resolve())))
-        self.assertEqual(result["progress_observer"]["run_id"], output.name)
+        self.assertEqual(result["progress_observer"]["run_id"], RUN)
+        # The prompt the CLI actually received is the request plus the rendered contract of the plan,
+        # and that same text is what the launcher recorded.
+        captured = read_json(self.capture)
+        self.assertEqual(captured["stdin"], self.effective_prompt())
+        self.assertEqual((output / "prompt.md").read_text(encoding="utf-8"), captured["stdin"])
+        self.assertIn("| C1 | yes | The launcher records what the CLI actually did | tests |", captured["stdin"])
+        self.assertIn("- Run: %s, attempt 1\n" % RUN, captured["stdin"])
+        self.assertIn("- Attempt limit: no attempt limit was requested", captured["stdin"])
+        invocation = read_json(output / "invocation.json")
+        self.assertEqual(invocation["prompt_sha256"], hashlib.sha256(captured["stdin"].encode("utf-8")).hexdigest())
+        self.assertEqual(invocation["acceptance"]["plan_id"], self.plan["plan_id"])
+        self.assertIsNone(invocation["acceptance"]["max_attempts"])
 
     def test_manager_phases_and_helper_calls_form_one_ordered_pipeline(self):
         progress = self.directory / "dm-05a"
         process, _ = self.invoke(output=self.directory / "attempt-1" / "builder", extra=("--progress-dir", str(progress)))
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        self.emit(progress, "--phase", "tests", "--status", "passed", "--count", "40", "--duration", "15.4")
+        self.emit(progress, "--phase", "tests", "--status", "failed", "--count", "40", "--duration", "15.4")
         self.emit(progress, "--phase", "review", "--status", "failed", "--model", "gpt-6-astra", "--effort", "ultra")
         self.emit(progress, "--phase", "triage", "--status", "confirmed", "--count", "8")
         self.emit(progress, "--phase", "decision", "--status", "retry")
         process, _ = self.invoke(output=self.directory / "attempt-2" / "builder",
                                  extra=("--progress-dir", str(progress), "--attempt", "2"))
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        self.emit(progress, "--phase", "tests", "--status", "passed")
-        self.emit(progress, "--phase", "review", "--status", "passed")
+        self.emit(progress, "--phase", "tests", "--status", "unverified")
+        self.emit(progress, "--phase", "review", "--status", "unverified")
         self.emit(progress, "--phase", "triage", "--status", "refuted")
         self.emit(progress, "--phase", "verify", "--status", "blocked", "--component", "network")
         process, handoff = self.invoke(output=self.directory / "attempt-2" / "handoff",
                                        extra=("--progress-dir", str(progress), "--read-only"))
         self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
-        self.emit(progress, "--phase", "decision", "--status", "complete")
+        self.emit(progress, "--phase", "decision", "--status", "escalate")
         records = journal_records(progress / "progress.jsonl")
-        self.assertEqual({record["run_id"] for record in records}, {"dm-05a"})
+        self.assertEqual({record["run_id"] for record in records}, {RUN},
+                         "the launchers and the manager records share the run identity of the plan")
         self.assertEqual([(record["attempt"], record["step_id"], record["phase"]) for record in records if record["event"] == "run"],
                          [(1, "builder", "build"), (2, "builder", "build"), (2, "handoff", "handoff")])
         self.assertEqual([(record["attempt"], record["step_id"], record["event"], record["status"])
                           for record in records if record["source"] == "manager"], [
-            (1, "tests", "phase", "passed"), (1, "review", "phase", "failed"), (1, "triage", "finding", "confirmed"),
-            (1, "decision", "decision", "retry"), (2, "tests", "phase", "passed"), (2, "review", "phase", "passed"),
-            (2, "triage", "finding", "refuted"), (2, "verify", "phase", "blocked"), (2, "decision", "decision", "complete")])
+            (1, "tests", "phase", "failed"), (1, "review", "phase", "failed"), (1, "triage", "finding", "confirmed"),
+            (1, "decision", "decision", "retry"), (2, "tests", "phase", "unverified"), (2, "review", "phase", "unverified"),
+            (2, "triage", "finding", "refuted"), (2, "verify", "phase", "blocked"), (2, "decision", "decision", "escalate")])
         review = next(record for record in records if record["step_id"] == "review")
         self.assertEqual((review["model"], review["effort"]), ("gpt-6-astra", "ultra"))
         self.assertEqual([record["status"] for record in records if record["event"] == "result"], ["ready"] * 3)
@@ -1982,6 +2360,19 @@ class LauncherIntegrationTest(LauncherFixture):
         self.assertFalse(duplicate.exists())
         self.emit(progress, "--phase", "decision", "--status", "success", expect=1)
         self.emit(progress, "--phase", "tests", "--status", "passed", "--attempt", "0", expect=1)
+        # A claim about checked work needs the acceptance receipt behind it, whatever phase or event
+        # it is filed under; the receipts themselves are exercised in tests/test_run_acceptance.py.
+        for claim in (("--phase", "decision", "--status", "complete"),
+                      ("--phase", "tests", "--status", "complete", "--event", "decision"),
+                      ("--phase", "handoff", "--status", "complete", "--event", "decision"),
+                      ("--phase", "tests", "--status", "passed"),
+                      ("--phase", "review", "--status", "passed"),
+                      ("--phase", "verify", "--status", "passed"),
+                      ("--phase", "tests", "--status", "passed", "--evidence", str(progress / "nothing.json"))):
+            with self.subTest(claim=claim):
+                refused = self.emit(progress, *claim, expect=1)
+                self.assertNotIn("COMPLETE", refused.stdout)
+                self.assertNotIn("этап PASS", refused.stdout)
         self.assertEqual(len(journal_records(progress / "progress.jsonl")), len(records))
 
     def test_same_basename_helpers_in_one_attempt_get_distinct_steps(self):
@@ -2279,7 +2670,8 @@ class LauncherIntegrationTest(LauncherFixture):
                 self.assertEqual(process.returncode, 1)
                 self.assertFalse(self.capture.exists())
                 self.assertFalse(output.exists())
-        self.assertEqual(sorted(path.name for path in self.workspace.iterdir()), ["Service.kt"])
+        self.assertEqual(sorted(path.name for path in self.workspace.iterdir() if path.name != ".git"),
+                         ["Service.kt"])
 
     def test_serve_command_prints_the_local_url_and_stops_on_interrupt(self):
         progress = self.directory / "served"
@@ -2339,11 +2731,13 @@ class LauncherIntegrationTest(LauncherFixture):
             ("status", "cli_started"), ("artifact", None), ("message", "manager"), ("harness", "selected"), ("status", "capture_started"), ("usage", "message"),
             ("rate_limit", None), ("message", "claude"), ("usage", "message"), ("usage", "invocation"), ("status", "final_marked"),
             ("harness", "doctor"), ("harness", "audit"), ("harness", "result"), ("status", "cli_exited")])
-        self.assertTrue(all((record["run_id"], record["attempt"], record["step_id"], record["phase"]) == ("traced", 1, output.name, "build")
+        self.assertTrue(all((record["run_id"], record["attempt"], record["step_id"], record["phase"]) == (RUN, 1, output.name, "build")
                             for record in records))
         prompt_record = records[2]
+        # The traced prompt is the effective one the CLI received, kept beside it as prompt.md.
         self.assertEqual((prompt_record["text"], prompt_record["origin"], prompt_record["source"], prompt_record["message_kind"]),
-                         (self.prompt.read_text(encoding="utf-8"), str(self.prompt.resolve()), "launcher", "task_prompt"))
+                         (self.effective_prompt(), str((output / "prompt.md").resolve()), "launcher", "task_prompt"))
+        self.assertIn(self.contract_text(), prompt_record["text"])
         self.assertEqual((progress / "artifacts" / (prompt_record["artifact_id"] + ".txt")).read_bytes(), (output / "prompt.md").read_bytes())
         self.assertEqual((records[0]["model"], records[0]["effort"], records[0]["tool"], records[4]["cli_version"]), (MODEL, "max", "run_claude_task.py", "9.9.9"))
         # The harness the manager selected is recorded before the CLI starts; observed calls, doctor and result follow the exit.
