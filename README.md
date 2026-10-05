@@ -26,7 +26,7 @@
 ## Установка
 
 1. Клонировать репозиторий в `~/IdeaProjects/java_kotlin_harness`. Другой путь - поправить его в шагах
-   ниже.
+   ниже. Для хука и строки состояния нужен Node.js.
 2. Плагин:
 
    ```bash
@@ -40,7 +40,7 @@
    Правило Kotlin - симлинком:
 
    ```bash
-   ln -s ~/IdeaProjects/java_kotlin_harness/rules/kotlin.md ~/.claude/rules/kotlin.md
+   mkdir -p ~/.claude/rules && ln -s ~/IdeaProjects/java_kotlin_harness/rules/kotlin.md ~/.claude/rules/kotlin.md
    ```
 
 4. По желанию строка состояния в `~/.claude/settings.json`:
@@ -49,8 +49,11 @@
    "statusLine": {"type": "command", "command": "node \"$HOME/IdeaProjects/java_kotlin_harness/statusline/statusline.js\""}
    ```
 
-Проверка: `claude plugin validate ~/IdeaProjects/java_kotlin_harness`; в сессии `/plugin` показывает
-скиллы, агентов и хук, `/memory` - подключенные `core.md` и `kotlin.md`.
+Проверка:
+- `claude --plugin-dir ~/IdeaProjects/java_kotlin_harness plugin details jkh` - 6 скиллов, 2 агента и хук
+  PostToolUse. `claude plugin validate` по корню проверяет только манифесты, без скиллов и агентов.
+- В сессии `/context` показывает подключенные `core.md` и `kotlin.md` (правило Kotlin - после чтения
+  файла `.kt`).
 
 ## Как писать компоненты
 
