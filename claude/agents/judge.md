@@ -1,6 +1,6 @@
 ---
 name: judge
-description: Independent check of an artifact (document, report, research) against explicit criteria and sources. Returns PASS / FAIL / UNVERIFIED with file:line evidence. Never edits the artifact. Use it from the /dev-pipeline loop or on its own after a substantial edit of a document.
+description: Independent check of an artifact (document, report, research) against explicit criteria and sources. Returns PASS / FAIL / UNVERIFIED with file:line evidence. Never edits the artifact. Use it on its own after a substantial edit of a document or as the checking side of a build-and-check loop.
 tools: ["Read", "Grep", "Glob"]
 model: inherit
 ---

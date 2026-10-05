@@ -2,7 +2,9 @@
 
 The manual catalogue is exercised here too, against that same installed home: /harness is the only
 place the descriptions of the installed components are shown, so what it prints is checked on real
-installed symlinks rather than on the repository directory.
+installed symlinks rather than on the repository directory. The development pipeline lives in a
+repository of its own and is invoked there explicitly, so an installation must neither create its
+global discovery entries nor leave an installed instruction that routes work through it.
 """
 
 import hashlib
@@ -19,13 +21,16 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "install.sh"
 BANNER = ROOT / "claude" / "hooks" / "harness-banner.js"
 OBSOLETE_HOOK = "harness-reminder.js"
-OBSOLETE_SKILL = "self-correct"
-SHARED_SKILLS = ("dev-pipeline", "epic-decomposition", "system-design-tradeoffs")
-# The three canonical roles live together; each client renders the ones it runs into its own format.
-ROLES = {"pipeline-manager": "manager", "pipeline-reviewer": "reviewer", "pipeline-implementer": "implementer"}
-CODEX_ROLES = ("pipeline-manager", "pipeline-reviewer")
-CLAUDE_ROLE = "pipeline-implementer"
-MARKER = "# generated from the harness role source"
+# Skills the repository no longer ships: a renamed one, and the pipeline that moved to its own repository.
+OBSOLETE_SKILLS = ("self-correct", "dev-pipeline")
+SHARED_SKILLS = ("epic-decomposition", "system-design-tradeoffs")
+# Where earlier installations made the development pipeline globally discoverable.
+PIPELINE_ENTRIES = (".claude/skills/dev-pipeline", ".agents/skills/dev-pipeline",
+                    ".claude/agents/pipeline-implementer.md", ".codex")
+# Names through which an installed instruction would send work to the extracted pipeline.
+PIPELINE_ROUTES = ("dev-pipeline", "teams/dev", "shared/rules", "review-criteria", "run_claude_task",
+                   "run_codex_manager", "run_codex_review", "run_acceptance", "pipeline-implementer",
+                   "pipeline-manager", "pipeline-reviewer")
 
 
 class InstallTest(unittest.TestCase):
@@ -50,7 +55,6 @@ class InstallTest(unittest.TestCase):
             links[self.target / ".claude" / "skills" / skill.name] = skill
         for name in SHARED_SKILLS:
             links[self.target / ".agents" / "skills" / name] = ROOT / "shared" / "skills" / name
-        # The pipeline role is not linked: the client generator writes it with its native profile.
         for file in sorted((ROOT / "claude" / "agents").glob("*.md")):
             links[self.target / ".claude" / "agents" / file.name] = file
         for file in sorted((ROOT / "claude" / "commands").glob("*.md")):
@@ -60,23 +64,17 @@ class InstallTest(unittest.TestCase):
                 links[self.target / ".claude" / kind / file.name] = file
         return links
 
-    def codex_agent(self, name):
-        return self.target / ".codex" / "agents" / (name + ".toml")
-
-    def claude_agent(self, name=CLAUDE_ROLE):
-        return self.target / ".claude" / "agents" / (name + ".md")
-
-    def role_source(self, name, root=ROOT):
-        return root / "teams" / "dev" / (ROLES[name] + ".md")
-
-    def role_body(self, name, root=ROOT):
-        return self.role_source(name, root).read_text(encoding="utf-8").split("---", 2)[2].strip()
-
     def assert_linked(self, links):
         for destination, source in links.items():
             self.assertTrue(destination.is_symlink(), destination)
             self.assertEqual(Path(os.readlink(destination)), source, destination)
             self.assertTrue(destination.exists(), destination)
+
+    def assert_no_pipeline_discovery(self):
+        for relative in PIPELINE_ENTRIES:
+            with self.subTest(absent=relative):
+                path = self.target / relative
+                self.assertFalse(path.exists() or path.is_symlink(), path)
 
     def snapshot(self):
         entries = {}
@@ -113,7 +111,7 @@ class InstallTest(unittest.TestCase):
             sorted(path.name for path in (self.target / ".claude" / "commands").iterdir()),
             sorted(path.name for path in (ROOT / "claude" / "commands").glob("*.md")),
         )
-        # The three shared methods stay the ones exposed to Codex; the rest of shared/skills does not
+        # The shared methods stay the ones exposed to Codex; the rest of shared/skills does not
         # leak into that client just because it moved under a shared directory.
         self.assertEqual(sorted(path.name for path in (self.target / ".agents" / "skills").iterdir()),
                          sorted(SHARED_SKILLS))
@@ -121,122 +119,32 @@ class InstallTest(unittest.TestCase):
         self.assertIn(str(self.target / ".claude"), completed.stdout)
         self.assertNotIn("пропуск", completed.stdout)
 
-    def test_codex_roles_become_native_agents_generated_from_the_canonical_markdown(self):
-        completed = self.run_installer("--target-home", str(self.target))
-        self.assertEqual(sorted(path.name for path in (self.target / ".codex" / "agents").iterdir()),
-                         sorted(name + ".toml" for name in CODEX_ROLES))
-        for name in CODEX_ROLES:
-            with self.subTest(role=name):
-                body = self.role_body(name)
-                generated = self.codex_agent(name).read_text(encoding="utf-8")
-                self.assertTrue(generated.startswith(MARKER), generated[:120])
-                self.assertIn("name = ", generated)
-                self.assertIn("description = ", generated)
-                self.assertIn("developer_instructions = ", generated)
-                self.assertIn(str(self.role_source(name)), generated)
-                # The body reaches the definition, with quotes escaped so no line can close the string.
-                self.assertIn(body.replace("\\", "\\\\").replace('"', '\\"'), generated)
-                self.assertNotIn('"""', generated.split("developer_instructions = ", 1)[1][3:-4])
-                self.assertIn("создан: " + str(self.codex_agent(name)), completed.stdout)
-        # Idempotent: a second run rewrites nothing it already generated.
-        before = self.snapshot()
-        again = self.run_installer("--target-home", str(self.target))
-        self.assertEqual(self.snapshot(), before)
-        self.assertIn("без изменений: " + str(self.codex_agent("pipeline-manager")), again.stdout)
-
-    def test_the_generated_codex_agents_carry_the_selected_profile_and_the_launcher_assembly(self):
+    def test_installs_no_pipeline_discovery_and_no_installed_instruction_routes_to_it(self):
         self.run_installer("--target-home", str(self.target))
-        manager = self.codex_agent("pipeline-manager").read_text(encoding="utf-8")
-        reviewer = self.codex_agent("pipeline-reviewer").read_text(encoding="utf-8")
-        for name, generated in (("pipeline-manager", manager), ("pipeline-reviewer", reviewer)):
-            with self.subTest(role=name):
-                self.assertIn('model = """\ngpt-6-astra"""', generated)
-                self.assertIn('model_reasoning_effort = """\nultra"""', generated)
-        # The reviewer may only read; the manager gets no permission of its own and keeps its caller's.
-        self.assertIn('sandbox_mode = """\nread-only"""', reviewer)
-        for absent in ("sandbox_mode", "approval_policy"):
-            self.assertNotIn(absent, manager.split("developer_instructions = ", 1)[0])
-        # The instructions are the same assembly the launchers send to a root codex exec.
-        self.assertIn(str(ROOT / "shared" / "skills" / "dev-pipeline" / "SKILL.md"), manager)
-        self.assertIn(str(ROOT / "scripts" / "run_acceptance.py"), manager)
-        self.assertIn(str(ROOT / "claude" / "scripts" / "run_claude_task.py"), manager)
-        for path in (ROOT / "shared" / "rules" / "review-criteria.md", ROOT / "shared" / "rules" / "simplicity.md"):
-            with self.subTest(source=path.name):
-                self.assertIn(str(path), reviewer)
-                # As in the role body, the quotes of the rule are escaped inside the TOML string.
-                text = path.read_text(encoding="utf-8").strip().replace("\\", "\\\\").replace('"', '\\"')
-                self.assertIn(text, reviewer)
-        self.assertIn("Choose the simplest implementation that fully satisfies the requirements.", reviewer)
-
-    def test_the_claude_role_becomes_a_generated_native_subagent_with_its_profile(self):
-        completed = self.run_installer("--target-home", str(self.target))
-        generated = self.claude_agent().read_text(encoding="utf-8")
-        self.assertTrue(generated.startswith("---\n" + MARKER), generated[:160])
-        self.assertIn("создан: " + str(self.claude_agent()), completed.stdout)
-        frontmatter, body = generated.split("---", 2)[1], generated.split("---", 2)[2]
-        for line in ('name: "pipeline-implementer"',
-                     'tools: ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "Skill"]',
-                     'model: "claude-opus-5"', 'effort: "max"'):
-            with self.subTest(field=line):
-                self.assertIn(line, frontmatter)
-        self.assertIn(str(self.role_source(CLAUDE_ROLE)), frontmatter)
-        # The canonical text stays free of client keys; the profile above exists only here.
-        canonical = self.role_source(CLAUDE_ROLE).read_text(encoding="utf-8").split("---", 2)[1]
-        for key in ("tools:", "model:", "effort:", "permissionMode:"):
-            with self.subTest(absent=key):
-                self.assertNotIn(key, canonical)
-        # The body is what the launcher sends: the role and the user's policy, each with its source.
-        self.assertIn(self.role_body(CLAUDE_ROLE), body)
-        self.assertIn((ROOT / "shared" / "rules" / "simplicity.md").read_text(encoding="utf-8").strip(), body)
-        self.assertIn(str(ROOT / "shared" / "rules" / "simplicity.md"), body)
-        before = self.snapshot()
-        again = self.run_installer("--target-home", str(self.target))
-        self.assertEqual(self.snapshot(), before)
-        self.assertIn("без изменений: " + str(self.claude_agent()), again.stdout)
-
-    def test_a_claude_agent_written_by_somebody_else_is_never_overwritten(self):
-        self.run_installer("--target-home", str(self.target))
-        own = self.claude_agent()
-        own.write_text(own.read_text(encoding="utf-8") + "\n<!-- stale generated content -->\n", encoding="utf-8")
-        foreign = self.claude_agent("code-explorer")
-        foreign.unlink()
-        foreign.write_text("---\nname: code-explorer\n---\nhand written\n", encoding="utf-8")
-
-        completed = self.run_installer("--target-home", str(self.target))
-
-        self.assertEqual(foreign.read_text(encoding="utf-8"), "---\nname: code-explorer\n---\nhand written\n")
-        self.assertNotIn("stale generated content", own.read_text(encoding="utf-8"))
-        self.assertIn("обновлен: " + str(own), completed.stdout)
-
-    def test_a_codex_agent_written_by_somebody_else_is_never_overwritten(self):
-        self.run_installer("--target-home", str(self.target))
-        own = self.codex_agent("pipeline-manager")
-        foreign = self.codex_agent("pipeline-reviewer")
-        foreign.write_text('name = "pipeline-reviewer"\n# hand written by the user\n', encoding="utf-8")
-        own.write_text(own.read_text(encoding="utf-8") + "\n# stale generated content\n", encoding="utf-8")
-
-        completed = self.run_installer("--target-home", str(self.target))
-
-        self.assertEqual(foreign.read_text(encoding="utf-8"),
-                         'name = "pipeline-reviewer"\n# hand written by the user\n')
-        self.assertIn("пропуск (уже существует и создан не установкой): " + str(foreign), completed.stdout)
-        # Its own generated file is brought back to the canonical text instead of being left stale.
-        self.assertNotIn("# stale generated content", own.read_text(encoding="utf-8"))
-        self.assertIn("обновлен: " + str(own), completed.stdout)
+        self.assert_no_pipeline_discovery()
+        # Everything installed is a link to a component of this checkout, and none of those
+        # components names the pipeline, its roles, its rules or its launchers.
+        installed = sorted(path for path in self.target.rglob("*") if path.is_symlink())
+        self.assertEqual(installed, sorted(self.expected_links()))
+        for link in installed:
+            source = Path(os.readlink(link))
+            files = sorted(path for path in source.rglob("*") if path.is_file()) if source.is_dir() else [source]
+            for file in files:
+                text = file.read_text(encoding="utf-8")
+                for route in PIPELINE_ROUTES:
+                    with self.subTest(component=str(file.relative_to(ROOT)), route=route):
+                        self.assertNotIn(route, text)
 
     def test_installs_from_a_checkout_whose_path_contains_spaces(self):
         checkout = self.directory / "har ness copy"
-        shutil.copytree(ROOT, checkout, symlinks=True,
-                        ignore=shutil.ignore_patterns(".git", "monitor", "node_modules"))
+        shutil.copytree(ROOT, checkout, symlinks=True, ignore=shutil.ignore_patterns(".git"))
         completed = self.run_installer("--target-home", str(self.target), installer=checkout / "install.sh")
-        for name in ("scope-fence", "dev-pipeline"):
-            link = self.target / ".claude" / "skills" / name
-            self.assertEqual(Path(os.readlink(link)), checkout / "shared" / "skills" / name)
-        for name, generated in ((CLAUDE_ROLE, self.claude_agent()), ("pipeline-manager", self.codex_agent("pipeline-manager"))):
-            with self.subTest(role=name):
-                self.assertIn(str(self.role_source(name, checkout)), generated.read_text(encoding="utf-8"))
-        self.assertIn(str(checkout / "shared" / "rules" / "simplicity.md"),
-                      self.claude_agent().read_text(encoding="utf-8"))
+        for link, source in ((".claude/skills/scope-fence", "shared/skills/scope-fence"),
+                             (".agents/skills/epic-decomposition", "shared/skills/epic-decomposition"),
+                             (".claude/agents/judge.md", "claude/agents/judge.md")):
+            with self.subTest(link=link):
+                self.assertEqual(Path(os.readlink(self.target / link)), checkout / source)
+                self.assertTrue((self.target / link).exists())
         self.assertNotIn("Ошибка", completed.stdout + completed.stderr)
 
     def test_links_of_the_previous_layout_of_this_checkout_are_retargeted(self):
@@ -244,14 +152,10 @@ class InstallTest(unittest.TestCase):
         # this same checkout, at paths the layout no longer has.
         stale = {
             self.target / ".claude" / "skills" / "scope-fence": ROOT / "skills" / "scope-fence",
-            self.target / ".agents" / "skills" / "dev-pipeline": ROOT / "skills" / "dev-pipeline",
+            self.target / ".agents" / "skills" / "epic-decomposition": ROOT / "skills" / "epic-decomposition",
             self.target / ".claude" / "agents" / "code-reviewer.md": ROOT / "agents" / "code-reviewer.md",
             self.target / ".claude" / "hooks" / "ascii-punctuation.js": ROOT / "hooks" / "ascii-punctuation.js",
         }
-        # The role used to be a link into this checkout; the client generator writes a real file there now.
-        generated_before = self.claude_agent()
-        generated_before.parent.mkdir(parents=True, exist_ok=True)
-        generated_before.symlink_to(ROOT / "claude" / "roles" / "pipeline-implementer.md")
         for link, old in stale.items():
             link.parent.mkdir(parents=True, exist_ok=True)
             link.symlink_to(old)
@@ -270,9 +174,6 @@ class InstallTest(unittest.TestCase):
             with self.subTest(retargeted=link):
                 self.assertTrue(link.is_symlink())
                 self.assertTrue(link.exists(), "the retargeted link resolves in the new layout")
-        self.assertFalse(generated_before.is_symlink(), "the stale role link gives way to the generated file")
-        self.assertIn(str(self.role_source(CLAUDE_ROLE)), generated_before.read_text(encoding="utf-8"))
-        self.assertIn("удален устаревший компонент: " + str(generated_before), completed.stdout)
         for link, target in foreign.items():
             with self.subTest(preserved=link):
                 self.assertEqual(Path(os.readlink(link)), target)
@@ -351,22 +252,25 @@ class InstallTest(unittest.TestCase):
 
     def test_removes_its_own_obsolete_skill_links_from_both_clients(self):
         self.run_installer("--target-home", str(self.target))
-        # What a previous installation of this repository left behind: its own links to a skill that
-        # has since been renamed, so both now dangle.
-        own_links = [self.target / ".claude" / "skills" / OBSOLETE_SKILL,
-                     self.target / ".agents" / "skills" / OBSOLETE_SKILL]
+        # What a previous installation of this repository left behind: its own links to skills the
+        # repository no longer ships, renamed or moved to a repository of their own, so they dangle.
+        own_links = [self.target / client / name for name in OBSOLETE_SKILLS
+                     for client in (".claude/skills", ".agents/skills")]
         for link in own_links:
-            link.symlink_to(ROOT / "skills" / OBSOLETE_SKILL)
+            link.symlink_to(ROOT / "shared" / "skills" / link.name)
 
         completed = self.run_installer("--target-home", str(self.target))
 
         for link in own_links:
-            self.assertFalse(link.is_symlink(), link)
-            self.assertFalse(link.exists(), link)
-            self.assertIn("удален устаревший компонент: " + str(link), completed.stdout)
+            with self.subTest(link=link):
+                self.assertFalse(link.is_symlink(), link)
+                self.assertFalse(link.exists(), link)
+                self.assertIn("удален устаревший компонент: " + str(link), completed.stdout)
         self.assertNotIn("удали", completed.stdout,
                          "the settings.json advice belongs to a removed hook, not to a removed skill")
         self.assert_linked(self.expected_links())
+        # Reinstalling over such a home brings no discovery entry of the pipeline back.
+        self.assert_no_pipeline_discovery()
         # Idempotent: with nothing obsolete left there is no removal and no advice about it.
         before = self.snapshot()
         again = self.run_installer("--target-home", str(self.target))
@@ -383,24 +287,25 @@ class InstallTest(unittest.TestCase):
                                            "пропуск (чужая ссылка)"),
             "a real skill the user wrote": (write_real_skill, "пропуск (уже существует и не симлинк)"),
         }
-        for label, (create, expected) in cases.items():
-            for client in (".claude/skills", ".agents/skills"):
-                with self.subTest(case=label, client=client):
-                    self.target = self.directory / ("home-" + client[1:6] + "-" + label.replace(" ", "-"))
-                    path = self.target / client / OBSOLETE_SKILL
-                    path.parent.mkdir(parents=True)
-                    create(path)
-                    state = (path.is_symlink(), os.readlink(path) if path.is_symlink()
-                             else (path / "SKILL.md").read_bytes())
+        for name in OBSOLETE_SKILLS:
+            for label, (create, expected) in cases.items():
+                for client in (".claude/skills", ".agents/skills"):
+                    with self.subTest(skill=name, case=label, client=client):
+                        self.target = self.directory / "-".join(("home", name, client[1:6], label.replace(" ", "-")))
+                        path = self.target / client / name
+                        path.parent.mkdir(parents=True)
+                        create(path)
+                        state = (path.is_symlink(), os.readlink(path) if path.is_symlink()
+                                 else (path / "SKILL.md").read_bytes())
 
-                    completed = self.run_installer("--target-home", str(self.target))
+                        completed = self.run_installer("--target-home", str(self.target))
 
-                    self.assertIn(expected + ": " + str(path), completed.stdout)
-                    self.assertNotIn("удален устаревший", completed.stdout)
-                    self.assertEqual((path.is_symlink(), os.readlink(path) if path.is_symlink()
-                                      else (path / "SKILL.md").read_bytes()),
-                                     state, "an entry this installation does not own is left untouched")
-                    self.assert_linked(self.expected_links())
+                        self.assertIn(expected + ": " + str(path), completed.stdout)
+                        self.assertNotIn("удален устаревший", completed.stdout)
+                        self.assertEqual((path.is_symlink(), os.readlink(path) if path.is_symlink()
+                                          else (path / "SKILL.md").read_bytes()),
+                                         state, "an entry this installation does not own is left untouched")
+                        self.assert_linked(self.expected_links())
 
     def test_a_foreign_file_or_link_under_the_obsolete_name_is_preserved(self):
         cases = {
@@ -429,7 +334,7 @@ class InstallTest(unittest.TestCase):
     def test_manual_catalogue_lists_installed_components_with_their_descriptions(self):
         self.run_installer("--target-home", str(self.target))
         output = self.run_banner()
-        for kind, name in (("skills", "scope-fence"), ("skills", "dev-pipeline"),
+        for kind, name in (("skills", "scope-fence"), ("skills", "epic-decomposition"),
                            ("agents", "builder"), ("agents", "judge"), ("commands", "harness")):
             with self.subTest(component=name):
                 source = (ROOT / "shared" / kind / name / "SKILL.md") if kind == "skills" else (ROOT / "claude" / kind / (name + ".md"))
@@ -502,10 +407,9 @@ class InstallTest(unittest.TestCase):
 
     def test_refuses_repository_without_required_shared_method(self):
         broken_repo = self.directory / "repo"
-        for name in ("dev-pipeline", "system-design-tradeoffs"):
-            (broken_repo / "shared" / "skills" / name).mkdir(parents=True)
-            (broken_repo / "shared" / "skills" / name / "SKILL.md").write_text(
-                "---\nname: " + name + "\n---\n", encoding="utf-8")
+        skill = broken_repo / "shared" / "skills" / "system-design-tradeoffs"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: system-design-tradeoffs\n---\n", encoding="utf-8")
         shutil.copy(INSTALLER, broken_repo / "install.sh")
         completed = self.run_installer(
             "--target-home", str(self.target), installer=broken_repo / "install.sh", expect_success=False,

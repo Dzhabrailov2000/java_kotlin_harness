@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Установка переносимой обвязки: общие методы из shared/, роли конвейера из
-# teams/dev/ и клиентские части из claude/ и codex/. Skills, агенты, команды,
-# хуки и statusline Claude Code симлинкуются в <home>/.claude; общие skills
-# dev-pipeline, epic-decomposition и system-design-tradeoffs дополнительно в
-# <home>/.agents/skills, чтобы обе основные сессии находили один исходник
-# метода. Три роли конвейера остаются одним каноническим текстом в teams/dev и
-# ставятся генераторами клиентов: implementer - нативным Markdown в
-# <home>/.claude/agents, manager и reviewer - нативным TOML в
-# <home>/.codex/agents, с моделью, effort и правами в этих же генераторах.
-# Память и секреты сюда НЕ входят (см. README.md и .gitignore).
+# Установка переносимой обвязки: общие skills из shared/ и клиентская часть из
+# claude/. Skills, агенты, команды, хуки и statusline Claude Code симлинкуются в
+# <home>/.claude; общие skills epic-decomposition и system-design-tradeoffs
+# дополнительно в <home>/.agents/skills, чтобы обе основные сессии находили один
+# исходник метода. Память и секреты сюда НЕ входят (см. README.md и .gitignore).
 #
-# Требуется python3 (генераторы нативных ролей); все остальное - bash и coreutils.
+# Требуются только bash и coreutils.
 #
 # Использование: ./install.sh [--target-home <каталог>]
 #   --target-home  корень установки вместо $HOME. Нужен для тестов в
@@ -19,14 +14,12 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_HOME="$HOME"
-SHARED_SKILLS="dev-pipeline epic-decomposition system-design-tradeoffs"
+SHARED_SKILLS="epic-decomposition system-design-tradeoffs"
 # Компоненты, которых в обвязке больше нет: снимается только своя ссылка на них.
 OBSOLETE_HOOKS="harness-reminder.js"
-# Скиллы под старым именем: ссылка снимается у обоих клиентов, .claude и .agents.
-OBSOLETE_SKILLS="self-correct"
-# Роль, которую прежняя раскладка ставила ссылкой: теперь ее генерирует клиент,
-# поэтому своя ссылка снимается, а на ее месте появляется нативный файл.
-GENERATED_AGENTS="pipeline-implementer.md"
+# Скиллы, которых в обвязке больше нет: переименованный self-correct и dev-pipeline,
+# вынесенный в отдельный репозиторий. Ссылка снимается у обоих клиентов, .claude и .agents.
+OBSOLETE_SKILLS="self-correct dev-pipeline"
 
 usage() {
   echo "Использование: $0 [--target-home <каталог>]" >&2
@@ -80,10 +73,6 @@ for name in $SHARED_SKILLS; do
     exit 1
   fi
 done
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "Ошибка: нужен python3: из него генерируются нативные роли Codex" >&2
-  exit 1
-fi
 
 # Ссылка, которую поставила установка из этого чекаута: она указывает внутрь
 # него. Прежняя раскладка репозитория - тоже своя, поэтому такая ссылка
@@ -149,14 +138,6 @@ for name in $OBSOLETE_SKILLS; do
   unlink_obsolete "$AGENTS_SKILLS_DIR/$name" || true
 done
 
-# Своя ссылка прежней раскладки на роль уступает место сгенерированному файлу;
-# чужая ссылка и написанный руками файл остаются, генератор их не трогает.
-for name in $GENERATED_AGENTS; do
-  if owned_link "$CLAUDE_DIR/agents/$name"; then
-    unlink_obsolete "$CLAUDE_DIR/agents/$name" || true
-  fi
-done
-
 # Скиллы: каждый каталог отдельным симлинком, чтобы не скрыть чужие скиллы.
 for dir in "$REPO_DIR"/shared/skills/*/; do
   [ -d "$dir" ] || continue
@@ -169,8 +150,7 @@ for name in $SHARED_SKILLS; do
   link_item "$REPO_DIR/shared/skills/$name" "$AGENTS_SKILLS_DIR/$name"
 done
 
-# Агенты, команды, хуки Claude Code: пофайлово. Роль конвейера здесь не
-# симлинкуется - ее ставит генератор ниже, вместе с моделью, effort и тулами.
+# Агенты, команды, хуки Claude Code: пофайлово.
 for file in "$REPO_DIR"/claude/agents/*.md; do
   [ -e "$file" ] || continue
   link_item "$file" "$CLAUDE_DIR/agents/$(basename "$file")"
@@ -190,15 +170,6 @@ for file in "$REPO_DIR"/claude/statusline/*; do
   [ -e "$file" ] || continue
   link_item "$file" "$CLAUDE_DIR/statusline/$(basename "$file")"
 done
-
-# Нативные роли собираются из того же канонического Markdown: у Claude это
-# субагент с frontmatter, у Codex - TOML. Свой файл перезаписывается только при
-# изменении, чужой не трогается.
-echo "Нативная роль Claude в $CLAUDE_DIR/agents"
-python3 "$REPO_DIR/claude/scripts/install_claude_agents.py" --target-home "$TARGET_HOME"
-
-echo "Нативные роли Codex в $TARGET_HOME/.codex/agents"
-python3 "$REPO_DIR/codex/scripts/install_codex_agents.py" --target-home "$TARGET_HOME"
 
 echo ""
 echo "Готово. settings.json не трогаю намеренно."

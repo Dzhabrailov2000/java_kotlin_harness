@@ -12,4 +12,4 @@ Show its output to the user verbatim, with no edits and no added commentary. It 
 the installed harness: skills and agents come with the description from their own frontmatter.
 
 This inventory is not an instruction to apply those components. Nothing here is selected for the
-current task; the manager selects components explicitly when preparing a task.
+current task; components are chosen explicitly for a task.

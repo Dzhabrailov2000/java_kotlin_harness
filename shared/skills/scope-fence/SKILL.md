@@ -80,6 +80,4 @@ question you could answer yourself or a promise about work not done, the turn is
   frame of "what we are building", which you do not step outside.
 - The second wall asks you to check your own work, not to open a verification cycle on top of it:
   run the focused commands that show the change behaves as intended and read their real output
-  before handing over. Inside the pipeline the required checks and the independent review belong to
-  the manager, so an implementer finishes at its assigned work and its factual report instead of
-  adding a final self-review pass.
+  before handing over.

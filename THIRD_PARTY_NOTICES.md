@@ -44,10 +44,9 @@ checkout and is not reproduced here.
 
 Files not listed above (`claude/agents/builder.md`, `claude/agents/judge.md`, the discipline
 skills `scope-fence`, `evidence-before-claim`, `adversarial-self-check`,
-`lead-with-outcome`, `context-hygiene`, `dev-pipeline`, the skills
+`lead-with-outcome`, `context-hygiene`, the skills
 `kotlin-comment-style`, `epic-decomposition`, `system-design-tradeoffs`, the
-pipeline roles under `teams/dev/`, the shared rules, the
-commands, hooks, statusline, scripts, tests, templates and docs) had no
+commands, hooks, statusline, tests and docs) had no
 counterpart at the same path in the compared ECC revision. This notice does not
 assign the MIT License to them.
 

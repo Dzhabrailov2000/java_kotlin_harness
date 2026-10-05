@@ -16,11 +16,6 @@ model: sonnet
 
 You are a senior code reviewer ensuring high standards of code quality and security.
 
-The common ground for every review of this harness, including the terminal independent review of the
-pipeline, is [shared/rules/review-criteria.md](../../shared/rules/review-criteria.md): what must be
-judged, what is not a finding by itself, and why zero findings is a valid result. Read it alongside
-this checklist; where the two disagree, the shared criteria win.
-
 ## Review Process
 
 When invoked:

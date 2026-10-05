@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Create an artifact or make a targeted edit to it from the task and the confirmed findings; in code mode only inside the given set of files. Never touches sources, marks the unknown instead of inventing it. Use it from the /dev-pipeline loop or to edit a document from a ready list of findings.
+description: Create an artifact or make a targeted edit to it from the task and the confirmed findings; in code mode only inside the given set of files. Never touches sources, marks the unknown instead of inventing it. Use it to edit a document from a ready list of findings or as the writing side of a build-and-check loop.
 tools: ["Read", "Grep", "Glob", "Edit", "Write"]
 model: inherit
 ---
