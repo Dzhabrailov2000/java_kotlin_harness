@@ -3,7 +3,7 @@
 // Показывает три величины, которых штатный футер вместе не дает:
 // занятость контекстного окна, лимит сессии (5 часов) и недельный лимит.
 //
-// Вход - JSON на stdin. Нужные поля payload (проверено на 2.1.224):
+// Вход - JSON на stdin. Нужные поля payload:
 //   context_window: { total_input_tokens, context_window_size, used_percentage }
 //   rate_limits: { five_hour: { used_percentage, resets_at },
 //                  seven_day: { used_percentage, resets_at } }
