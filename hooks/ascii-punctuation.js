@@ -13,8 +13,8 @@ process.stdin.on('end', () => {
   }
   const ti = (input && input.tool_input) || {};
   const text = ti.content != null ? ti.content : ti.new_string != null ? ti.new_string : '';
-  // тире U+2013-U+2015, кривые кавычки, многоточие одним символом, кавычки-елочки, стрелки, значки и эмодзи
-  const bad = /[\u2013-\u2015\u2018\u2019\u201c-\u201e\u2026\u00ab\u00bb\u2190-\u21ff\u2600-\u27bf]|[\u{1f300}-\u{1faff}]/u;
+  // тире, кривые кавычки, точка-маркер, многоточие одним символом, елочки, стрелки, значки, флаги и эмодзи
+  const bad = /[\u2010-\u2015\u2018\u2019\u201c-\u201e\u2022\u2026\u00ab\u00bb\u2190-\u21ff\u2300-\u23ff\u25a0-\u25ff\u2600-\u27bf\u2b00-\u2bff]|[\u{1f1e6}-\u{1f1ff}\u{1f300}-\u{1faff}]/u;
   if (typeof text !== 'string' || !bad.test(text)) process.exit(0);
 
   const hits = [];
