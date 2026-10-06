@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-time
 description: "Проектирует и проверяет время в Java/Kotlin: Instant, LocalDateTime, зоны, календарные интервалы, deadline и управляемые Clock. Применяется при изменении дат, TTL, расписаний и измерения длительности."
+disable-model-invocation: true
 ---
 
 # Время, даты и длительности

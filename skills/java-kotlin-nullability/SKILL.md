@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-nullability
 description: "Проектирует и проверяет отсутствие значения в Java/Kotlin: nullable, Optional, platform types, defaults и границы JSON/Java API. Применяется при изменении null-контрактов, обязательных полей и цепочек обработки отсутствия."
+disable-model-invocation: true
 ---
 
 # Nullability и отсутствие значения

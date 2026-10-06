@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-serialization
 description: "Проектирует и проверяет JSON и другие внешние представления Java/Kotlin: имена полей, missing/null/default, enum, неизвестные поля и совместимость Jackson/kotlinx.serialization. Применяется при изменении DTO, mapper или схемы сообщения."
+disable-model-invocation: true
 ---
 
 # Сериализация и внешний формат

@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-rest-api
 description: "Проектирует и проверяет HTTP API и Spring REST-контроллеры: методы, статусы, DTO, валидацию, ошибки, пагинацию и совместимость. Применяется при создании или изменении внешнего HTTP-контракта."
+disable-model-invocation: true
 ---
 
 # REST API и контроллеры

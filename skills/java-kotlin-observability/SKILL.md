@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-observability
 description: "Проектирует и проверяет логи, метрики и tracing Java/Kotlin backend: полезные события, cardinality, секреты и время жизни trace context. Применяется при изменении диагностики и инструментировании значимых отказов/операций."
+disable-model-invocation: true
 ---
 
 # Логи, метрики и трассировка

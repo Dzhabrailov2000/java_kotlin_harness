@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-collections
 description: "Пишет и проверяет читаемую обработку коллекций Java/Kotlin: Stream, Sequence, map/filter/grouping, ключи, дубликаты и вложенные структуры. Применяется при преобразовании данных или ревью сложных цепочек и контейнеров."
+disable-model-invocation: true
 ---
 
 # Коллекции, Stream и Sequence

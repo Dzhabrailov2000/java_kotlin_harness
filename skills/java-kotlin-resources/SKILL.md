@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-resources
 description: "Проектирует и проверяет владение ресурсами Java/Kotlin: close/use, файлы, HTTP bodies, DB streams, executors, ограничение памяти и lifetime ленивых вычислений. Применяется при создании, передаче и освобождении ресурсов или I/O."
+disable-model-invocation: true
 ---
 
 # Ресурсы и время жизни

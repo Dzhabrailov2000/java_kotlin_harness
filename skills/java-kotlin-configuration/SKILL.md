@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-configuration
 description: "Проектирует и проверяет конфигурацию Spring Boot: ConfigurationProperties, binding, precedence, profiles, units, defaults и секреты. Применяется при добавлении параметров или диагностике различий между окружениями."
+disable-model-invocation: true
 ---
 
 # Конфигурация приложения

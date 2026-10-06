@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-interop
 description: "Проектирует и проверяет границу Java/Kotlin на JVM: Java-вызовы Kotlin API, accessors, overloads, checked exceptions, wildcards и бинарную совместимость. Применяется при публикации смешанного API или миграции между языками."
+disable-model-invocation: true
 ---
 
 # Совместимость Java и Kotlin

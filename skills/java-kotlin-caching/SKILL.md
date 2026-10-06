@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-caching
 description: "Проектирует и проверяет кэш Java/Kotlin: ключи, tenant, TTL, invalidation, stampede, Caffeine и Spring Cache. Применяется при добавлении кэша или изменении его согласованности и загрузки."
+disable-model-invocation: true
 ---
 
 # Кэш и согласованность

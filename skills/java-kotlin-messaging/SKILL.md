@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-messaging
 description: "Проектирует и проверяет Java/Kotlin consumers/producers: Kafka delivery semantics, повторную обработку, offset/ack, outbox и порядок событий. Применяется при изменении сообщений, listener или связи БД с брокером."
+disable-model-invocation: true
 ---
 
 # Сообщения и обработчики

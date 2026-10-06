@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-resilience
 description: "Проектирует и проверяет вызовы ненадежных зависимостей Java/Kotlin: timeout, retry, idempotency, circuit breaker, bulkhead и допустимый fallback. Применяется при изменении HTTP/RPC-клиентов и политики восстановления."
+disable-model-invocation: true
 ---
 
 # Отказоустойчивые вызовы

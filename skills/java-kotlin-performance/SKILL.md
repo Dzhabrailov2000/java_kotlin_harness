@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-performance
 description: "Проверяет производительность Java/Kotlin по измеряемому сценарию: стоимость запросов, allocation, JMH, query plans и цену оптимизации. Применяется при доказанной проблеме latency/throughput/memory или ревью изменения горячего пути."
+disable-model-invocation: true
 ---
 
 # Производительность по измерению

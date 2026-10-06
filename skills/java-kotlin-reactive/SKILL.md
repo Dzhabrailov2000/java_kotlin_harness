@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-reactive
 description: "Пишет и проверяет Reactor/WebFlux и Kotlin Flow: subscription, context, blocking, empty/error, повторную подписку и потерю элементов. Применяется к reactive pipeline; не предлагает перевод MVC/JDBC на reactive без отдельной задачи."
+disable-model-invocation: true
 ---
 
 # Реактивные цепочки и Flow

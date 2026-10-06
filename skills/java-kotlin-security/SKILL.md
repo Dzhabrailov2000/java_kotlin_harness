@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-security
 description: "Пишет и проверяет безопасные границы Java/Kotlin backend: доступ к объектам и tenant, входные данные, SQL, исходящие URL и утечки секретов. Применяется при изменении внешнего ввода, authorization и доступа к данным; не требует полного аудита для каждой локальной правки."
+disable-model-invocation: true
 ---
 
 # Безопасные границы backend

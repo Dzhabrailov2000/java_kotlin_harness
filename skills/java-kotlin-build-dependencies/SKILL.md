@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-build-dependencies
 description: "Проверяет Java/Kotlin build и зависимости: JVM targets/toolchains, Gradle locking, verification, транзитивные версии и совместимость runtime. Применяется при изменении build scripts, JDK/Kotlin или библиотек."
+disable-model-invocation: true
 ---
 
 # Сборка и зависимости

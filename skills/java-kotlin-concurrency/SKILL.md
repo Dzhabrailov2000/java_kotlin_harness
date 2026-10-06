@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-concurrency
 description: "Проектирует и проверяет конкурентный Java/Kotlin-код: общую память, атомарность, threads, coroutines, ограничение параллелизма и отмену. Применяется при изменении асинхронных операций, фоновых задач и доступа к общему состоянию."
+disable-model-invocation: true
 ---
 
 # Конкурентность Java и Kotlin

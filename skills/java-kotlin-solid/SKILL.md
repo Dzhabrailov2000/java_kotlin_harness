@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-solid
 description: "Применяет SOLID при проектировании, ревью и рефакторинге Java/Kotlin-кода: распределении ответственности, выборе интерфейсов, наследования и зависимостей, включая Spring и Android. Используется при изменении этих границ или явном запросе проверки SOLID."
+disable-model-invocation: true
 ---
 
 # SOLID в Java и Kotlin

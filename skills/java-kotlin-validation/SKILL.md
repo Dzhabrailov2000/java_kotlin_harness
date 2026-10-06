@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-validation
 description: "Реализует и проверяет валидацию внешнего ввода Java/Kotlin: Bean Validation, Spring binding, Kotlin annotation targets, межполевые ограничения и гарантии БД. Применяется при изменении DTO, constraints или пути отклонения неверного ввода."
+disable-model-invocation: true
 ---
 
 # Валидация входа

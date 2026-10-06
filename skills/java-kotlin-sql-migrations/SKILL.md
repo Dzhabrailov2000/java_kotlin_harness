@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-sql-migrations
 description: "Создает и проверяет SQL-миграции и changesets Flyway/Liquibase для Java/Kotlin-сервисов: совместимость версий приложения, изменение schema, backfill, locks и восстановление. Применяется при изменении структуры или миграции данных БД."
+disable-model-invocation: true
 ---
 
 # SQL-миграции

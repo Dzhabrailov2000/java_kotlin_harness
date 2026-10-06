@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-generics
 description: "Проектирует и проверяет понятные generic API Java/Kotlin: границы типов, variance, wildcards, erasure, reified и безопасные преобразования. Применяется при введении или изменении обобщенных типов и сложных сигнатур."
+disable-model-invocation: true
 ---
 
 # Дженерики без лишней сложности

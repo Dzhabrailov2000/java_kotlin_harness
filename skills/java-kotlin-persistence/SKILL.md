@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-persistence
 description: "Проектирует и проверяет работу Java/Kotlin с БД: Spring-транзакции, JPA/JDBC-запросы, конкурентные записи, загрузку связей и ограничения данных. Применяется при изменении persistence-кода и его гарантий."
+disable-model-invocation: true
 ---
 
 # База данных и транзакции

@@ -1,6 +1,7 @@
 ---
 name: java-kotlin-numeric-modeling
 description: "Проектирует и проверяет числовые расчеты Java/Kotlin: деньги, BigDecimal, единицы, scale, округление, переполнение и числовое равенство. Применяется при изменении расчетов, лимитов и числового wire-контракта."
+disable-model-invocation: true
 ---
 
 # Числа, деньги и единицы
