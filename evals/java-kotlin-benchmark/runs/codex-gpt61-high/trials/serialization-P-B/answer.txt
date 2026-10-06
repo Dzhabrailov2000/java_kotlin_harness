@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Round trip заменяет null на \"fallback\", нарушая требование сохранения description.",
+      "evidence": "При explicitNulls = false объект Item(null) сериализуется в {}: поле с null пропускается. При чтении {} отсутствующее description получает значение по умолчанию \"fallback\". Поэтому decoded.description равно \"fallback\", а не null.",
+      "fix": "Установить explicitNulls = true (или убрать настройку false, сохранив стандартное значение true). Тогда JSON содержит {\"description\":null}, а десериализация сохраняет null. Проверить, что round trip Item(null) возвращает объект с description == null."
+    }
+  ],
+  "summary": "Обнаружена потеря семантики null из-за сочетания explicitNulls = false и ненулевого значения по умолчанию."
+}

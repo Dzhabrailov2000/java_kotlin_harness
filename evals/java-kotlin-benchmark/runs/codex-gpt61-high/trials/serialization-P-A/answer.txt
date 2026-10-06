@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Round trip заменяет null на значение по умолчанию.",
+      "evidence": "При explicitNulls = false сериализация Item(null) пропускает поле description и возвращает {}. При декодировании отсутствующего поля применяется объявленное значение по умолчанию: decoded.description становится \"fallback\", а не null.",
+      "fix": "Установить explicitNulls = true либо убрать эту настройку, поскольку true используется по умолчанию. Тогда null будет записан явно и восстановлен при декодировании, а \"fallback\" останется значением для отсутствующего поля."
+    }
+  ],
+  "summary": "Код нарушает требование сохранения nullable description: Item(null) после round trip превращается в Item(\"fallback\")."
+}

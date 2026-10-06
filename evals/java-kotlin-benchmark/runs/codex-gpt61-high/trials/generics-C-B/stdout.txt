@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4e-acf2-7a20-97b9-456175664ed7"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Дефектов нет: Source только возвращает T через next(), поэтому ковариантность out корректна. Например, Source<String> можно использовать как Source<Any>, сохраняя типовую безопасность. Проверки runtime-типов и преобразования внешних данных здесь не требуются.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":6276,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":119,"reasoning_output_tokens":27}}

@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Без @JvmName обе функции после стирания типов получили бы одинаковую JVM-сигнатуру valid(Ljava/util/List;)Z. Компиляция тогда упала бы с ошибкой platform declaration clash.",
+      "reason": "Ответ верно объясняет, зачем нужен @JvmName: без него после стирания типов возникает platform declaration clash. Удалить аннотацию он не предлагает. Разные JVM-имена ответ дефектом не считает, потому что по контексту они заданы намеренно. Список findings пуст. Поведение all для пустого списка и неоднозначность для List<Nothing> прямо названы не требующими исправления, и оба утверждения верны. Это анализ в пределах задачи, а не её расширение."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Без аннотации обе функции после erasure получили бы одну JVM-сигнатуру `valid(Ljava/util/List;)Z`, и компилятор выдал бы ошибку «Platform declaration clash».",
+      "reason": "Ответ верно объясняет назначение @JvmName и называет его стандартным приёмом из документации Kotlin. Удалить аннотацию он не предлагает, список findings пуст. Верны и утверждения о Java-сигнатурах valid(List<String>) и validInts(List<Integer>): для final-типов wildcard не генерируется. Также верно, что первая перегрузка сохраняет JVM-имя valid. Финальная оговорка о проверке совместимости сборкой клиентов условная. Это не ложный дефект и не расширение задачи."
+    }
+  ]
+}

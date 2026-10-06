@@ -1,0 +1,21 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Ключ List<Any> не задаёт роли, порядок, длину и типы customerId и календарной даты.",
+      "evidence": "List.of(date, id) и List.of(id, date) — разные ключи. List.of(42, d) не равен List.of(42L, d), потому что Integer.equals(Long) == false. Строка \"2024-05-01\" не равна LocalDate. Во всех этих случаях get молча вернёт null. Если список-ключ изменяемый и его изменят после put, поиск по нему перестанет работать.",
+      "fix": "record DailyUsageKey(CustomerId customerId, LocalDate date) с неизменяемыми полями; в Kotlin — data class."
+    },
+    {
+      "problem": "Значение List<Long> различает requests и bytes только по позиции.",
+      "evidence": "Если клиент перепутает get(0) и get(1), ошибку никто не заметит. Тип допускает список из одного или трёх элементов, а также null. Итог: IndexOutOfBoundsException, NPE при распаковке или лишние данные, которые молча игнорируются.",
+      "fix": "record UsageTotal(long requests, long bytes); внутри кода — Map<DailyUsageKey, UsageTotal>."
+    },
+    {
+      "problem": "Map с объектным ключом не даёт понятной схемы публичного API.",
+      "evidence": "Это касается API в формате JSON. Jackson по умолчанию записывает нестроковый ключ через toString(), например \"[42, 2024-05-01]\", и не может прочитать его обратно без KeyDeserializer. kotlinx.serialization без allowStructuredMapKeys отклоняет такой ключ. Замена ключа на record сама по себе это не исправит.",
+      "fix": "Во внешнем контракте отдавать список DailyUsage(customerId, date, requests, bytes) с именованными полями."
+    }
+  ],
+  "summary": "В ключе и значении используются списки, где смысл задаёт только позиция. Перестановки и неверные типы проходят компиляцию, а потом дают молчаливые промахи при поиске или исключения. Нужны именованные типы ключа и значения, а для API — понятный внешний формат."
+}

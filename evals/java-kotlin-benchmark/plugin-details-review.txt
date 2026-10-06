@@ -1,0 +1,57 @@
+java_kotlin_harness (jkh)
+  Description: Проверка изменений, ADR, нарезка эпиков, системные решения, встречи, ревьюеры и ASCII-хук
+  Source: jkh@jkh
+
+Component inventory
+  Skills (36)  adr, epic, java-kotlin-build-dependencies, java-kotlin-caching, java-kotlin-collections, java-kotlin-concurrency, java-kotlin-configuration, java-kotlin-contracts, java-kotlin-domain-modeling, java-kotlin-errors, java-kotlin-generics, java-kotlin-interop, java-kotlin-messaging, java-kotlin-modularity, java-kotlin-naming, java-kotlin-nullability, java-kotlin-numeric-modeling, java-kotlin-observability, java-kotlin-performance, java-kotlin-persistence, java-kotlin-reactive, java-kotlin-refactoring, java-kotlin-resilience, java-kotlin-resources, java-kotlin-rest-api, java-kotlin-security, java-kotlin-serialization, java-kotlin-solid, java-kotlin-sql-migrations, java-kotlin-testing, java-kotlin-time, java-kotlin-validation, meeting-notes, meeting-prep, system-design-tradeoffs, verify
+  Agents (2)  judge, defect-reviewer
+  Hooks (1)  PostToolUse  (harness-only — no model context cost)
+  MCP servers (0)
+  LSP servers (0)
+
+Projected token cost
+  Always-on:   ~2,374 tok   added to every session
+
+Per-component (rounded)
+  component                       always-on  on-invoke
+  java-kotlin-resources                 ~60      ~1.7k
+  java-kotlin-generics                  ~60      ~1.2k
+  java-kotlin-contracts                 ~80      ~2.7k
+  java-kotlin-interop                   ~60       ~810
+  adr                                   ~50       ~490
+  java-kotlin-modularity                ~60       ~840
+  java-kotlin-nullability               ~60      ~1.3k
+  java-kotlin-security                  ~70      ~1.5k
+  java-kotlin-configuration             ~60       ~890
+  verify                                ~60       ~470
+  java-kotlin-reactive                  ~60       ~850
+  java-kotlin-time                      ~60       ~780
+  java-kotlin-observability             ~60       ~750
+  meeting-prep                          ~50       ~600
+  java-kotlin-solid                     ~70      ~1.9k
+  java-kotlin-build-dependencies        ~60       ~850
+  java-kotlin-serialization             ~70       ~940
+  java-kotlin-persistence               ~60      ~1.7k
+  java-kotlin-caching                   ~50       ~820
+  java-kotlin-naming                    ~70        ~3k
+  epic                                  ~90      ~1.5k
+  java-kotlin-concurrency               ~60      ~1.7k
+  java-kotlin-validation                ~70       ~940
+  java-kotlin-messaging                 ~60       ~820
+  system-design-tradeoffs               ~80       ~550
+  java-kotlin-resilience                ~60       ~910
+  java-kotlin-testing                   ~60      ~1.4k
+  java-kotlin-sql-migrations            ~70      ~1.3k
+  java-kotlin-refactoring               ~60       ~910
+  java-kotlin-numeric-modeling          ~60       ~860
+  java-kotlin-errors                    ~60      ~1.5k
+  java-kotlin-performance               ~70       ~830
+  java-kotlin-collections               ~60      ~1.4k
+  java-kotlin-domain-modeling           ~60      ~1.5k
+  meeting-notes                         ~50       ~490
+  java-kotlin-rest-api                  ~50      ~1.6k
+  judge                                 ~70       ~640
+  defect-reviewer                       ~60       ~540
+
+  On-invoke cost is paid each time a skill or agent fires.
+  Token counts are estimates and may differ from actual usage.

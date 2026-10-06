@@ -1,0 +1,5 @@
+{
+  "verdict": "ok",
+  "findings": [],
+  "summary": "Фрагмент корректен, дефектов для согласованного Java 17 нет. Toolchain выбирает JDK 17: он используется для компиляции и по умолчанию для задач Test, Javadoc и JavaExec. `options.release.set(17)` передаёт javac флаг `--release 17`. Компилятор JDK 17 его поддерживает, и сборка проверяется по API платформы 17. Конфликта нет: в блоке `java {}` не заданы одновременно toolchain и `sourceCompatibility`/`targetCompatibility`. `configureEach` настраивает задачи JavaCompile лениво, не создавая их заранее. Типы корректны: `options.release` имеет тип `Property<Int>`, поэтому `set(17)` допустим. Явно задавать `release` при toolchain 17 не обязательно, но это безвредно и не требует исправления."
+}

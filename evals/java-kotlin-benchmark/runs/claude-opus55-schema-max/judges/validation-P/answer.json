@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "По контракту Jakarta Validation `@Size` считает null допустимым значением… Добавить `@field:NotNull` рядом с `@field:Size(min = 1, max = 100)`",
+      "reason": "Ответ верно показывает, что @Size пропускает null и поэтому Input(ids = null) проходит Validator. Он предлагает @field:NotNull с той же use-site target и даёт корректный план проверки: null, [], 101, 1 и 100 элементов. Nullable-тип упомянут только как часть объяснения и не назван ошибкой. Ложных дефектов и вредных советов нет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "@Size считает null допустимым значением… Добавить @field:NotNull… Другой вариант — @field:NotEmpty вместе с @field:Size(max = 100). Тип можно оставить nullable",
+      "reason": "Ответ верно находит, что null проходит валидацию, потому что @Size считает null допустимым. Он предлагает @field:NotNull, а в качестве альтернативы — равнозначную по смыслу границу @NotEmpty + @Size(max = 100). Ответ прямо говорит, что nullable-тип можно оставить, поэтому запрет не нарушен. Ложных дефектов и вредных советов нет."
+    }
+  ]
+}

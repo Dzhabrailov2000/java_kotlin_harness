@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "изменился порядок эффектов: isKnown теперь вычисляется после эффектов load; fix: `val result = if (isKnown(id)) load(id) else null`",
+      "reason": "Ответ находит безусловный и преждевременный I/O, в том числе для неизвестного ID, и смену порядка эффектов. Предлагает вернуть вызов load внутрь условия. Выделить класс не требует. Совет добавить тест с mock — разумная рекомендация, а не ложный дефект. Код при этом не меняется."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "load теперь вызывается до isKnown... Снова вызывать load только внутри условия: `if (isKnown(id)) load(id) else null`",
+      "reason": "Ответ находит лишний I/O для любого ID и вызов load до isKnown, а также объясняет, почему важен порядок. Исправление сохраняет условность вызова. Лишней архитектуры и выдуманных дефектов нет. Возможное исключение упомянуто как условное последствие."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«нужен реальный Spring proxy path и проверки отказа до service»; «Service можно заменить mock, но механизм валидации должен оставаться реальным».",
+      "reason": "Назван обход Spring validation proxy при ручном создании контроллера. Предложена подходящая интеграционная проверка через настроенный проксированный bean с проверкой ошибки валидации и отсутствия вызова service. Прямой вызов не представлен доказательством MVC validation; замечания соответствуют задаче, лишняя архитектура не предлагается."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«Вызвать метод через Spring-managed proxy с включённой method validation»; «Проверить ожидаемую ошибку валидации и отсутствие вызовов service».",
+      "reason": "Указано, что ручное создание и прямой вызов обходят Spring method validation. Предложена достаточная проверка реального proxy path и отклонения ввода до service. Успешный direct-call тест не признаётся доказательством MVC validation; несуществующих обязательных дефектов и вредных советов нет."
+    }
+  ]
+}

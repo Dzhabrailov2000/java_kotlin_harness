@@ -1,0 +1,55 @@
+{
+  "engine": "codex",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "proxy": "http://127.0.0.1:43132",
+  "workers": 2,
+  "timeout": 180,
+  "manifest_sha256": "36b6238b5686ac9884aaaf8d6e57158ffc744016686a4be306eb2f24a04c730c",
+  "base_prompt_sha256": "99290c297ad33fd0dcdf1d4fd6d173599c92290ce8aed80ea35cc9cba6c94b3e",
+  "answer_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "verdict": {
+        "type": "string",
+        "enum": [
+          "issue",
+          "ok"
+        ]
+      },
+      "findings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "problem": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "string"
+            },
+            "fix": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "problem",
+            "evidence",
+            "fix"
+          ]
+        }
+      },
+      "summary": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "verdict",
+      "findings",
+      "summary"
+    ]
+  },
+  "runner_sha256": "6e4ddfe011c151fc24583ca1548944a41c312c21f1dd3f1b650ee6c8023ca01e"
+}

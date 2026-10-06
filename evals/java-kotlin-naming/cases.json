@@ -1,0 +1,290 @@
+[
+  {
+    "id": "B01",
+    "mode": "review",
+    "context": "Частный API буфера; метод читает следующий байт и продвигает индекс.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\nfinal class Cursor {\n    private byte[] bytes;\n    private int readerIndex;\n    byte getByte() { return bytes[readerIndex++]; }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B02",
+    "mode": "review",
+    "context": "Внутренний Kafka adapter. Рядом есть commitAsync; save ждет подтверждения offsets.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\nvoid save(Map<TopicPartition, OffsetAndMetadata> offsets) {\n    consumer.commitSync(offsets);\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B03",
+    "mode": "review",
+    "context": "Новый внутренний API читает UTF-8. Ограничение задается в байтах; рядом код работает с длиной строк в символах.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "fun readLine(maxLength: Long): String = source.readUtf8LineStrict(maxLength)\n"
+      }
+    ]
+  },
+  {
+    "id": "B04",
+    "mode": "review",
+    "context": "Это весь внутренний тип ошибки и единственное условие его выброса: отправка в закрытый канал без другой причины.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "class DataException : IllegalStateException()\nfun ensureCanSend(closed: Boolean) {\n    if (closed) throw DataException()\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B05",
+    "mode": "review",
+    "context": "Новая private-функция в Kotlin-модуле, где check обозначает проверку состояния, require - аргумента.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "private fun checkPort(port: Int) {\n    require(port in 1..65535)\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B06",
+    "mode": "review",
+    "context": "Внутренний интерфейс выполняет только сериализацию и десериализацию. В словаре проекта эта роль называется serializer.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "interface DataManager<T> {\n    fun serialize(encoder: Encoder, value: T)\n    fun deserialize(decoder: Decoder): T\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B07",
+    "mode": "review",
+    "context": "Внутренний Java helper проверяет точный класс исключения, не его подтипы.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\n<T extends Throwable> T assertError(Class<T> expectedType, Executable executable) {\n    return Assertions.assertThrowsExactly(expectedType, executable);\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B08",
+    "mode": "review",
+    "context": "Фрагмент Android sample: обе ветки поведения существенны. Оцени имя, не архитектуру приложения.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "fun completeTask(task: Task, completed: Boolean) = viewModelScope.launch {\n    if (completed) {\n        taskRepository.completeTask(task.id)\n    } else {\n        taskRepository.activateTask(task.id)\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "G01",
+    "mode": "review",
+    "context": "Существующая роль Spring API, override и публичные названия менять нельзя.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\ninterface PlatformTransactionManager {\n    TransactionStatus getTransaction(TransactionDefinition definition);\n    void commit(TransactionStatus status);\n    void rollback(TransactionStatus status);\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "G02",
+    "mode": "review",
+    "context": "Guava API. Контракт copyOf допускает повторное использование безопасного неизменяемого представления.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\nImmutableList<String> names = ImmutableList.copyOf(sourceNames);\n"
+      }
+    ]
+  },
+  {
+    "id": "G03",
+    "mode": "review",
+    "context": "Публичный fluent API Netty; getter и setter уже приняты потребителями.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.java",
+        "content": "// Java\nint readerIndex();\nByteBuf readerIndex(int readerIndex);\n"
+      }
+    ]
+  },
+  {
+    "id": "G04",
+    "mode": "review",
+    "context": "Compose API, функция возвращает Unit.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "@Composable\nfun Button(onClick: () -> Unit, enabled: Boolean = true) { }\n"
+      }
+    ]
+  },
+  {
+    "id": "G05",
+    "mode": "review",
+    "context": "Краткий фрагмент существующего MockK DSL.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "every { client.execute() } returns response\n"
+      }
+    ]
+  },
+  {
+    "id": "G06",
+    "mode": "review",
+    "context": "Открытый функциональный API Either; A и B - стороны, C - результат преобразования левой стороны.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "inline fun <A, B, C> Either<A, B>.mapLeft(f: (A) -> C): Either<C, B> =\n    when (this) {\n        is Either.Left -> Either.Left(f(value))\n        is Either.Right -> Either.Right(value)\n    }\n"
+      }
+    ]
+  },
+  {
+    "id": "G07",
+    "mode": "review",
+    "context": "Существующий BufferedSource API. exhausted может читать источник и блокироваться до выяснения, остались ли байты.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "fun exhausted(): Boolean\n"
+      }
+    ]
+  },
+  {
+    "id": "G08",
+    "mode": "review",
+    "context": "Публичная фабрика существующего kotlinx-datetime API, команда сохраняет его стиль.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "@Suppress(\"FunctionName\")\nfun Format(block: DateTimeFormatBuilder.WithDate.() -> Unit): DateTimeFormat<LocalDate>\n"
+      }
+    ]
+  },
+  {
+    "id": "C01",
+    "mode": "rename",
+    "context": "Jackson 2, опубликованное JSON-поле deviceID. Разрешено изменить Java-имя на deviceId; JSON должен остаться прежним.",
+    "request": "Переименуй поле в deviceId, сохрани опубликованное JSON-имя deviceID. Других изменений не нужно.",
+    "files": [
+      {
+        "path": "DeviceDto.java",
+        "content": "// Java\npackage example;\npublic class DeviceDto {\n    public String deviceID;\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "C02",
+    "mode": "review",
+    "context": "Spring Data repository. Nullability задана Kotlin-типом. Префикс get поддерживается derived query parser.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "interface CustomerRepository : Repository<Customer, Long> {\n    fun getByEmail(email: String): Customer?\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "C03",
+    "mode": "review",
+    "context": "Это опубликованный Kotlin API. Во внешних проектах есть readUtf8LineStrict(limit = 16). Их исходников здесь нет.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "fun readUtf8LineStrict(limit: Long): String\n"
+      }
+    ]
+  },
+  {
+    "id": "C04",
+    "mode": "review",
+    "context": "Публичный Java record; клиенты вызывают user.name().",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "User.java",
+        "content": "// Java\npublic record User(String name) {}\n"
+      }
+    ]
+  },
+  {
+    "id": "C05",
+    "mode": "review",
+    "context": "KSerializer - внешний интерфейс библиотеки; это реализация его метода.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "override fun serialize(encoder: Encoder, value: Packet) {\n    encoder.encodeString(value.text)\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "C06",
+    "mode": "review",
+    "context": "Файл находится в src/androidTest, выполняется на поддерживаемых устройствах API 26. Общее правило команды предлагает тестовые имена с пробелами в backticks.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "@Test\nfun returnsCachedValue_whenOffline() { }\n"
+      }
+    ]
+  },
+  {
+    "id": "C07",
+    "mode": "review",
+    "context": "Свойство хранит изменяемую коллекцию; аннотация нужна для Java-клиентов.",
+    "request": "Проверь нейминг в приведенном фрагменте. Предложи только обоснованные изменения и объясни их. Файлы не меняй.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "object Registry {\n    @JvmStatic\n    val activeNames: MutableSet<String> = mutableSetOf()\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "C08",
+    "mode": "rename",
+    "context": "Spring Kotlin. Имя bean orderProcessor используется в существующем Qualifier. Разрешено переименовать класс, сохранив привязку.",
+    "request": "Переименуй OrderProcessor в PersistentOrderProcessor. Сохрани существующее имя Spring bean orderProcessor.",
+    "files": [
+      {
+        "path": "Example.kt",
+        "content": "import org.springframework.stereotype.Service\nimport org.springframework.stereotype.Component\nimport org.springframework.beans.factory.annotation.Qualifier\n\n@Service\nclass OrderProcessor\n\n@Component\nclass Checkout(@Qualifier(\"orderProcessor\") val processor: OrderProcessor)\n"
+      }
+    ]
+  }
+]

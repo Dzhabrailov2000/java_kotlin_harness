@@ -1,0 +1,226 @@
+[
+  {
+    "id": "S01",
+    "mode": "review",
+    "context": "Финансовые правила премирования и формат выгрузки для внешнего аудитора изменяются по независимым требованиям. Оба алгоритма реализованы в одном PayrollService; изменение CSV уже требует повторной проверки расчета. Нужен разбор границы, не переписывание приложения.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "PayrollService.kt",
+        "content": "class PayrollService {\n    fun calculatePay(employee: Employee): Money = calculateByFinanceRules(employee)\n    fun exportAuditCsv(employees: List<Employee>): String = encodeAuditSchema(employees)\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "S02",
+    "mode": "review",
+    "context": "Координатор выполняет один сценарий покупки. Правила валидации, хранения и формирования события уже инкапсулированы в зависимостях. Обработка отказов и атомарность заданы другим кодом вне этого фрагмента и сейчас не оцениваются.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Checkout.kt",
+        "content": "class Checkout(private val validator: Validator, private val orders: Orders, private val events: Events) {\n    fun place(order: Order) {\n        validator.validate(order)\n        orders.save(order)\n        events.recordPlaced(order)\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "S03",
+    "mode": "review",
+    "context": "Передан только список методов. Их реализации, требования и потребители не предоставлены. Истории изменений в доступном контексте нет.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "DocumentService.java",
+        "content": "public interface DocumentService {\n    Document load(String id);\n    void save(Document document);\n    String render(Document document);\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "O01",
+    "mode": "review",
+    "context": "Приложение использует Spring GenericConversionService. Поступила задача подключить новый конвертер формата через существующий Converter. В предлагаемом патче вместо регистрации добавлен отдельный if в общий convert, такой if приходится добавлять для каждого типа.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "ProposedChange.java",
+        "content": "Object convert(Object source, Class<?> targetType) {\n    if (targetType == ExternalId.class) return new ExternalId(source.toString());\n    return existingGenericConversion(source, targetType);\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "O02",
+    "mode": "review",
+    "context": "Закрытая модель с двумя исходами. Произвольные варианты от внешних модулей не требуются.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Result.kt",
+        "content": "sealed interface Outcome {\n    data class Success(val value: String) : Outcome\n    data class Failure(val cause: Throwable) : Outcome\n}\nfun label(outcome: Outcome): String = when (outcome) {\n    is Outcome.Success -> outcome.value\n    is Outcome.Failure -> \"failed\"\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "O03",
+    "mode": "review",
+    "context": "Новая реализация Converter подключена в composition root. Общий механизм преобразования не менялся. Ревьюер утверждает: правка конфигурации нарушает OCP, потому что существующий файл изменен.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Converters.java",
+        "content": "registry.addConverter(String.class, ExternalId.class, ExternalId::new);\n"
+      }
+    ]
+  },
+  {
+    "id": "L01",
+    "mode": "review",
+    "context": "Source допускает повторный close. Клиент вправе закрыть ресурс в обработчике ошибки и затем в finally. Это новая обертка.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "SingleCloseSource.kt",
+        "content": "class SingleCloseSource(delegate: Source) : ForwardingSource(delegate) {\n    private var closed = false\n    override fun close() {\n        check(!closed)\n        closed = true\n        super.close()\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "L02",
+    "mode": "review",
+    "context": "Java List допускает необязательные операции изменения. Клиент здесь использует только чтение.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Names.java",
+        "content": "List<String> names = Collections.unmodifiableList(List.of(\"Ada\"));\nString first = names.get(0);\n"
+      }
+    ]
+  },
+  {
+    "id": "L03",
+    "mode": "review",
+    "context": "Передана реализация OkHttp interceptor, возвращающая синтетический ответ. Не указано, зарегистрирована ли она как application или network interceptor.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "LocalReply.kt",
+        "content": "val localReply = Interceptor { chain ->\n    Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)\n        .code(403).message(\"blocked\").body(\"blocked\".toResponseBody()).build()\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "I01",
+    "mode": "review",
+    "context": "Клиент Renderer только читает записи. Общий Cache требует обязательную успешную запись, а поддерживаемый ReadOnlyCache вынужден ее имитировать. Роли чтения и записи нужны разным потребителям.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Cache.kt",
+        "content": "interface Cache {\n    fun read(key: String): String?\n    fun write(key: String, value: String)\n}\nclass ReadOnlyCache : Cache {\n    override fun read(key: String): String? = load(key)\n    override fun write(key: String, value: String) = throw UnsupportedOperationException()\n}\nclass Renderer(private val cache: Cache)\n"
+      }
+    ]
+  },
+  {
+    "id": "I02",
+    "mode": "review",
+    "context": "Производитель получает только отправляющую роль канала. Конкретный Channel реализует обе роли.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Producer.kt",
+        "content": "class Producer(private val output: SendChannel<Event>) {\n    suspend fun publish(event: Event) { output.send(event) }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "I03",
+    "mode": "review",
+    "context": "CodecRunner действительно использует обе операции и descriptor для согласования формата. KSerializer объединяет SerializationStrategy и DeserializationStrategy.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "CodecRunner.kt",
+        "content": "class CodecRunner<T>(private val serializer: KSerializer<T>) {\n    fun encode(encoder: Encoder, value: T) = serializer.serialize(encoder, value)\n    fun decode(decoder: Decoder): T = serializer.deserialize(decoder)\n    val descriptor get() = serializer.descriptor\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "D01",
+    "mode": "review",
+    "context": "Принятая граница: модуль pricing не должен зависеть от JDBC и Spring. Policy использует технические типы из storage-модуля. Зависимость передана конструктором.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "PricingPolicy.kt",
+        "content": "import storage.JdbcPriceRepository\nimport java.sql.Connection\nclass PricingPolicy(private val repository: JdbcPriceRepository) {\n    fun price(connection: Connection, id: ProductId): Money = repository.readPrice(connection, id)\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "D02",
+    "mode": "review",
+    "context": "Локальный стабильный расчет использует стандартный BigDecimal. Внешних эффектов, заменяемых провайдеров и требования изолировать эту библиотеку нет.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "TaxCalculator.java",
+        "content": "final class TaxCalculator {\n    BigDecimal tax(BigDecimal subtotal, BigDecimal rate) { return subtotal.multiply(rate); }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "D03",
+    "mode": "design",
+    "context": "Новая политика начисления должна тестироваться без платежной сети и не зависеть от SDK провайдера. Провайдер пока один. Требуется предложить границу, не реализовывать весь платежный сервис.",
+    "request": "Предложи минимальный дизайн по SOLID под эти требования. Файлы пока не меняй.",
+    "files": [
+      {
+        "path": "Requirements.txt",
+        "content": "Политика принимает сумму и идентификатор заказа. Сетевая реализация использует vendor SDK. Сохранить проверяемые результаты успеха и отказа.\n"
+      }
+    ]
+  },
+  {
+    "id": "P01",
+    "mode": "review",
+    "context": "Spring работает в обычном proxy-режиме, AspectJ не используется. Ни у вызывающего, ни у place транзакции нет. Для SRP предложено перенести две записи в метод того же bean и поставить на него Transactional. Обе записи должны откатываться при сбое второй.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "OrderService.kt",
+        "content": "@Service\nclass OrderService(private val orders: Orders, private val outbox: Outbox) {\n    fun place(order: Order) { saveBoth(order) }\n    @Transactional\n    fun saveBoth(order: Order) { orders.save(order); outbox.save(order) }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "P02",
+    "mode": "review",
+    "context": "В Kotlin-адаптере результат сетевой операции раньше ожидался вызывающей coroutine. После извлечения интерфейса адаптер возвращает Queued и запускает работу в отдельном application scope. Требование по-прежнему: вернуть окончательный результат и прекратить операцию при отмене клиента.",
+    "request": "Проверь SOLID в указанной области. Обоснуй содержательные находки и минимальные решения. Код не меняй.",
+    "files": [
+      {
+        "path": "Sender.kt",
+        "content": "interface Sender { suspend fun send(message: Message): Result }\nclass AsyncSender(private val applicationScope: CoroutineScope, private val client: Client) : Sender {\n    override suspend fun send(message: Message): Result {\n        applicationScope.launch { client.send(message) }\n        return Result.Queued\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "P03",
+    "mode": "refactor",
+    "context": "Это изолированный учебный модуль. Требуется убрать зависимость политики от конкретного хранилища. Алгоритм начисления, видимость API метода bonus и порядок вызова чтения сохранить. Построй минимальную границу без дополнительных слоев.",
+    "request": "Выполни минимальный рефакторинг по DIP в этих файлах, сохрани поведение. Можно добавить небольшой файл контракта, если он нужен.",
+    "files": [
+      {
+        "path": "BonusPolicy.kt",
+        "content": "class BonusPolicy(private val store: JdbcSalesStore) {\n    fun bonus(employeeId: String): Int {\n        val sales = store.totalSales(employeeId)\n        return if (sales >= 100) 10 else 0\n    }\n}\n"
+      },
+      {
+        "path": "JdbcSalesStore.kt",
+        "content": "class JdbcSalesStore(private val readTotal: (String) -> Int) {\n    fun totalSales(employeeId: String): Int = readTotal(employeeId)\n}\n"
+      },
+      {
+        "path": "Wiring.kt",
+        "content": "fun createPolicy(readTotal: (String) -> Int): BonusPolicy =\n    BonusPolicy(JdbcSalesStore(readTotal))\n"
+      }
+    ]
+  }
+]

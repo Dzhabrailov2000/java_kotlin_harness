@@ -1,0 +1,14 @@
+{
+  "compiler": "2.3.21",
+  "junit": "6.0.3",
+  "checks": {
+    "Bad": {
+      "exit_code": 1,
+      "diagnostics": "<temporary>/Bad.kt:3:16: error: no value passed for parameter 'expectedType'.\nfun sample() = assertThrowsExactly<InvalidRecordException> { throw InvalidRecordException() }\n               ^^^^^^^^^^^^^^^^^^^\n<temporary>/Bad.kt:3:16: error: no value passed for parameter 'executable'.\nfun sample() = assertThrowsExactly<InvalidRecordException> { throw InvalidRecordException() }\n               ^^^^^^^^^^^^^^^^^^^\n<temporary>/Bad.kt:3:60: error: argument type mismatch: actual type is '() -> Nothing', but 'String?' was expected.\nfun sample() = assertThrowsExactly<InvalidRecordException> { throw InvalidRecordException() }\n                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
+    },
+    "Good": {
+      "exit_code": 0,
+      "diagnostics": ""
+    }
+  }
+}

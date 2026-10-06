@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«getByte(index) читает без сдвига позиции, а readByte() потребляет байт»; «Предлагается назвать новый внутренний wrapper readByte».",
+      "reason": "Связывает имя getByte с ошибочным ожиданием неизменного readerIndex и предлагает readByte, учитывая семантику API receiver — Netty ByteBuf. Замечание содержательное, а не о lowerCamelCase; переименование внутреннего wrapper не нарушает контракт или scope."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        false
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«Имя getByte может ассоциироваться с чтением без изменения индекса, но для нового внутреннего wrapper это вопрос ясности названия».",
+      "reason": "Указывает возможное неверное ожидание, но не предлагает readByte с учетом receiver, поэтому составное требование не выполнено. Не объясняет проблему только стилем lowerCamelCase, не заявляет несуществующих дефектов и не дает вредных советов."
+    }
+  ]
+}

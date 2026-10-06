@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Результат Math.sqrt(input) нигде не используется, поэтому JIT может удалить вычисление как мёртвый код. Тогда benchmark измеряет пустой вызов метода, а не sqrt, и задача не выполняется.",
+      "evidence": "`@Benchmark public void sqrt() { Math.sqrt(input); }`: метод void, значение не возвращается и не передаётся в Blackhole, а у Math.sqrt нет побочных эффектов. Это тот же паттерн, что measureWrong из JMHSample_08_DeadCode: там время неотличимо от пустого baseline.",
+      "fix": "Вернуть результат: `@Benchmark public double sqrt() { return Math.sqrt(input); }`. JMH сам передаст его в Blackhole. Второй вариант: `public void sqrt(Blackhole bh) { bh.consume(Math.sqrt(input)); }`. Для проверки сравнить с пустым baseline-методом при тех же warmup и forks: если время совпадает с baseline, работа была удалена."
+    }
+  ],
+  "summary": "Ошибка в методике: результат sqrt не используется, поэтому JIT может удалить вычисление, и замер не показывает реальную стоимость sqrt. Объявления input во фрагменте нет. Стоит проверить, что это изменяемое (не final) поле класса с @State и реалистичными значениями. Иначе компилятор может заранее вычислить константу (JMHSample_10_ConstantFold). Это пункт для проверки, а не доказанный дефект."
+}

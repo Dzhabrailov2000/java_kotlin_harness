@@ -1,0 +1,525 @@
+{
+  "created_utc": "2026-10-05T22:52:46.588195+00:00",
+  "seed": 20261006,
+  "conditions": {
+    "A": "base prompt + case",
+    "B": "same base prompt + one complete SKILL.md + case"
+  },
+  "files_sha256": {
+    "evals/java-kotlin-suite/cases.json": "f2f8a49a1de23d780d30ab7c738fec0d1abe590f0420631a39dfbd7ac3276e14",
+    "evals/java-kotlin-suite/rubrics.json": "b8b38b92dac547347f2eb8362282d29c5799d116421eb7c7ae9de5a536dd5c44",
+    "skills/java-kotlin-build-dependencies/SKILL.md": "152dee31493c1c02ce5d55d5725d5ee648697f8d8cd32a9624effae0e71606ce",
+    "skills/java-kotlin-caching/SKILL.md": "f1c0f6316fc2c097ca7f2fd040536c2f9ba60b5bc423ed4e761b4415f80eed2e",
+    "skills/java-kotlin-collections/SKILL.md": "e85337cee0e04d944fffac50353b33c205c3be04afa49904948c61ddfa7f1ca5",
+    "skills/java-kotlin-concurrency/SKILL.md": "6abab1407f970782604c51652df0d93545c972ed533bc2c6bf3b1d7a25bcff46",
+    "skills/java-kotlin-configuration/SKILL.md": "f1dbbe4b3e3b3733b12bc6b08f19b6d80d3e0dcd34ca43f502c222a87c366496",
+    "skills/java-kotlin-contracts/SKILL.md": "f33c9bf1602f6fa686b9d6c4c1bd2b688ad5e89dc74fe982da00cea78375b093",
+    "skills/java-kotlin-domain-modeling/SKILL.md": "798be1f0392f177c2a89ed7be3ce7b81d680506f2994383fde65c1fb813eda08",
+    "skills/java-kotlin-errors/SKILL.md": "079f51c1999d03a97c103306d3c8eeac2cd203d75ceeab0bdf4534f60b27e087",
+    "skills/java-kotlin-generics/SKILL.md": "612d03ea4ff1f02856655ec9129514f5eb3d1086cdad3a9b9c6fbe36532c8c88",
+    "skills/java-kotlin-interop/SKILL.md": "ce0c5bf93dadc939d420e35b28650477fd5691ece78b306f57c1cf6e331f8eb9",
+    "skills/java-kotlin-messaging/SKILL.md": "85f97661c1ee2af9340f299b6247b8b5561cfe52c16b5dfa16a0dc01e9a4efd7",
+    "skills/java-kotlin-modularity/SKILL.md": "8c075731eb1a4effa01fe9c21fa31179fa0f358c94b0729284ffff06ab9d7e4c",
+    "skills/java-kotlin-naming/SKILL.md": "ae466d79009db12715caf6631bea28c432364b7a280e1e013881a4bf0af63567",
+    "skills/java-kotlin-nullability/SKILL.md": "eeddfa00c14a1df135f25084d2f6c4684975da837eba6c503140f81d52e9c6a4",
+    "skills/java-kotlin-numeric-modeling/SKILL.md": "a1d7bbfc685cc06855c1cc277959fbba5ff2ffbc4d07825331fb038cb7917037",
+    "skills/java-kotlin-observability/SKILL.md": "10da8326b8b296cbae4106aba11b596d3015c9c909ef59eb26aacfc3ccc84104",
+    "skills/java-kotlin-performance/SKILL.md": "691296021eb797ad127bea535794c9c86ef1726d03747d20a68cf469a19b9589",
+    "skills/java-kotlin-persistence/SKILL.md": "b5346e7ee38c476852361822b1309a21720dc74566e2e8b6fec48b44cb61dcd6",
+    "skills/java-kotlin-reactive/SKILL.md": "e08cea9c0f06f97e4db6a3d32e4f76e8bab6c47951d69da624acd5e634e71b78",
+    "skills/java-kotlin-refactoring/SKILL.md": "841b9eed77ab0495b5b75aa351ace5119e2f208d7f0cb70ba066fe0899142554",
+    "skills/java-kotlin-resilience/SKILL.md": "9fea7ed85dcc00a49fb0a5c3c4457ec9192c9a38630163ce3c0244b6f7ab74ca",
+    "skills/java-kotlin-resources/SKILL.md": "4a9e7dcefa268dea31795ac0b8998fbcc22d354ab0cd625005a25ac1275d4ba4",
+    "skills/java-kotlin-rest-api/SKILL.md": "eabfa9f35a079304fe478cf78d1b81038ba538359241f586cc5c51609287c080",
+    "skills/java-kotlin-security/SKILL.md": "9b971646bbfbe9e680b35189e57d3aef5b285fff8f0032fd262dc0e1ee4da346",
+    "skills/java-kotlin-serialization/SKILL.md": "6714a7e8cae945a336aeb6edc0a152ecbb82a22a81922271c73492b09d4d1c2d",
+    "skills/java-kotlin-solid/SKILL.md": "d27dec5b9929b98b6a179d0307ef1b43a83d87b7cc40010a012e5f456ec7a310",
+    "skills/java-kotlin-sql-migrations/SKILL.md": "caa1c40666be8564c3628188d11ded55de14d11dc3d27249485a749403b49dc4",
+    "skills/java-kotlin-testing/SKILL.md": "a6764be75fd2231254940cce1e749e007efa2b588e3aea5e1e0521494a97d2bd",
+    "skills/java-kotlin-time/SKILL.md": "3f8c7afc8f3476b814c74d60c78ee9b724931c96548fb5bb89662f2739278892",
+    "skills/java-kotlin-validation/SKILL.md": "aee4ba49e84dc75e92aa9d16583765cdee6574f5dc8a937ce350ea7983415fc6"
+  },
+  "order": [
+    {
+      "id": "time-C",
+      "arm": "A"
+    },
+    {
+      "id": "validation-C",
+      "arm": "A"
+    },
+    {
+      "id": "sql-migrations-C",
+      "arm": "B"
+    },
+    {
+      "id": "security-P",
+      "arm": "A"
+    },
+    {
+      "id": "solid-P",
+      "arm": "B"
+    },
+    {
+      "id": "testing-C",
+      "arm": "A"
+    },
+    {
+      "id": "interop-P",
+      "arm": "A"
+    },
+    {
+      "id": "rest-api-P",
+      "arm": "A"
+    },
+    {
+      "id": "resources-P",
+      "arm": "B"
+    },
+    {
+      "id": "testing-P",
+      "arm": "A"
+    },
+    {
+      "id": "validation-C",
+      "arm": "B"
+    },
+    {
+      "id": "persistence-P",
+      "arm": "A"
+    },
+    {
+      "id": "numeric-modeling-P",
+      "arm": "B"
+    },
+    {
+      "id": "performance-P",
+      "arm": "A"
+    },
+    {
+      "id": "messaging-C",
+      "arm": "B"
+    },
+    {
+      "id": "performance-C",
+      "arm": "B"
+    },
+    {
+      "id": "nullability-C",
+      "arm": "A"
+    },
+    {
+      "id": "reactive-C",
+      "arm": "B"
+    },
+    {
+      "id": "caching-C",
+      "arm": "B"
+    },
+    {
+      "id": "resilience-P",
+      "arm": "B"
+    },
+    {
+      "id": "interop-C",
+      "arm": "A"
+    },
+    {
+      "id": "generics-C",
+      "arm": "A"
+    },
+    {
+      "id": "modularity-P",
+      "arm": "B"
+    },
+    {
+      "id": "nullability-P",
+      "arm": "A"
+    },
+    {
+      "id": "performance-P",
+      "arm": "B"
+    },
+    {
+      "id": "refactoring-P",
+      "arm": "A"
+    },
+    {
+      "id": "modularity-C",
+      "arm": "B"
+    },
+    {
+      "id": "numeric-modeling-C",
+      "arm": "B"
+    },
+    {
+      "id": "modularity-P",
+      "arm": "A"
+    },
+    {
+      "id": "observability-C",
+      "arm": "A"
+    },
+    {
+      "id": "time-C",
+      "arm": "B"
+    },
+    {
+      "id": "time-P",
+      "arm": "A"
+    },
+    {
+      "id": "collections-C",
+      "arm": "B"
+    },
+    {
+      "id": "contracts-P",
+      "arm": "B"
+    },
+    {
+      "id": "resources-P",
+      "arm": "A"
+    },
+    {
+      "id": "contracts-C",
+      "arm": "B"
+    },
+    {
+      "id": "observability-C",
+      "arm": "B"
+    },
+    {
+      "id": "concurrency-C",
+      "arm": "A"
+    },
+    {
+      "id": "concurrency-C",
+      "arm": "B"
+    },
+    {
+      "id": "testing-C",
+      "arm": "B"
+    },
+    {
+      "id": "collections-P",
+      "arm": "B"
+    },
+    {
+      "id": "numeric-modeling-C",
+      "arm": "A"
+    },
+    {
+      "id": "sql-migrations-P",
+      "arm": "B"
+    },
+    {
+      "id": "time-P",
+      "arm": "B"
+    },
+    {
+      "id": "refactoring-P",
+      "arm": "B"
+    },
+    {
+      "id": "errors-C",
+      "arm": "A"
+    },
+    {
+      "id": "collections-C",
+      "arm": "A"
+    },
+    {
+      "id": "serialization-P",
+      "arm": "A"
+    },
+    {
+      "id": "resilience-P",
+      "arm": "A"
+    },
+    {
+      "id": "security-P",
+      "arm": "B"
+    },
+    {
+      "id": "messaging-P",
+      "arm": "A"
+    },
+    {
+      "id": "validation-P",
+      "arm": "A"
+    },
+    {
+      "id": "persistence-C",
+      "arm": "B"
+    },
+    {
+      "id": "rest-api-C",
+      "arm": "A"
+    },
+    {
+      "id": "naming-C",
+      "arm": "A"
+    },
+    {
+      "id": "reactive-P",
+      "arm": "A"
+    },
+    {
+      "id": "solid-C",
+      "arm": "A"
+    },
+    {
+      "id": "caching-P",
+      "arm": "A"
+    },
+    {
+      "id": "configuration-P",
+      "arm": "B"
+    },
+    {
+      "id": "generics-P",
+      "arm": "B"
+    },
+    {
+      "id": "caching-P",
+      "arm": "B"
+    },
+    {
+      "id": "generics-C",
+      "arm": "B"
+    },
+    {
+      "id": "generics-P",
+      "arm": "A"
+    },
+    {
+      "id": "messaging-P",
+      "arm": "B"
+    },
+    {
+      "id": "build-dependencies-P",
+      "arm": "B"
+    },
+    {
+      "id": "modularity-C",
+      "arm": "A"
+    },
+    {
+      "id": "configuration-C",
+      "arm": "A"
+    },
+    {
+      "id": "serialization-C",
+      "arm": "A"
+    },
+    {
+      "id": "nullability-P",
+      "arm": "B"
+    },
+    {
+      "id": "resilience-C",
+      "arm": "B"
+    },
+    {
+      "id": "reactive-C",
+      "arm": "A"
+    },
+    {
+      "id": "refactoring-C",
+      "arm": "A"
+    },
+    {
+      "id": "testing-P",
+      "arm": "B"
+    },
+    {
+      "id": "domain-modeling-C",
+      "arm": "B"
+    },
+    {
+      "id": "sql-migrations-C",
+      "arm": "A"
+    },
+    {
+      "id": "errors-C",
+      "arm": "B"
+    },
+    {
+      "id": "contracts-P",
+      "arm": "A"
+    },
+    {
+      "id": "resources-C",
+      "arm": "B"
+    },
+    {
+      "id": "domain-modeling-P",
+      "arm": "A"
+    },
+    {
+      "id": "naming-C",
+      "arm": "B"
+    },
+    {
+      "id": "solid-C",
+      "arm": "B"
+    },
+    {
+      "id": "security-C",
+      "arm": "A"
+    },
+    {
+      "id": "errors-P",
+      "arm": "B"
+    },
+    {
+      "id": "concurrency-P",
+      "arm": "A"
+    },
+    {
+      "id": "performance-C",
+      "arm": "A"
+    },
+    {
+      "id": "concurrency-P",
+      "arm": "B"
+    },
+    {
+      "id": "build-dependencies-C",
+      "arm": "B"
+    },
+    {
+      "id": "errors-P",
+      "arm": "A"
+    },
+    {
+      "id": "configuration-C",
+      "arm": "B"
+    },
+    {
+      "id": "naming-P",
+      "arm": "A"
+    },
+    {
+      "id": "rest-api-C",
+      "arm": "B"
+    },
+    {
+      "id": "nullability-C",
+      "arm": "B"
+    },
+    {
+      "id": "resources-C",
+      "arm": "A"
+    },
+    {
+      "id": "validation-P",
+      "arm": "B"
+    },
+    {
+      "id": "security-C",
+      "arm": "B"
+    },
+    {
+      "id": "sql-migrations-P",
+      "arm": "A"
+    },
+    {
+      "id": "caching-C",
+      "arm": "A"
+    },
+    {
+      "id": "build-dependencies-C",
+      "arm": "A"
+    },
+    {
+      "id": "domain-modeling-C",
+      "arm": "A"
+    },
+    {
+      "id": "persistence-C",
+      "arm": "A"
+    },
+    {
+      "id": "naming-P",
+      "arm": "B"
+    },
+    {
+      "id": "domain-modeling-P",
+      "arm": "B"
+    },
+    {
+      "id": "solid-P",
+      "arm": "A"
+    },
+    {
+      "id": "observability-P",
+      "arm": "B"
+    },
+    {
+      "id": "observability-P",
+      "arm": "A"
+    },
+    {
+      "id": "serialization-P",
+      "arm": "B"
+    },
+    {
+      "id": "messaging-C",
+      "arm": "A"
+    },
+    {
+      "id": "reactive-P",
+      "arm": "B"
+    },
+    {
+      "id": "numeric-modeling-P",
+      "arm": "A"
+    },
+    {
+      "id": "interop-C",
+      "arm": "B"
+    },
+    {
+      "id": "persistence-P",
+      "arm": "B"
+    },
+    {
+      "id": "serialization-C",
+      "arm": "B"
+    },
+    {
+      "id": "configuration-P",
+      "arm": "A"
+    },
+    {
+      "id": "rest-api-P",
+      "arm": "B"
+    },
+    {
+      "id": "interop-P",
+      "arm": "B"
+    },
+    {
+      "id": "build-dependencies-P",
+      "arm": "A"
+    },
+    {
+      "id": "collections-P",
+      "arm": "A"
+    },
+    {
+      "id": "resilience-C",
+      "arm": "A"
+    },
+    {
+      "id": "contracts-C",
+      "arm": "A"
+    },
+    {
+      "id": "refactoring-C",
+      "arm": "B"
+    }
+  ],
+  "corpus": "60 authored non-held-out short reviews"
+}

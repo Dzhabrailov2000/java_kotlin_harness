@@ -1,0 +1,164 @@
+{
+  "generated_utc": "2026-10-06T08:36:51.626394+00:00",
+  "run": "codex-gpt61-high",
+  "run_config": {
+    "engine": "codex",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "proxy": "http://127.0.0.1:43132",
+    "workers": 2,
+    "timeout": 180,
+    "manifest_sha256": "36b6238b5686ac9884aaaf8d6e57158ffc744016686a4be306eb2f24a04c730c",
+    "base_prompt_sha256": "99290c297ad33fd0dcdf1d4fd6d173599c92290ce8aed80ea35cc9cba6c94b3e",
+    "answer_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "issue",
+            "ok"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "problem": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "problem",
+              "evidence",
+              "fix"
+            ]
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "findings",
+        "summary"
+      ]
+    },
+    "runner_sha256": "6e4ddfe011c151fc24583ca1548944a41c312c21f1dd3f1b650ee6c8023ca01e"
+  },
+  "display": {
+    "label": "Codex / gpt-6.1-sol / high",
+    "model_note": "CLI сообщает gpt-6.1-sol, но предупреждает об отсутствии model metadata и использует fallback metadata. Неизменяемый серверный snapshot не раскрыт.",
+    "cost_note": "Токены - данные Codex CLI; cached входит в input, reasoning входит в output. Денежная стоимость неизвестна: использована авторизация ChatGPT, а не отчет о тарификации API."
+  },
+  "observed_model_ids": [],
+  "metrics": {
+    "A": {
+      "attempted": 60,
+      "completed": 60,
+      "graded": 60,
+      "passed": 54,
+      "verdict_matches": 59,
+      "input_tokens": 293577,
+      "cached_input_tokens": 103936,
+      "cache_creation_input_tokens": 0,
+      "output_tokens": 12451,
+      "reasoning_output_tokens": 3403,
+      "mean_seconds": 12.68,
+      "median_seconds": 12.32,
+      "answer_chars": 32423,
+      "problem_passed": 25,
+      "correct_passed": 29,
+      "false_positives": 0,
+      "harmful_advice": 0,
+      "tool_events": 0,
+      "structured_output_events": 0
+    },
+    "B": {
+      "attempted": 60,
+      "completed": 60,
+      "graded": 60,
+      "passed": 59,
+      "verdict_matches": 60,
+      "input_tokens": 380481,
+      "cached_input_tokens": 100224,
+      "cache_creation_input_tokens": 0,
+      "output_tokens": 12967,
+      "reasoning_output_tokens": 2944,
+      "mean_seconds": 12.88,
+      "median_seconds": 12.74,
+      "answer_chars": 36919,
+      "problem_passed": 29,
+      "correct_passed": 30,
+      "false_positives": 0,
+      "harmful_advice": 0,
+      "tool_events": 0,
+      "structured_output_events": 0
+    }
+  },
+  "pairs": {
+    "B_only": 5,
+    "both_pass": 54,
+    "both_fail": 1
+  },
+  "judge_completed": 60,
+  "judge_usage": {
+    "input_tokens": 323753,
+    "cached_input_tokens": 48256,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 17137,
+    "reasoning_output_tokens": 1970
+  },
+  "manual_audit": {
+    "checked": [
+      "solid-P",
+      "security-P",
+      "concurrency-P",
+      "sql-migrations-C",
+      "messaging-C",
+      "rest-api-C",
+      "collections-C",
+      "collections-P",
+      "persistence-P",
+      "contracts-C",
+      "naming-P",
+      "naming-C",
+      "domain-modeling-P",
+      "errors-P",
+      "rest-api-P",
+      "configuration-P"
+    ],
+    "overrides": [],
+    "note": "Автор-ИИ проверил 10 заранее выбранных пар и все 6 пар с провалом хотя бы одной группы. Исходные оценки сохранены без поправок. Неполнота по строгой рубрике не приравнивается к неверному диагнозу.",
+    "case_notes": {
+      "solid-P": "Both preserve repeat-close contract with guard, no unnecessary hierarchy; exact acronym LSP not required.",
+      "security-P": "Both show untrusted tenant filter cannot authorize and use trusted principal.",
+      "concurrency-P": "Both demonstrate lost update and choose atomic/common lock.",
+      "sql-migrations-C": "Both preserve simple nullable addition in specified stopped-old-version context; no needless rollout scheme.",
+      "messaging-C": "Both retain atomic inbox/business commit and ack sequence under explicit correct duplicate handling.",
+      "rest-api-C": "Both distinguish server effect idempotency from status equality.",
+      "collections-C": "Both retain valid pure stream; int bound explicitly provided.",
+      "collections-P": "Both demonstrate duplicate-key replacement and propose groupBy preserving both words.",
+      "persistence-P": "Both show READ COMMITTED race, require DB unique constraint and conflict handling; B additionally mentions cleanup and commit-time failure.",
+      "contracts-C": "Both preserve valid empty closed-open range; no stronger precondition imposed.",
+      "naming-P": "A recognizes index shift and possible expectation mismatch, but declines the requested naming improvement and never proposes readByte. B meets frozen must; neither proposes harmful or external API changes. Keep A fail / B pass under rubric.",
+      "naming-C": "Both correctly keep the public API and Manager. A omits explicit effect semantics; B explains creation/participation and why get is not pure. Under the frozen composite must, A fails coverage, not correctness of its no-change verdict. Keep grade but disclose this metric sensitivity prominently.",
+      "domain-modeling-P": "Both replace positional nested lists with named domain types. A does not specify immutable/value-equality key; under explicit stable-key rubric this is incomplete, not harmful advice. Keep A fail/B pass, and distinguish coverage from defect detection.",
+      "errors-P": "A catches swallowed cancellation but leaves ordinary failures unspecified. B also explains technical-error-to-empty-success ambiguity. Composite frozen criterion requires both, so A fail/B pass.",
+      "rest-api-P": "Both find false 201/completed and propose 202. B also discusses a way to check state, though conditionally. Rubric includes follow-up state discovery; keep A fail/B pass as completeness difference, not an extra discovered defect.",
+      "configuration-P": "Both accurately find 10 ms vs 10 s and propose explicit 10s (B also PT10S). Neither proposes checking effective binding. The frozen compound must includes binding verification, so retain both fails as strict coverage penalties, not incorrect diagnoses. Literal execution was unavailable in the text-only protocol; the criterion can only reasonably expect a verification recommendation and should be revisited in a future corpus, not edited after seeing results."
+    },
+    "selection": "audit-plan.json",
+    "reviewer": "author AI assistant; not independent human review"
+  }
+}

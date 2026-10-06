@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Значение connectTimeout не соответствует требуемым 10 секундам.",
+      "evidence": "В Snippet.txt:1 указано remote.connect-timeout=10. При привязке к Duration без @DurationUnit Spring Boot трактует число без единицы как миллисекунды: получится 10 мс, а не 10 с.",
+      "fix": "Указать единицу явно: remote.connect-timeout=10s. Это обеспечит требуемую длительность без @DurationUnit."
+    }
+  ],
+  "summary": "Обнаружена ошибка единицы времени: настроенный таймаут в 1000 раз меньше требуемого."
+}

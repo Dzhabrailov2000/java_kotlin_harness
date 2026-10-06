@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4b-3bf4-7ff1-ae25-288d3f833a67"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Код соответствует контракту числового равенства: compareTo сравнивает значения без учета scale, поэтому для «2.0» и «2.00» возвращает 0, а equal получает true. Объект не используется как ключ map, поэтому согласование hashCode здесь не требуется.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":5929,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":117,"reasoning_output_tokens":21}}

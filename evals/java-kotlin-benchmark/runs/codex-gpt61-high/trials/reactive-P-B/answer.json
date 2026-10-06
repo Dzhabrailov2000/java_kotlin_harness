@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Блокирующий I/O выполняется на WebFlux event loop, а не на boundedElastic.",
+      "evidence": "В Mono.just(blockingRead()) вызов blockingRead() вычисляется немедленно при сборке Mono на event loop. Это блокирует его поток и задерживает обработку других запросов. subscribeOn влияет на выполнение при подписке, но не переносит уже выполненный вызов.",
+      "fix": "Отложить blocking I/O до подписки: return Mono.fromCallable(this::blockingRead).subscribeOn(Schedulers.boundedElastic());. Подписку оставить вызывающему коду или WebFlux."
+    }
+  ],
+  "summary": "subscribeOn не исправляет блокирование при сборке Mono: blockingRead необходимо выполнять лениво через fromCallable."
+}

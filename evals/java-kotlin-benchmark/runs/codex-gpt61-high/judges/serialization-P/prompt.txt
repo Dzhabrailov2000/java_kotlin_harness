@@ -1,0 +1,18 @@
+Оцени два анонимных ответа ревьюера по рубрике. Условия получения ответов неизвестны.
+Не используй инструменты и внешние файлы. Оцени смысл, не совпадение слов или длину. Для каждого
+must дай boolean: true, если требование достаточно выполнено; для каждого must_not дай boolean:
+true, если запрет НАРУШЕН. Порядок boolean должен совпадать с порядком критериев. Не добавляй критерии.
+false_positive означает выданный за обязательное исправление несуществующий дефект или нарушение
+явного scope. Условные оговорки сами по себе не ложный дефект. harmful_advice означает совет,
+который ломает явно заданный контракт или добавляет требуемую автором ненужную архитектуру.
+Обычная корректная альтернатива не вредный совет. Evidence: короткая цитата ответа. Reason: кратко
+объясни оценку. У каждого label X и Y должен быть ровно один judgment. Ответ - только JSON:
+{"judgments":[{"label":"X","must_met":[true],"must_not_violated":[false],
+"false_positive":false,"harmful_advice":false,"evidence":"...","reason":"..."}, ...]}.
+
+Задание:
+{"context": "kotlinx.serialization; требуется round trip nullable description без изменения null на default.", "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.", "files": [{"path": "Snippet.txt", "content": "@Serializable data class Item(val description: String? = \"fallback\")\nval mapper = Json { explicitNulls = false }\nval decoded = mapper.decodeFromString<Item>(mapper.encodeToString(Item(null)))"}]}
+Рубрика:
+{"group": "problem", "must": ["Найти изменение null на default после пропуска поля; проверить mapper configuration."], "must_not": ["Утверждать, что nullable гарантирует три состояния missing/null/default."]}
+Ответы:
+{"X": "{\n  \"verdict\": \"issue\",\n  \"findings\": [\n    {\n      \"problem\": \"Round trip заменяет null на \\\"fallback\\\", нарушая требование сохранения description.\",\n      \"evidence\": \"При explicitNulls = false объект Item(null) сериализуется в {}: поле с null пропускается. При чтении {} отсутствующее description получает значение по умолчанию \\\"fallback\\\". Поэтому decoded.description равно \\\"fallback\\\", а не null.\",\n      \"fix\": \"Установить explicitNulls = true (или убрать настройку false, сохранив стандартное значение true). Тогда JSON содержит {\\\"description\\\":null}, а десериализация сохраняет null. Проверить, что round trip Item(null) возвращает объект с description == null.\"\n    }\n  ],\n  \"summary\": \"Обнаружена потеря семантики null из-за сочетания explicitNulls = false и ненулевого значения по умолчанию.\"\n}", "Y": "{\n  \"verdict\": \"issue\",\n  \"findings\": [\n    {\n      \"problem\": \"Round trip заменяет null на значение по умолчанию.\",\n      \"evidence\": \"При explicitNulls = false сериализация Item(null) пропускает поле description и возвращает {}. При декодировании отсутствующего поля применяется объявленное значение по умолчанию: decoded.description становится \\\"fallback\\\", а не null.\",\n      \"fix\": \"Установить explicitNulls = true либо убрать эту настройку, поскольку true используется по умолчанию. Тогда null будет записан явно и восстановлен при декодировании, а \\\"fallback\\\" останется значением для отсутствующего поля.\"\n    }\n  ],\n  \"summary\": \"Код нарушает требование сохранения nullable description: Item(null) после round trip превращается в Item(\\\"fallback\\\").\"\n}"}

@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e50-7c0f-7933-ae36-6872e450d9c0"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Содержательных дефектов в заданном контексте нет. Запрос использует bind parameters, а условие tenant_id = :authorizedTenantId ограничивает выборку tenant из проверенного principal. Подстановка идентификатора заказа другого tenant не вернёт его строку. По условиям задания фильтры безопасности активны.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":4902,"cached_input_tokens":3712,"cache_write_input_tokens":0,"output_tokens":133,"reasoning_output_tokens":32}}

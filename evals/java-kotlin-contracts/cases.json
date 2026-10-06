@@ -1,0 +1,218 @@
+[
+  {
+    "id": "C01",
+    "mode": "review",
+    "context": "Новый Java-тип полуинтервала обязан отклонять startInclusive > endExclusive через IllegalArgumentException. Пустой полуинтервал с равными границами допустим. Проверяются создание и contains.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Interval.java",
+        "content": "public record Interval(int startInclusive, int endExclusive) {\n    public boolean contains(int value) {\n        return value >= startInclusive && value < endExclusive;\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "C02",
+    "mode": "review",
+    "context": "Клиент Guava представляет пустой срез числовой оси и явно допускает одинаковые границы. Контракт Range.closedOpen разрешает такой диапазон.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Slice.java",
+        "content": "Range<Integer> slice = Range.closedOpen(5, 5);\nboolean empty = slice.isEmpty();\n"
+      }
+    ]
+  },
+  {
+    "id": "C03",
+    "mode": "review",
+    "context": "Для календарной корректировки требуется сдвиг на -5 месяцев, +6 дней и -3 часа. Используется kotlinx-datetime; положительность всех компонентов не требуется.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Adjustment.kt",
+        "content": "val adjustment = DateTimePeriod(months = -5, days = 6, hours = -3)\n"
+      }
+    ]
+  },
+  {
+    "id": "C04",
+    "mode": "review",
+    "context": "Доступно только объявление транспортного DTO. Требования к знаку ID, допустимости пустого displayName и месту валидации не переданы. Операции, потребители и конфигурация недоступны.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "ImportedRow.kt",
+        "content": "data class ImportedRow(val externalId: Long, val displayName: String)\n"
+      }
+    ]
+  },
+  {
+    "id": "T01",
+    "mode": "review",
+    "context": "Требование нового API: компилятор должен запрещать передать идентификатор заказа вместо идентификатора клиента. Java interop и сериализация в этой задаче не задействованы.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Ids.kt",
+        "content": "typealias CustomerId = Long\ntypealias OrderId = Long\nfun customerLabel(id: CustomerId): String = \"customer:$id\"\nval orderId: OrderId = 17\nval label = customerLabel(orderId)\n"
+      }
+    ]
+  },
+  {
+    "id": "T02",
+    "mode": "review",
+    "context": "Опубликованный предыдущий снимок списка должен сохраняться. Новый снимок формируется перед публикацией; добавление b не должно менять предыдущий.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Snapshot.kt",
+        "content": "data class Snapshot(val items: MutableList<String>)\nval previous = Snapshot(mutableListOf(\"a\"))\nval next = previous.copy()\nnext.items.add(\"b\")\n"
+      }
+    ]
+  },
+  {
+    "id": "T03",
+    "mode": "review",
+    "context": "Простой CRUD сохраняет снимок списка имен. Null-список и null-элементы запрещены, порядок и дубликаты сохраняются. Достаточно независимости от последующих изменений исходного списка. Элементы String неизменяемы; отдельное доменное поведение не требуется. Java 21.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Names.java",
+        "content": "import java.util.List;\npublic record Names(List<String> values) {\n    public Names {\n        values = List.copyOf(values);\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "E01",
+    "mode": "review",
+    "context": "Amount хранит десятичное количество без единиц. По требованию Amount(2.0) и Amount(2.00) равны и должны занимать одно место в HashSet. Null запрещен; числовые значения отрицательного знака допустимы. Класс новый, внешнего формата пока нет.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Amount.java",
+        "content": "import java.math.BigDecimal;\nimport java.util.Objects;\npublic record Amount(BigDecimal value) {\n    public Amount {\n        Objects.requireNonNull(value);\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "E02",
+    "mode": "review",
+    "context": "Quote хранит исходное десятичное представление. По контракту scale значим: 2.0 и 2.00 должны различаться при equals и храниться в HashSet раздельно. Это не денежный расчет. Null запрещен.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Quote.java",
+        "content": "import java.math.BigDecimal;\nimport java.util.Objects;\npublic record Quote(BigDecimal value) {\n    public Quote {\n        Objects.requireNonNull(value);\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "V01",
+    "mode": "review",
+    "context": "Функция обязана выбрасывать IllegalArgumentException при null. При ненулевом значении завершается нормально. Декларация compiler contract нужна существующему Kotlin-клиенту.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "EnsureName.kt",
+        "content": "import kotlin.contracts.ExperimentalContracts\nimport kotlin.contracts.contract\n\n@OptIn(ExperimentalContracts::class)\nfun ensureName(value: String?) {\n    contract { returns() implies (value != null) }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "V02",
+    "mode": "review",
+    "context": "Публичная функция обязана всегда отклонять port вне 1..65535 через IllegalArgumentException. В production Java assertions отключены.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Ports.java",
+        "content": "public final class Ports {\n    public static int validate(int port) {\n        assert port >= 1 && port <= 65535;\n        return port;\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "F01",
+    "mode": "refactor",
+    "context": "EndpointBuilder используется одним потоком. После успешного port(p) он хранит p и возвращает тот же экземпляр. Допустимы 1..65535. После отклоненного аргумента прежний port должен сохраниться. Сигнатуру, IllegalArgumentException и сообщение unexpected port: <число> нужно сохранить. Разрешена только локальная правка указанного файла.",
+    "request": "Исправь нарушение контракта в EndpointBuilder.kt минимальной правкой. Проверь результат доступными средствами и перечисли выполненные проверки.",
+    "files": [
+      {
+        "path": "EndpointBuilder.kt",
+        "content": "class EndpointBuilder {\n    var port: Int = 443\n        private set\n\n    fun port(port: Int): EndpointBuilder {\n        this.port = port\n        require(port in 1..65535) { \"unexpected port: $port\" }\n        return this\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "F02",
+    "mode": "review",
+    "context": "client.post отправляет создание операции через HTTP. По контракту, аналогичному OkHttp Call.execute, IOException может возникнуть после принятия сервером запроса. POST не имеет idempotency key, сервер не обещает дедупликацию. Требование клиента - не создавать вторую операцию из-за повтора после неопределенного исхода.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Submit.kt",
+        "content": "fun submit(payload: String) {\n    try {\n        client.post(payload)\n    } catch (failure: java.io.IOException) {\n        client.post(payload)\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "F03",
+    "mode": "review",
+    "context": "Обрабатывается Okio Buffer с точными байтами 12345\\r\\n. Сначала применяется строгий лимит 4, затем разрешена повторная попытка с лимитом 5. Требуется получить 12345. Контракт bounded readUtf8LineStrict обещает не отбрасывать байты при неудачном поиске разделителя; других I/O-сбоев в этом сценарии нет.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Line.kt",
+        "content": "fun readLine(source: okio.BufferedSource): String =\n    try {\n        source.readUtf8LineStrict(4)\n    } catch (failure: java.io.EOFException) {\n        source.readUtf8LineStrict(5)\n    }\n"
+      }
+    ]
+  },
+  {
+    "id": "A01",
+    "mode": "review",
+    "context": "Одно нажатие должно отправлять в gateway один запрос charge. Две coroutine могут одновременно менять state. gateway.charge - синхронный внешний эффект без дедупликации. Используется kotlinx.coroutines MutableStateFlow.update.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Charge.kt",
+        "content": "fun charge() {\n    state.update { previous ->\n        gateway.charge()\n        previous.copy(charges = previous.charges + 1)\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "A02",
+    "mode": "review",
+    "context": "Два экземпляра Spring-приложения обслуживают одну PostgreSQL БД с READ COMMITTED. activeNameCount считает активные записи по name; insert вставляет активную запись. Для одного name должна существовать не более одной активной записи. Ни unique constraint/index, ни общий lock, ни другой координатор не настроены. Вызов идет через Spring proxy.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Register.java",
+        "content": "@Transactional\npublic void register(String name) {\n    if (repository.activeNameCount(name) == 0) {\n        repository.insert(name);\n    }\n}\n"
+      }
+    ]
+  },
+  {
+    "id": "B01",
+    "mode": "review",
+    "context": "Используется OkHttp HttpUrl.Builder. Промежуточный builder хранится только локально. URL публикуется после build; схема https и host указаны перед ним. Перестановки или дополнительные входы не рассматриваются.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "Endpoint.kt",
+        "content": "val builder = HttpUrl.Builder()\nbuilder.scheme(\"https\")\nbuilder.host(\"example.org\")\nval endpoint = builder.build()\n"
+      }
+    ]
+  },
+  {
+    "id": "B02",
+    "mode": "review",
+    "context": "Нужно установить, будет ли Spring MVC отклонять пустой name до вызова service.create. Передан только handler и DTO. Конфигурация валидатора, версия Spring и зависимости не предоставлены. Прямой unit test вручную создает controller и вызывает create(Request(\"\")); запрос через MVC еще не выполнялся.",
+    "request": "Проверь контракт и инварианты в указанной области. Обоснуй находки конкретным сценарием и предложи минимальное решение. Код не меняй.",
+    "files": [
+      {
+        "path": "CreateController.kt",
+        "content": "data class Request(@field:jakarta.validation.constraints.NotBlank val name: String)\n\n@RestController\nclass CreateController(private val service: Service) {\n    @PostMapping(\"/items\")\n    fun create(@RequestBody @jakarta.validation.Valid request: Request) {\n        service.create(request)\n    }\n}\n"
+      }
+    ]
+  }
+]

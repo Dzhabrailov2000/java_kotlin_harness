@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Дефектов не найдено... Оба значения совпадают с согласованным target 17, поэтому конфликта нет.",
+      "reason": "Ответ оставляет toolchain 17 и release 17 без изменений и не требует более нового JDK. Работа --release 17 и ленивого configureEach, включая compileTestJava, описана верно. Замечание про Kotlin jvmTarget и про настройки в других местах скрипта дано как условная оговорка о границах проверки. Это не дефект и не требование исправить код, поэтому ложных находок и вредных советов нет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Явно задавать `release` при toolchain 17 не обязательно, но это безвредно и не требует исправления.",
+      "reason": "Ответ признаёт фрагмент корректным и сохраняет toolchain и release. Он прямо пишет, что дублирование release безвредно и исправлять его не нужно. Технические детали верны: toolchain по умолчанию применяется к задачам Test, Javadoc и JavaExec, а options.release имеет тип Property<Int>. Конфликта с sourceCompatibility во фрагменте нет. Ответ не выходит за рамки задачи и не выдаёт допустимое решение за дефект."
+    }
+  ]
+}

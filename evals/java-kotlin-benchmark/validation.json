@@ -1,0 +1,142 @@
+{
+  "completed_utc": "2026-10-06T08:38:11.692816+00:00",
+  "report_sha256": "d7be59881cdd505c60774e105b098b46be67ce6e7f27198e8c82005caf7be1d6",
+  "validation_scope": "frozen snapshot only; current source/install differences explicitly reported; no certification of changed current skills",
+  "series": [
+    {
+      "run": "codex-gpt61-high",
+      "validated_trials": 120,
+      "judged_pairs": 60,
+      "distinct_sessions": 180,
+      "pairs": {
+        "B_only": 5,
+        "both_pass": 54,
+        "both_fail": 1
+      },
+      "partial_mode": false,
+      "snapshot_only": true,
+      "live_skill_drift": [
+        {
+          "location": "repository",
+          "skill": "java-kotlin-concurrency",
+          "expected_sha256": "6abab1407f970782604c51652df0d93545c972ed533bc2c6bf3b1d7a25bcff46",
+          "actual_sha256": "a3f9daf0e57a635079075c0f0d372d4aedbc1ff31bdea9a285ebbcdc6b885736"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-errors",
+          "expected_sha256": "079f51c1999d03a97c103306d3c8eeac2cd203d75ceeab0bdf4534f60b27e087",
+          "actual_sha256": "a84609a102efedccee688c0216a970a6a8c22d21f51dc457ccd5b9110d8aed98"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-naming",
+          "expected_sha256": "ae466d79009db12715caf6631bea28c432364b7a280e1e013881a4bf0af63567",
+          "actual_sha256": "89fe58c7fa7ea0060fb54c60607aeb6be6ba8896f8702f2fcdb77d3ef146f98a"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-observability",
+          "expected_sha256": "10da8326b8b296cbae4106aba11b596d3015c9c909ef59eb26aacfc3ccc84104",
+          "actual_sha256": "6e5bf4321722c8bbd11107686805ba0a8169b7f1897e376bb1ca15c04ae72f83"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-refactoring",
+          "expected_sha256": "841b9eed77ab0495b5b75aa351ace5119e2f208d7f0cb70ba066fe0899142554",
+          "actual_sha256": "41842e1b64db4783d73972644f089e7ea5e00993b97fcbc36fabd35d1d1c7cab"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-sql-migrations",
+          "expected_sha256": "caa1c40666be8564c3628188d11ded55de14d11dc3d27249485a749403b49dc4",
+          "actual_sha256": "412d1fb12972889622cb4da11fcf519857cd39686c6ff0091126c4d936687505"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-testing",
+          "expected_sha256": "a6764be75fd2231254940cce1e749e007efa2b588e3aea5e1e0521494a97d2bd",
+          "actual_sha256": "137566e79d54f7d263f03bd2f22c8f40d62006e19d06630db3e4dc4d35e4e366"
+        }
+      ]
+    },
+    {
+      "run": "claude-opus55-schema-max",
+      "validated_trials": 120,
+      "judged_pairs": 60,
+      "distinct_sessions": 180,
+      "pairs": {
+        "both_pass": 59,
+        "B_only": 1
+      },
+      "partial_mode": false,
+      "snapshot_only": true,
+      "live_skill_drift": [
+        {
+          "location": "repository",
+          "skill": "java-kotlin-concurrency",
+          "expected_sha256": "6abab1407f970782604c51652df0d93545c972ed533bc2c6bf3b1d7a25bcff46",
+          "actual_sha256": "a3f9daf0e57a635079075c0f0d372d4aedbc1ff31bdea9a285ebbcdc6b885736"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-errors",
+          "expected_sha256": "079f51c1999d03a97c103306d3c8eeac2cd203d75ceeab0bdf4534f60b27e087",
+          "actual_sha256": "a84609a102efedccee688c0216a970a6a8c22d21f51dc457ccd5b9110d8aed98"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-naming",
+          "expected_sha256": "ae466d79009db12715caf6631bea28c432364b7a280e1e013881a4bf0af63567",
+          "actual_sha256": "89fe58c7fa7ea0060fb54c60607aeb6be6ba8896f8702f2fcdb77d3ef146f98a"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-observability",
+          "expected_sha256": "10da8326b8b296cbae4106aba11b596d3015c9c909ef59eb26aacfc3ccc84104",
+          "actual_sha256": "6e5bf4321722c8bbd11107686805ba0a8169b7f1897e376bb1ca15c04ae72f83"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-refactoring",
+          "expected_sha256": "841b9eed77ab0495b5b75aa351ace5119e2f208d7f0cb70ba066fe0899142554",
+          "actual_sha256": "41842e1b64db4783d73972644f089e7ea5e00993b97fcbc36fabd35d1d1c7cab"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-sql-migrations",
+          "expected_sha256": "caa1c40666be8564c3628188d11ded55de14d11dc3d27249485a749403b49dc4",
+          "actual_sha256": "412d1fb12972889622cb4da11fcf519857cd39686c6ff0091126c4d936687505"
+        },
+        {
+          "location": "repository",
+          "skill": "java-kotlin-testing",
+          "expected_sha256": "a6764be75fd2231254940cce1e749e007efa2b588e3aea5e1e0521494a97d2bd",
+          "actual_sha256": "137566e79d54f7d263f03bd2f22c8f40d62006e19d06630db3e4dc4d35e4e366"
+        }
+      ]
+    }
+  ],
+  "author_audited_pairs": {
+    "codex-gpt61-high": 16,
+    "claude-opus55-schema-max": 10
+  },
+  "browser_preview": "Final populated report.html over loopback HTTP: both model labels/scores, model switch, Claude 1/Codex 5 discordant filters, expanded configuration-P answers and grades, naming search, 30 correct cases, 10 optional skills, 30 total skills, source drift notice, screenshots and no JS errors verified. Reloaded after final wording change.",
+  "file_url_preview": "Not verified: IAB blocks file: protocol. User original file tab preserved.",
+  "external_script_style_dependencies": 0,
+  "javascript_syntax_check": "node --check passed",
+  "python_syntax_check": "ast.parse passed",
+  "git_diff_check": "passed",
+  "temporary_preview_server": "stopped; owned exec session 88254 exited 0",
+  "agent_created_tab": "closed only agent-created tab 2; user tab preserved",
+  "independent_reviews": [
+    "claude-runner-review.md",
+    "claude-report-review.md"
+  ],
+  "code_sha256": {
+    "run_benchmark.py": "b7dad40fdcbb8e11055d7db41899a5d14530384d2a5aca7dfa8faac8b7b22ee4",
+    "build_report.py": "cfe0f105099990140f0b9add4c76ac92318f849bc750c4cc838830bd494b3bae",
+    "validate_results.py": "3d94338c27b7d8325dd334c44d4718a3291f1c3f133d9a175f669933c417399b"
+  },
+  "cleanup_utc": "2026-10-06T08:39:07.610804+00:00"
+}

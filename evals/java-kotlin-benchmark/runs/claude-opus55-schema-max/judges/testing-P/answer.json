@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Нет AOP-прокси для method validation и нет пути через MVC (binding и валидации HandlerMethod) … @WebMvcTest(Controller::class) и MockMvc",
+      "reason": "Ответ называет обойдённый Spring-путь: AOP-прокси method validation, а также binding и валидацию HandlerMethod в MVC. Он предлагает подходящие проверки: @WebMvcTest с MockMvc и проверкой статуса и resolvedException по контракту или бин-прокси из контекста с assertThrows. Прямой вызов доказательством не назван, наоборот, ответ пишет, что механизм в таком тесте не работает. Отсутствие assert и verify в показанном коде — реальный дефект в рамках задачи. Позитивный контроль предложен как желательный и не вредит."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Он минует AOP-прокси от MethodValidationPostProcessor и MVC-конвейер … @WebMvcTest(Controller::class), @MockitoBean для service и MockMvc",
+      "reason": "Ответ называет оба обходимых пути: прокси от MethodValidationPostProcessor и MVC-конвейер с resolver аргументов и встроенной method validation. Он даёт два корректных варианта проверки: @WebMvcTest с @MockitoBean и MockMvc или @Validated-прокси из контекста. Также указаны ожидаемые исключения и verifyNoInteractions. Прямой вызов доказательством не объявлен. Отдельно верно отмечено, что без assert тест зелёный именно тогда, когда валидации нет. Ожидание 400 — разумное умолчание и не ложный дефект."
+    }
+  ]
+}

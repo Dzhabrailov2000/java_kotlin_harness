@@ -1,0 +1,33 @@
+{
+  "created_utc": "2026-10-06T08:20:59.917087+00:00",
+  "checked": [
+    "resilience-P",
+    "configuration-P",
+    "rest-api-P",
+    "performance-C",
+    "security-C",
+    "concurrency-P",
+    "generics-C",
+    "contracts-C",
+    "modularity-C",
+    "build-dependencies-C"
+  ],
+  "overrides": [],
+  "note": "Автор-ИИ проверил 10 заранее выбранных пар, включая единственную пару с провалом или расхождением (configuration-P). Все оценки сохранены без поправок. Неполнота по составной рубрике не приравнивается к пропущенному дефекту.",
+  "case_notes": {
+    "resilience-P": "Both distinguish the statistics window from concurrency and propose maxConcurrentCalls(8). A overinterprets the absence of other limits and invents an earlier default configuration. Its fix does not require removing the circuit breaker or mandate a new statistics window; it says to choose the window for failure detection, with the default only as an example. Under the frozen definition this is not a mandatory fix for a nonexistent defect. The blinded judge independently flags the same scope overinterpretation and passes both. Keep grades; retain this qualitative limitation rather than claiming flawless prose.",
+    "generics-C": "Both retain Source<out T>, explain producer covariance and do not demand casts or redesign. B hypothetical future consume method is explicitly not a defect. No false-positive claim observed.",
+    "modularity-C": "Both preserve public module API and the modular monolith; neither demands microservices. Optional verification is explicitly limited/conditional. B mentions Modulith only if app is the base package and does not require adding it.",
+    "performance-C": "Both retain the sequential primitive stream and reject unmeasured optimization. Conditional integer overflow discussion is explicitly not a finding; no mandatory parallelism/cache/JMH rewrite.",
+    "concurrency-P": "Both demonstrate a lost increment interleaving and choose AtomicInteger or a common lock. A LongAdder alternative is acceptable for the stated no-lost-increments requirement, which does not demand linearizable concurrent reads. B protects other writes as part of its fix.",
+    "security-C": "Both retain bind parameters and the trusted tenant filter. Neither invents cross-tenant IDOR or mandates an unspecified within-tenant ownership policy. B proposes relevant preservation tests.",
+    "build-dependencies-C": "Both keep Java 17 toolchain/release and do not demand an upgrade. Kotlin advice in B is conditional on a Kotlin plugin not shown. A includes unnecessary explanation about source/target settings but does not require changing the given configuration.",
+    "configuration-P": "Both correctly diagnose 10 ms rather than 10 s and propose 10s/PT10S. Only B recommends a real Boot-context binding test and checking overridden sources. A therefore misses one part of the unchanged composite must; keep A fail/B pass. This is completeness, not an additional detected defect or harmful advice. In a text-only task checking binding can mean recommending a check, not executing it. B also makes an unverified generalization about localhost timing; this does not establish an additional defect.",
+    "rest-api-P": "Both identify false 201/completed after enqueue, choose 202/pending and provide an operation status identifier/URL. Both meet the frozen asynchronous contract criterion; B splits status-code/body into two findings but no new distinct bug is established.",
+    "contracts-C": "Both preserve valid empty Guava closedOpen(5,5), explain isEmpty true and contains(5) false, and do not strengthen the precondition to start < end. No unrelated redesign."
+  },
+  "selection": "audit-plan.json",
+  "reviewer": "author AI assistant; not independent human review",
+  "complete": true,
+  "completed_utc": "2026-10-06T08:35:19.841733+00:00"
+}

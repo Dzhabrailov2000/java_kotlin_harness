@@ -1,0 +1,16 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Ключ — позиционный нетипизированный List<Any>. Схема не задаёт ни порядок customerId/date, ни их типы.",
+      "evidence": "Компилируются и listOf(customerId, date), и listOf(date, customerId). Это разные ключи, поэтому при перепутанном порядке поиск без ошибки возвращает null. Также listOf(42, d) ≠ listOf(42L, d), потому что Integer.equals(Long) == false, а строка \"2024-05-01\" не равна LocalDate. Ключи из 1 или 3 элементов тоже допустимы. Если ключ — изменяемый список, то его изменение после put меняет hashCode, и запись в HashMap становится недостижимой.",
+      "fix": "Неизменяемый data class/record UsageKey(customerId: CustomerId, date: LocalDate) с корректными equals/hashCode."
+    },
+    {
+      "problem": "Значение List<Long> хранит requests и bytes по индексам, без имён.",
+      "evidence": "Ничто не мешает записать listOf(bytes, requests): метрики перепутаются без ошибки. Для списка длины 0 или 1 чтение v[1] бросит IndexOutOfBoundsException. Клиент видит только позиции [0]/[1] и не знает, что в них лежит.",
+      "fix": "UsageTotals(requests: Long, bytes: Long). Если API отдаёт JSON, удобнее возвращать строки с именованными полями customerId, date, requests, bytes."
+    }
+  ],
+  "summary": "Тип Map<List<Any>, List<Long>> сам создаёт описанную в требованиях путаницу позиций: ключ и значение не имеют имён и типов, а ошибки порядка, типа или длины не видны компилятору и приводят к промахам при поиске или к перепутанным метрикам. Нужны именованные неизменяемые типы: UsageKey для ключа и UsageTotals для значения."
+}

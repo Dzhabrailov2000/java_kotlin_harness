@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«условие tenant_id = :authorizedTenantId исключает возврат заказа другого tenant даже при подстановке его id»",
+      "reason": "Ответ корректно учитывает bind-параметры и tenant из проверенного principal, не объявляет клиентский ID уязвимостью и сохраняет tenant filter. Несуществующих дефектов и предложений перестройки нет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«Подстановка идентификатора заказа другого tenant не вернёт его строку»",
+      "reason": "Ответ признаёт запрос допустимым в заданном контексте и обосновывает защиту обязательным tenant filter и bind-параметрами. Ложных замечаний, расширения scope и вредных советов нет."
+    }
+  ]
+}

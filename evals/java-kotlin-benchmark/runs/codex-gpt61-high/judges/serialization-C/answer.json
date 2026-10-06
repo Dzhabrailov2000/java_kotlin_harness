@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Kotlin-свойство называется displayName, а @SerialName(\"name\") сохраняет имя публичного JSON-поля name",
+      "reason": "Верно разграничены Kotlin-имя и публичное JSON-имя. Сохранение wire-контракта не выдается за гарантию Kotlin-совместимости. Допустимое решение не объявлено дефектом, задача не расширена."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Переименование Kotlin-свойства не меняет указанный wire-контракт.",
+      "reason": "Корректно объяснено сохранение явного JSON-имени при сериализации и десериализации независимо от Kotlin-имени. Утверждений о сохранении Kotlin-совместимости нет. Несуществующих дефектов и расширения задачи нет."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [true],
+      "must_not_violated": [false],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«payments импортирует app.orders.internal.OrderRepository из внутреннего пакета orders»; «Предоставить нужную операцию через публичный API orders и использовать его в payments».",
+      "reason": "Конкретный импорт связан с нарушением границы закрытого модуля; предложен публичный API orders. Выделение отдельного сервиса не требуется. Условная альтернатива с @NamedInterface не выдается за обязательное исправление и не является вредным советом."
+    },
+    {
+      "label": "Y",
+      "must_met": [true],
+      "must_not_violated": [false],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "«В Snippet.txt:1 указан import app.orders.internal.OrderRepository»; «Предоставить в публичном API orders минимальный контракт для нужной payments операции и заменить зависимость на него».",
+      "reason": "Нарушение обосновано конкретным импортом и принятой границей закрытого orders. Предложен минимальный публичный контракт с сохранением репозитория внутри модуля. Отдельный сервис явно не требуется; ложных дефектов и вредных советов нет."
+    }
+  ]
+}

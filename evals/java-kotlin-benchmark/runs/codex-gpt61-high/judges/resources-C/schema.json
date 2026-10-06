@@ -1,0 +1,58 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "judgments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string",
+            "enum": [
+              "X",
+              "Y"
+            ]
+          },
+          "must_met": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "must_not_violated": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "false_positive": {
+            "type": "boolean"
+          },
+          "harmful_advice": {
+            "type": "boolean"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "must_met",
+          "must_not_violated",
+          "false_positive",
+          "harmful_advice",
+          "evidence",
+          "reason"
+        ]
+      }
+    }
+  },
+  "required": [
+    "judgments"
+  ]
+}

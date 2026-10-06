@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "issue",
+        "ok"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "problem": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "fix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "problem",
+          "evidence",
+          "fix"
+        ]
+      }
+    },
+    "summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "verdict",
+    "findings",
+    "summary"
+  ]
+}

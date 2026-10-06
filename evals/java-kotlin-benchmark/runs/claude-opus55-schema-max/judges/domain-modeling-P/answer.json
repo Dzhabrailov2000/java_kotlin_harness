@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "record DailyUsageKey(CustomerId customerId, LocalDate date) с неизменяемыми полями; ... record UsageTotal(long requests, long bytes); внутри кода — Map<DailyUsageKey, UsageTotal>",
+      "reason": "Ответ предлагает неизменяемый предметный ключ (CustomerId и LocalDate, календарная дата сохранена) и именованное значение с requests и bytes, так что смысл сохранён. typealias не упоминается, знак и ограничения ID не выдуманы: 42 — только пример расхождения Integer и Long. Доводы о порядке элементов, Integer.equals(Long), длине списка и изменении ключа после put верны. Замечание о JSON тоже верно: Jackson пишет ключ через toString() и без KeyDeserializer его не прочитает, kotlinx без allowStructuredMapKeys такой ключ отклонит. Оно прямо ограничено JSON и относится к требованию понятной схемы публичного API, поэтому это не ложный дефект. Предложение отдавать наружу DTO со строками — разумная альтернатива, а не вредный совет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Неизменяемый data class/record UsageKey(customerId: CustomerId, date: LocalDate) с корректными equals/hashCode. ... UsageTotals(requests: Long, bytes: Long).",
+      "reason": "Ответ предлагает стабильный предметный ключ (неизменяемый, с корректными equals/hashCode, CustomerId и LocalDate) и именованное значение UsageTotals(requests, bytes), смысл сохранён. Все доводы верны: перестановка элементов, Integer≠Long, строка вместо LocalDate, длина 0/1/3, изменение ключа после put. typealias не упоминается, ограничений знака или ID нет. Совет про JSON дан условно («Если API отдаёт JSON») и разумен."
+    }
+  ]
+}

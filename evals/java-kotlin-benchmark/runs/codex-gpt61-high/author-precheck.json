@@ -1,0 +1,30 @@
+{
+  "created_utc": "2026-10-05T23:08:59.501680+00:00",
+  "stage": "before reading model grades; grader process had already started when the last three pairs were inspected",
+  "checked_pairs": [
+    "solid-P",
+    "security-P",
+    "concurrency-P",
+    "sql-migrations-C",
+    "messaging-C",
+    "rest-api-C",
+    "collections-C",
+    "collections-P",
+    "persistence-P",
+    "contracts-C"
+  ],
+  "expected_pass_both": true,
+  "notes": {
+    "solid-P": "Both preserve repeat-close contract with guard, no unnecessary hierarchy; exact acronym LSP not required.",
+    "security-P": "Both show untrusted tenant filter cannot authorize and use trusted principal.",
+    "concurrency-P": "Both demonstrate lost update and choose atomic/common lock.",
+    "sql-migrations-C": "Both preserve simple nullable addition in specified stopped-old-version context; no needless rollout scheme.",
+    "messaging-C": "Both retain atomic inbox/business commit and ack sequence under explicit correct duplicate handling.",
+    "rest-api-C": "Both distinguish server effect idempotency from status equality.",
+    "collections-C": "Both retain valid pure stream; int bound explicitly provided.",
+    "collections-P": "Both demonstrate duplicate-key replacement and propose groupBy preserving both words.",
+    "persistence-P": "Both show READ COMMITTED race, require DB unique constraint and conflict handling; B additionally mentions cleanup and commit-time failure.",
+    "contracts-C": "Both preserve valid empty closed-open range; no stronger precondition imposed."
+  },
+  "completed_utc": "2026-10-05T23:10:16.832107+00:00"
+}

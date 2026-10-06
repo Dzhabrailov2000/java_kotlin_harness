@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4f-eb92-7272-a5e7-71670b29c65e"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Код соответствует контракту: неподходящий формат приводит к допустимому отсутствию значения (null), а технические ошибки parser.tryParse пробрасываются вызывающему без перехвата. Отсутствие результата и технический сбой остаются различимыми.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":6666,"cached_input_tokens":3712,"cache_write_input_tokens":0,"output_tokens":113,"reasoning_output_tokens":25}}

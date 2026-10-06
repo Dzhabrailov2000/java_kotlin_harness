@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4c-8e11-7c91-a95d-c4bff72a9bb4"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\"verdict\":\"ok\",\"findings\":[],\"summary\":\"Код корректен: BigDecimal.compareTo сравнивает числовые значения без учёта scale. Для «2.0» и «2.00» результат сравнения равен 0, поэтому equal будет true, что соответствует контракту.\"}"}}
+{"type":"turn.completed","usage":{"input_tokens":4900,"cached_input_tokens":3712,"cache_write_input_tokens":0,"output_tokens":98,"reasoning_output_tokens":21}}

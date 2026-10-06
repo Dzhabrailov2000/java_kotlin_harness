@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4a-b6f2-7451-a9ce-9bc41c671b8d"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Содержательных дефектов нет. Source только возвращает T из next() и не принимает значения этого типа, поэтому ковариантность out T корректна: Source<Подтип> можно безопасно использовать как Source<Супертип>.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":4878,"cached_input_tokens":3712,"cache_write_input_tokens":0,"output_tokens":102,"reasoning_output_tokens":18}}

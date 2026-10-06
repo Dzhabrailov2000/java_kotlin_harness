@@ -1,0 +1,25 @@
+2026-10-05T22:54:19.850605Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+2026-10-05T22:54:19.851356Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+OpenAI Codex v0.157.1
+--------
+workdir: /var/folders/3l/h0bzgbhn09l75f1jhd629tgr0000gq/T/jkh-bench-probe-cj1wj5sy
+model: gpt-6.1-sol
+provider: bench-http
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 01a10e46-70cb-7ca2-a276-deb689590a2e
+--------
+user
+Reply with exactly BENCH_OK. Do not use tools or inspect any files.
+warning: Under-development features enabled: skip_host_skill_discovery. Under-development features are incomplete and may behave unpredictably. To suppress this warning, set `suppress_unstable_features_warning = true` in /Users/dzabrailovramzan/.codex/config.toml.
+warning: Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues.
+ERROR: unexpected status 403 Forbidden: <html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-out}@media (min-width:768px){.scale-appear{height:48px;width:48px}}.data:empty{display:none}.data{border-radius:5px;color:#8e8ea0;max-width:420px;text-align:center;width:100%}.data ul{list-style:none;padding:0}.blocked-icon{color:#ef4444}.message{align-items:center;display:flex;font-size:1.5rem;gap:1rem;justify-content:center}.explanation{font-size:.9rem;line-height:1.5;max-width:420px;opacity:50%;text-align:center;width:100%}.explanation a{color:#000}@media (prefers-color-scheme:dark){body{background-color:#343541;c..., url: https://chatgpt.com/backend-api/codex/responses, cf-ray: a46003e34996ec41-DME
+ERROR: unexpected status 403 Forbidden: <html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-out}@media (min-width:768px){.scale-appear{height:48px;width:48px}}.data:empty{display:none}.data{border-radius:5px;color:#8e8ea0;max-width:420px;text-align:center;width:100%}.data ul{list-style:none;padding:0}.blocked-icon{color:#ef4444}.message{align-items:center;display:flex;font-size:1.5rem;gap:1rem;justify-content:center}.explanation{font-size:.9rem;line-height:1.5;max-width:420px;opacity:50%;text-align:center;width:100%}.explanation a{color:#000}@media (prefers-color-scheme:dark){body{background-color:#343541;c..., url: https://chatgpt.com/backend-api/codex/responses, cf-ray: a46003e34996ec41-DME

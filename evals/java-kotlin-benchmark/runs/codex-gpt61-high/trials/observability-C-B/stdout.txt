@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4c-3446-7fa3-bcab-e34be8881b93"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"Содержательных дефектов в заданном контексте нет. try-with-resources закрывает Scope и восстанавливает предыдущий контекст как при нормальном завершении operation.run(), так и при исключении. Затем finally вызывает span.end(). Дополнительная ручная instrumentation ошибок по условиям задачи не требуется.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":5755,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":142,"reasoning_output_tokens":45}}

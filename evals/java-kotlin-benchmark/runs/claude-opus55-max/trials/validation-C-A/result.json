@@ -1,0 +1,132 @@
+{
+  "started_utc": "2026-10-06T07:24:12.073863+00:00",
+  "engine": "claude",
+  "model_requested": "claude-opus-5-5",
+  "effort": "max",
+  "prompt_sha256": "4c12c7362b70ecf41aa49e71ba0b1fa8b6b2b713250b4627e8cff73862c1833c",
+  "prompt_chars": 1052,
+  "proxy": "http://127.0.0.1:43132",
+  "cost_usd": null,
+  "usage": {
+    "input_tokens": 891,
+    "cached_input_tokens": 0,
+    "cache_creation_input_tokens": 889,
+    "uncached_input_tokens": 2,
+    "output_tokens": 2579,
+    "reasoning_output_tokens": 2277
+  },
+  "runner_sha256": "29e3f2a705a3eb5de5ffd1fe19d933fc6ea49b16cf348aa609eebe18e3c03476",
+  "command": [
+    "claude",
+    "--safe-mode",
+    "--print",
+    "--model",
+    "claude-opus-5-5",
+    "--effort",
+    "max",
+    "--tools",
+    "",
+    "--disable-slash-commands",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--no-session-persistence",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--system-prompt",
+    "Perform the supplied text-only review or evaluation. Do not use tools."
+  ],
+  "status": "contaminated_initialization",
+  "exit_code": 0,
+  "seconds": 40.608,
+  "session_id": "0dd3bf0f-cbd4-4a65-8da5-1d8a16f66853",
+  "initialization": {
+    "model": "claude-opus-5-5",
+    "tools": [],
+    "mcp_servers": [],
+    "skills": [],
+    "plugins": [
+      {
+        "name": "jkh",
+        "path": "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness",
+        "source": "jkh@jkh"
+      },
+      {
+        "name": "agents-md",
+        "path": "builtin",
+        "source": "agents-md@builtin"
+      },
+      {
+        "name": "telemetry",
+        "path": "builtin",
+        "source": "telemetry@builtin"
+      },
+      {
+        "name": "plugin-authoring",
+        "path": "builtin",
+        "source": "plugin-authoring@builtin"
+      }
+    ],
+    "agents": [
+      "claude",
+      "Explore",
+      "general-purpose",
+      "Plan"
+    ]
+  },
+  "tool_events": 0,
+  "raw_usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 889,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 2579,
+    "output_tokens_details": {
+      "thinking_tokens": 2277
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 889,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2579,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 889,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 889
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "reported_list_cost_usd": 0.0587,
+  "model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 2579,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 889,
+      "webSearchRequests": 0,
+      "costUSD": 0.0587,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 2277,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "num_turns": 1,
+  "answer_chars": 738
+}

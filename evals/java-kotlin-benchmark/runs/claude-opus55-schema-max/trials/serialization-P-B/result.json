@@ -1,0 +1,121 @@
+{
+  "started_utc": "2026-10-06T08:00:08.003155+00:00",
+  "engine": "claude",
+  "model_requested": "claude-opus-5-5",
+  "effort": "max",
+  "prompt_sha256": "56cecee4bbd99b61840990b9926295ff1fece836c7c68a495896350c6b644af7",
+  "prompt_chars": 5289,
+  "proxy": "http://127.0.0.1:43132",
+  "cost_usd": null,
+  "usage": {
+    "input_tokens": 3348,
+    "cached_input_tokens": 638,
+    "cache_creation_input_tokens": 2708,
+    "uncached_input_tokens": 2,
+    "output_tokens": 4614,
+    "reasoning_output_tokens": 4047
+  },
+  "runner_sha256": "b7dad40fdcbb8e11055d7db41899a5d14530384d2a5aca7dfa8faac8b7b22ee4",
+  "command": [
+    "claude",
+    "--safe-mode",
+    "--setting-sources",
+    "",
+    "--settings",
+    "{\"enabledPlugins\": {\"jkh@jkh\": false, \"agents-md@builtin\": false, \"telemetry@builtin\": false, \"plugin-authoring@builtin\": false}}",
+    "--print",
+    "--model",
+    "claude-opus-5-5",
+    "--effort",
+    "max",
+    "--tools",
+    "",
+    "--disable-slash-commands",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--no-session-persistence",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--json-schema",
+    "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"verdict\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"issue\",\n        \"ok\"\n      ]\n    },\n    \"findings\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"additionalProperties\": false,\n        \"properties\": {\n          \"problem\": {\n            \"type\": \"string\"\n          },\n          \"evidence\": {\n            \"type\": \"string\"\n          },\n          \"fix\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"problem\",\n          \"evidence\",\n          \"fix\"\n        ]\n      }\n    },\n    \"summary\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"verdict\",\n    \"findings\",\n    \"summary\"\n  ]\n}\n",
+    "--system-prompt",
+    "Perform the supplied text-only review or evaluation. Use StructuredOutput only to serialize the answer; do not use other tools."
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "seconds": 60.617,
+  "session_id": "583580f2-b2c5-40d9-ae31-c189297fe312",
+  "initialization": {
+    "model": "claude-opus-5-5",
+    "tools": [
+      "StructuredOutput"
+    ],
+    "mcp_servers": [],
+    "skills": [],
+    "plugins": [],
+    "agents": [
+      "claude",
+      "Explore",
+      "general-purpose",
+      "Plan"
+    ]
+  },
+  "structured_output_events": 1,
+  "tool_events": 0,
+  "answer_source": "structured_output",
+  "raw_usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 2708,
+    "cache_read_input_tokens": 638,
+    "output_tokens": 4614,
+    "output_tokens_details": {
+      "thinking_tokens": 4047
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2708,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 4614,
+        "cache_read_input_tokens": 638,
+        "cache_creation_input_tokens": 2708,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2708
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "reported_list_cost_usd": 0.1140796,
+  "model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 4614,
+      "cacheReadInputTokens": 638,
+      "cacheCreationInputTokens": 2708,
+      "webSearchRequests": 0,
+      "costUSD": 0.1140796,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 4047,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "num_turns": 2,
+  "answer_chars": 1317
+}

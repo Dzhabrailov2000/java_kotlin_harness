@@ -1,0 +1,5 @@
+{
+  "verdict": "ok",
+  "findings": [],
+  "summary": "Содержательных дефектов нет. Toolchain выбирает JDK 17, а options.release.set(17) задаёт для задач JavaCompile совместимость исходного кода, байткода и доступных Java API с Java 17. Настройки согласованы с указанным target; JDK 17 доступен, Gradle запускается на подходящей JVM."
+}

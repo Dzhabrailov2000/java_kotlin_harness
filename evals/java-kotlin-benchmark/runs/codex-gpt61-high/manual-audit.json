@@ -1,0 +1,42 @@
+{
+  "checked": [
+    "solid-P",
+    "security-P",
+    "concurrency-P",
+    "sql-migrations-C",
+    "messaging-C",
+    "rest-api-C",
+    "collections-C",
+    "collections-P",
+    "persistence-P",
+    "contracts-C",
+    "naming-P",
+    "naming-C",
+    "domain-modeling-P",
+    "errors-P",
+    "rest-api-P",
+    "configuration-P"
+  ],
+  "overrides": [],
+  "note": "Автор-ИИ проверил 10 заранее выбранных пар и все 6 пар с провалом хотя бы одной группы. Исходные оценки сохранены без поправок. Неполнота по строгой рубрике не приравнивается к неверному диагнозу.",
+  "case_notes": {
+    "solid-P": "Both preserve repeat-close contract with guard, no unnecessary hierarchy; exact acronym LSP not required.",
+    "security-P": "Both show untrusted tenant filter cannot authorize and use trusted principal.",
+    "concurrency-P": "Both demonstrate lost update and choose atomic/common lock.",
+    "sql-migrations-C": "Both preserve simple nullable addition in specified stopped-old-version context; no needless rollout scheme.",
+    "messaging-C": "Both retain atomic inbox/business commit and ack sequence under explicit correct duplicate handling.",
+    "rest-api-C": "Both distinguish server effect idempotency from status equality.",
+    "collections-C": "Both retain valid pure stream; int bound explicitly provided.",
+    "collections-P": "Both demonstrate duplicate-key replacement and propose groupBy preserving both words.",
+    "persistence-P": "Both show READ COMMITTED race, require DB unique constraint and conflict handling; B additionally mentions cleanup and commit-time failure.",
+    "contracts-C": "Both preserve valid empty closed-open range; no stronger precondition imposed.",
+    "naming-P": "A recognizes index shift and possible expectation mismatch, but declines the requested naming improvement and never proposes readByte. B meets frozen must; neither proposes harmful or external API changes. Keep A fail / B pass under rubric.",
+    "naming-C": "Both correctly keep the public API and Manager. A omits explicit effect semantics; B explains creation/participation and why get is not pure. Under the frozen composite must, A fails coverage, not correctness of its no-change verdict. Keep grade but disclose this metric sensitivity prominently.",
+    "domain-modeling-P": "Both replace positional nested lists with named domain types. A does not specify immutable/value-equality key; under explicit stable-key rubric this is incomplete, not harmful advice. Keep A fail/B pass, and distinguish coverage from defect detection.",
+    "errors-P": "A catches swallowed cancellation but leaves ordinary failures unspecified. B also explains technical-error-to-empty-success ambiguity. Composite frozen criterion requires both, so A fail/B pass.",
+    "rest-api-P": "Both find false 201/completed and propose 202. B also discusses a way to check state, though conditionally. Rubric includes follow-up state discovery; keep A fail/B pass as completeness difference, not an extra discovered defect.",
+    "configuration-P": "Both accurately find 10 ms vs 10 s and propose explicit 10s (B also PT10S). Neither proposes checking effective binding. The frozen compound must includes binding verification, so retain both fails as strict coverage penalties, not incorrect diagnoses. Literal execution was unavailable in the text-only protocol; the criterion can only reasonably expect a verification recommendation and should be revisited in a future corpus, not edited after seeing results."
+  },
+  "selection": "audit-plan.json",
+  "reviewer": "author AI assistant; not independent human review"
+}

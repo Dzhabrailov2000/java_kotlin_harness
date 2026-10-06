@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Модуль payments зависит от внутреннего типа закрытого модуля orders, нарушая принятую модульную границу.",
+      "evidence": "В Snippet.txt:1 указан import app.orders.internal.OrderRepository. По контексту импорт находится в payments, а orders — закрытый Spring Modulith module. Такая зависимость обращается к internals вместо публичного API: payments связан с внутренним репозиторием orders, поэтому его изменение может потребовать изменений в payments. Проверка ApplicationModules.verify() должна выявить нарушение доступа к internals.",
+      "fix": "Предоставить в публичном API orders минимальный контракт для нужной payments операции и заменить зависимость на него. OrderRepository оставить внутренней деталью orders; простая передача репозитория через конструктор не устранит нарушение."
+    }
+  ],
+  "summary": "Обнаружено нарушение явно принятой границы закрытых Spring Modulith modules: payments → orders.internal. Достаточно перехода на публичный API orders, без выделения отдельного сервиса."
+}

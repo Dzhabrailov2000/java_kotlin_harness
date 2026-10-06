@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "`import app.orders.internal.OrderRepository;` … Обращаться к orders через публичный API в пакете app.orders: сервис или фасад, который возвращает DTO или идентификаторы.",
+      "reason": "Ответ связывает конкретный import с границей закрытого модуля orders. Он верно объясняет, что открыт только базовый пакет и @NamedInterface, а verify() отклонит такую зависимость. Предложен API в app.orders, возвращающий DTO или идентификаторы. События предложены лишь как один из вариантов, это корректная альтернатива. «Сервис» здесь означает класс внутри модуля, а не выделение orders в отдельный сервис. Ложных дефектов нет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "В app.orders объявить узкий публичный API (например, OrderLookup) только с теми операциями, которые реально нужны payments.",
+      "reason": "Ответ привязывает import к принятой в проекте модели закрытых модулей и к проверке verify(). Предложен узкий API OrderLookup в базовом пакете, который возвращает DTO. Реализация остаётся в internal. Есть уместные дополнения: не открывать internal через @NamedInterface или open module и проверить, не появился ли цикл. Выделить orders в отдельный сервис ответ не требует. Ложных дефектов и вредных советов нет."
+    }
+  ]
+}

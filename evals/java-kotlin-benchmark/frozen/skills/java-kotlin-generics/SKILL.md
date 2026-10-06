@@ -1,0 +1,104 @@
+---
+name: java-kotlin-generics
+description: "Проектирует и проверяет понятные generic API Java/Kotlin: границы типов, variance, wildcards, erasure, reified и безопасные преобразования. Применяется при введении или изменении обобщенных типов и сложных сигнатур."
+---
+
+# Дженерики без лишней сложности
+
+Порядок работы и выбор исправления - методика этого навыка. Метки S1 и далее подтверждают
+указанные факты API или рекомендации авторов; они не делают всю методику требованием языка.
+Проверь применимость документации к версиям проекта. Примеры ниже адаптированы, если не указано иное.
+
+Используй параметр типа для реальной связи входа, выхода или нескольких операций.
+В новом коде выбери минимальный API; в ревью обоснуй правку, редактируй только по заданию.
+
+## Обоснуй обобщение
+
+- Покажи минимум один нужный способ использования и типовую связь, которую generic сохраняет.
+  Не превращай однотипный бизнес-сервис в framework с T, ID, DTO, Mapper и Factory на будущее.
+
+- Выбирай generic function для локальной связи, generic class - когда тип связывает состояние
+  и операции объекта. Не переноси параметр на весь класс без необходимости.
+
+- Используй T/E/K/V в знакомом протоколе, содержательное имя - когда параметров и ролей много.
+  Читаемость проверяй на вызове; клиент не должен расшифровывать вложенные wildcard-цепочки.
+
+- Связные предметные данные лучше выразить именованным типом, чем универсальной вложенной map.
+  Typealias сокращает сигнатуру, но не добавляет новый тип и не делает неверные комбинации невозможными. [S1]
+
+## Выбери variance по использованию
+
+- Producer отдает T, consumer принимает T. В Java для соответствующего параметра используй
+  ? extends T или ? super T; если нужно и читать, и писать T, часто требуется invariant T. [S2] [S3]
+
+- В Kotlin declaration-site out/in подходит роли типа; use-site projection сужает конкретное
+  использование. MutableList<T> invariant по смыслу чтения и записи, List<out T> - producer. [S3]
+
+- Не считай covariance обещанием неизменяемости или отсутствия aliases.
+  Java List<? extends T> не допускает произвольный add(T), но не является immutable-объектом. [S2] [S4]
+
+- Избегай wildcard в возвращаемом типе, если он лишь переносит сложность на клиента.
+  Не убирай полезную variance из входа ради визуальной простоты: это может сломать нужные вызовы. [S2]
+
+- Ограничивай T интерфейсом/типом, чьи операции нужны реализации. Несколько bounds допустимы,
+  когда реально нужны; не вводи recursive/self types для обычного builder без причины. [S3]
+
+## Учитывай runtime
+
+- JVM стирает generic-аргументы. Проверка List или List<*> не доказывает List<String>.
+  Не скрывай unchecked cast широкой @Suppress, не своди все к Any/Object. [S3]
+
+- Inline reified позволяет проверить доступный тип в месте вызова, но не проверяет автоматически
+  вложенные аргументы произвольной List<T>. Для внешних данных нужен реальный parser/serializer
+  с типовой информацией и проверкой содержимого, а не один cast. [S3]
+
+- Если unchecked участок необходим на известной границе, изолируй его, объясни сохраняемый
+  инвариант и проверь неверный вход. Не объявляй suppression доказательством безопасности.
+
+- При публичном Java/Kotlin API проверь обе стороны: variance, wildcards, nullability,
+  type inference и перегрузки после erasure. Не добавляй @JvmSuppressWildcards повсюду. [S5]
+
+## Примеры
+
+В [Kotlin generics](https://kotlinlang.org/docs/generics.html) роль producer выражается так:
+
+~~~kotlin
+interface Source<out T> {
+    fun next(): T
+}
+~~~
+
+Добавление consume(value: T) меняет роль и не совместимо с безусловным out.
+Для чтения и записи выбери invariant тип или отдельные действительно нужные роли. [S3]
+
+Типовая связь [JDK Collections.copy](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/Collections.html):
+
+~~~java
+static <T> void copy(List<? super T> destination, List<? extends T> source)
+~~~
+
+Это сигнатура-пример, не новая реализация. Метод заменяет существующие элементы: размер
+destination должен быть достаточным. Generics не описывают и не проверяют это предусловие. [S6]
+
+## Проверь
+
+Скомпилируй нужные вызовы с подтипами и проверь, что недопустимые подстановки отвергаются.
+Для erasure/десериализации проверь runtime-содержимое, а не только компиляцию cast.
+В находке дай конкретный вызов, потерянную типовую гарантию или ненужную сложность и простую замену.
+Не считай каждый generic дефектом и не требуй избавиться от полезных generic-библиотек.
+
+## Источники по тезисам
+
+- [S1] - Kotlin type aliases не создают тип.
+- [S2] - Java: wildcard recommendations.
+- [S3] - Kotlin: variance, bounds, erasure и reified.
+- [S4] - JDK List: контракт и необязательные операции.
+- [S5] - Kotlin API со стороны Java: JVM names, accessors, wildcards.
+- [S6] - JDK Collections.copy: variance и размер destination.
+
+[S1]: https://kotlinlang.org/docs/type-aliases.html
+[S2]: https://docs.oracle.com/javase/tutorial/java/generics/wildcardGuidelines.html
+[S3]: https://kotlinlang.org/docs/generics.html
+[S4]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/List.html
+[S5]: https://kotlinlang.org/docs/java-to-kotlin-interop.html
+[S6]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/Collections.html

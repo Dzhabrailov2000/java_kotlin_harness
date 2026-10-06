@@ -1,0 +1,179 @@
+[
+  {
+    "id": "Q1",
+    "request": "Исправь название переменной, без изменения поведения и архитектуры.",
+    "primary": [
+      "java-kotlin-naming"
+    ],
+    "avoid": [
+      "java-kotlin-security",
+      "java-kotlin-solid"
+    ]
+  },
+  {
+    "id": "Q2",
+    "request": "Проверь потерянные инкременты общего счетчика из двух threads.",
+    "primary": [
+      "java-kotlin-concurrency"
+    ]
+  },
+  {
+    "id": "Q3",
+    "request": "Новая migration переименовывает колонку при rolling deployment.",
+    "primary": [
+      "java-kotlin-sql-migrations"
+    ]
+  },
+  {
+    "id": "Q4",
+    "request": "Проверь, не съедается ли отмена в runCatching.",
+    "primary": [
+      "java-kotlin-errors"
+    ],
+    "also_reasonable": [
+      "java-kotlin-concurrency"
+    ]
+  },
+  {
+    "id": "Q5",
+    "request": "Проверь Map<List<Any>, Map<String, List<Long>>> в публичном API: трудно понять смысл полей.",
+    "primary": [
+      "java-kotlin-domain-modeling"
+    ],
+    "also_reasonable": [
+      "java-kotlin-collections"
+    ]
+  },
+  {
+    "id": "Q6",
+    "request": "Определи правильный статус HTTP для принятой фоновой задачи.",
+    "primary": [
+      "java-kotlin-rest-api"
+    ]
+  },
+  {
+    "id": "Q7",
+    "request": "Исправь опечатку в README, код не меняй.",
+    "primary": [],
+    "avoid": [
+      "java-kotlin-concurrency",
+      "java-kotlin-persistence",
+      "java-kotlin-security"
+    ]
+  },
+  {
+    "id": "Q8",
+    "request": "Составь краткий протокол встречи из текста.",
+    "primary": [],
+    "avoid": [
+      "java-kotlin-naming",
+      "java-kotlin-solid",
+      "java-kotlin-contracts"
+    ]
+  },
+  {
+    "id": "Q9",
+    "request": "Упрости вложенные if в функции, сохрани порядок эффектов.",
+    "primary": [
+      "java-kotlin-refactoring"
+    ]
+  },
+  {
+    "id": "Q10",
+    "request": "После добавления default-параметра Kotlin-библиотеки перестал работать старый Java binary client.",
+    "primary": [
+      "java-kotlin-interop"
+    ]
+  },
+  {
+    "id": "Q11",
+    "request": "Проверь потерю null при kotlinx.serialization explicitNulls=false.",
+    "primary": [
+      "java-kotlin-serialization"
+    ]
+  },
+  {
+    "id": "Q12",
+    "request": "Почему Size на nullable DTO пропускает null через Validator?",
+    "primary": [
+      "java-kotlin-validation"
+    ]
+  },
+  {
+    "id": "Q13",
+    "request": "Нужно завтра в 12:00 Europe/Berlin, проверь plusHours(24) перед DST.",
+    "primary": [
+      "java-kotlin-time"
+    ]
+  },
+  {
+    "id": "Q14",
+    "request": "Проверь точность BigDecimal(double) и выбранное округление.",
+    "primary": [
+      "java-kotlin-numeric-modeling"
+    ]
+  },
+  {
+    "id": "Q15",
+    "request": "Проверь policy retries и общий deadline HTTP-клиента.",
+    "primary": [
+      "java-kotlin-resilience"
+    ]
+  },
+  {
+    "id": "Q16",
+    "request": "После падения listener событие обработано повторно: проверь offset и DB effect.",
+    "primary": [
+      "java-kotlin-messaging"
+    ]
+  },
+  {
+    "id": "Q17",
+    "request": "Проверь Spring Cache key для нескольких tenant.",
+    "primary": [
+      "java-kotlin-caching"
+    ]
+  },
+  {
+    "id": "Q18",
+    "request": "Проверь labels метрик, число time series постоянно растет.",
+    "primary": [
+      "java-kotlin-observability"
+    ]
+  },
+  {
+    "id": "Q19",
+    "request": "Установи effective Boot property и единицу timeout.",
+    "primary": [
+      "java-kotlin-configuration"
+    ]
+  },
+  {
+    "id": "Q20",
+    "request": "Проверь, измеряет ли JMH benchmark нужную работу.",
+    "primary": [
+      "java-kotlin-performance"
+    ]
+  },
+  {
+    "id": "Q21",
+    "request": "Почему zip с Mono<Void> не вызывает combinator?",
+    "primary": [
+      "java-kotlin-reactive"
+    ]
+  },
+  {
+    "id": "Q22",
+    "request": "Проверь import internal-пакета соседнего Modulith-модуля.",
+    "primary": [
+      "java-kotlin-modularity"
+    ]
+  },
+  {
+    "id": "Q23",
+    "request": "Проверь checksum mismatch и JVM targets в Gradle build.",
+    "primary": [
+      "java-kotlin-build-dependencies"
+    ]
+  }
+]

@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"01a10e4f-c059-71c3-a65e-baac38628d03"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `gpt-6.1-sol` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"{\n  \"verdict\": \"ok\",\n  \"findings\": [],\n  \"summary\": \"groupBy группирует события по дате и возвращает Map<LocalDate, List<Event>>. LocalDate — неизменяемый ключ с равенством по значению. Для небольшой локальной группировки с ясным потребителем обычная Map подходит; отдельный доменный тип не требуется. Содержательных дефектов в рамках заданного контекста нет.\"\n}"}}
+{"type":"turn.completed","usage":{"input_tokens":6569,"cached_input_tokens":3712,"cache_write_input_tokens":0,"output_tokens":138,"reasoning_output_tokens":30}}

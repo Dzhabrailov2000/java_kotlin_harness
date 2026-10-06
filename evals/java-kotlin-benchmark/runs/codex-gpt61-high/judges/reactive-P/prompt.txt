@@ -1,0 +1,18 @@
+Оцени два анонимных ответа ревьюера по рубрике. Условия получения ответов неизвестны.
+Не используй инструменты и внешние файлы. Оцени смысл, не совпадение слов или длину. Для каждого
+must дай boolean: true, если требование достаточно выполнено; для каждого must_not дай boolean:
+true, если запрет НАРУШЕН. Порядок boolean должен совпадать с порядком критериев. Не добавляй критерии.
+false_positive означает выданный за обязательное исправление несуществующий дефект или нарушение
+явного scope. Условные оговорки сами по себе не ложный дефект. harmful_advice означает совет,
+который ломает явно заданный контракт или добавляет требуемую автором ненужную архитектуру.
+Обычная корректная альтернатива не вредный совет. Evidence: короткая цитата ответа. Reason: кратко
+объясни оценку. У каждого label X и Y должен быть ровно один judgment. Ответ - только JSON:
+{"judgments":[{"label":"X","must_met":[true],"must_not_violated":[false],
+"false_positive":false,"harmful_advice":false,"evidence":"...","reason":"..."}, ...]}.
+
+Задание:
+{"context": "WebFlux event loop собирает Mono, blockingRead - blocking I/O.", "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.", "files": [{"path": "Snippet.txt", "content": "return Mono.just(blockingRead()).subscribeOn(Schedulers.boundedElastic());"}]}
+Рубрика:
+{"group": "problem", "must": ["Найти eager вызов до scheduler; fromCallable/defer на правильной границе."], "must_not": ["Считать subscribeOn переносом уже исполненного метода."]}
+Ответы:
+{"X": "{\n  \"verdict\": \"issue\",\n  \"findings\": [\n    {\n      \"problem\": \"Blocking I/O выполняется на WebFlux event loop, а не на boundedElastic.\",\n      \"evidence\": \"Java вычисляет blockingRead() до вызова Mono.just(), поэтому чтение выполняется синхронно при сборке Mono и блокирует event loop. subscribeOn применяется уже к Mono с готовым результатом и не переносит ранее выполненное чтение на другой поток.\",\n      \"fix\": \"Отложить чтение до подписки: Mono.fromCallable(() -> blockingRead()).subscribeOn(Schedulers.boundedElastic()). Тогда blockingRead() будет выполняться на boundedElastic.\"\n    }\n  ],\n  \"summary\": \"subscribeOn не переносит вычисление аргумента Mono.just на другой поток; blockingRead необходимо выполнять лениво.\"\n}", "Y": "{\n  \"verdict\": \"issue\",\n  \"findings\": [\n    {\n      \"problem\": \"Блокирующий I/O выполняется на WebFlux event loop, а не на boundedElastic.\",\n      \"evidence\": \"В Mono.just(blockingRead()) вызов blockingRead() вычисляется немедленно при сборке Mono на event loop. Это блокирует его поток и задерживает обработку других запросов. subscribeOn влияет на выполнение при подписке, но не переносит уже выполненный вызов.\",\n      \"fix\": \"Отложить blocking I/O до подписки: return Mono.fromCallable(this::blockingRead).subscribeOn(Schedulers.boundedElastic());. Подписку оставить вызывающему коду или WebFlux.\"\n    }\n  ],\n  \"summary\": \"subscribeOn не исправляет блокирование при сборке Mono: blockingRead необходимо выполнять лениво через fromCallable.\"\n}"}

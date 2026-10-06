@@ -1,0 +1,782 @@
+[
+  {
+    "id": "naming-P",
+    "skill": "java-kotlin-naming",
+    "mode": "review",
+    "context": "Функция читает Netty ByteBuf и увеличивает readerIndex. Выбор имени относится к новому внутреннему wrapper.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "fun getByte(buffer: ByteBuf): Byte = buffer.readByte()"
+      }
+    ]
+  },
+  {
+    "id": "naming-C",
+    "skill": "java-kotlin-naming",
+    "mode": "review",
+    "context": "Это существующий Spring PlatformTransactionManager. Задача - проверить понятность роли; внешний API менять нельзя.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "interface PlatformTransactionManager { TransactionStatus getTransaction(TransactionDefinition definition); }"
+      }
+    ]
+  },
+  {
+    "id": "solid-P",
+    "skill": "java-kotlin-solid",
+    "mode": "review",
+    "context": "Базовый Source гарантирует безопасный повторный close; wrapper добавлен для метрики.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "override fun close() { check(!closed); closed = true; delegate.close() }"
+      }
+    ]
+  },
+  {
+    "id": "solid-C",
+    "skill": "java-kotlin-solid",
+    "mode": "review",
+    "context": "Набор двух вариантов закрыт по требованию, внешнее расширение не нужно.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "sealed interface Outcome; fun label(x: Outcome) = when(x) { is Ok -> \"ok\"; is Failed -> \"failed\" }"
+      }
+    ]
+  },
+  {
+    "id": "contracts-P",
+    "skill": "java-kotlin-contracts",
+    "mode": "review",
+    "context": "При неверном port прежнее значение должно сохраниться; допустимы 1..65535.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "fun port(p: Int) { this.port = p; require(p in 1..65535) }"
+      }
+    ]
+  },
+  {
+    "id": "contracts-C",
+    "skill": "java-kotlin-contracts",
+    "mode": "review",
+    "context": "Guava closedOpen должен представлять допустимый пустой диапазон.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val range = Range.closedOpen(5, 5)"
+      }
+    ]
+  },
+  {
+    "id": "domain-modeling-P",
+    "skill": "java-kotlin-domain-modeling",
+    "mode": "review",
+    "context": "Составной ключ публичного API означает customerId и calendar date, значения - requests и bytes. Клиенты путают позиции; схема должна быть понятной.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Map<List<Any>, List<Long>> totals;"
+      }
+    ]
+  },
+  {
+    "id": "domain-modeling-C",
+    "skill": "java-kotlin-domain-modeling",
+    "mode": "review",
+    "context": "Небольшая локальная группировка уже использует immutable ключи и имеет ясного потребителя.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val byDate: Map<LocalDate, List<Event>> = events.groupBy { it.date }"
+      }
+    ]
+  },
+  {
+    "id": "concurrency-P",
+    "skill": "java-kotlin-concurrency",
+    "mode": "review",
+    "context": "Два JVM-потока увеличивают один счетчик; требуется не терять инкременты.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Volatile var count = 0\nfun increment() { count++ }"
+      }
+    ]
+  },
+  {
+    "id": "concurrency-C",
+    "skill": "java-kotlin-concurrency",
+    "mode": "review",
+    "context": "Нужен один независимый счетчик; AtomicInteger принадлежит сервису.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "private val count = AtomicInteger()\nfun increment(): Int = count.incrementAndGet()"
+      }
+    ]
+  },
+  {
+    "id": "errors-P",
+    "skill": "java-kotlin-errors",
+    "mode": "review",
+    "context": "Отмена suspend-чтения должна доходить до вызывающего. Пустой список означает успешно прочитанный пустой результат.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "suspend fun load() = runCatching { remote.load() }.getOrDefault(emptyList())"
+      }
+    ]
+  },
+  {
+    "id": "errors-C",
+    "skill": "java-kotlin-errors",
+    "mode": "review",
+    "context": "Отсутствие значения разрешено; parser.tryParse возвращает null только для неподходящего формата, технические ошибки пробрасывает.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "fun parseCandidate(input: String): Candidate? = parser.tryParse(input)"
+      }
+    ]
+  },
+  {
+    "id": "rest-api-P",
+    "skill": "java-kotlin-rest-api",
+    "mode": "review",
+    "context": "Служба после enqueue еще не создала ресурс; обработка может позже завершиться ошибкой. Ответ обещает завершение.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "return ResponseEntity.status(201).body(mapOf(\"status\" to \"completed\"))"
+      }
+    ]
+  },
+  {
+    "id": "rest-api-C",
+    "skill": "java-kotlin-rest-api",
+    "mode": "review",
+    "context": "DELETE удаляет объект при первом запросе. Повтор не меняет состояние и получает 404. Это опубликованный контракт.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "DELETE /items/42 -> 204\nDELETE /items/42 -> 404"
+      }
+    ]
+  },
+  {
+    "id": "persistence-P",
+    "skill": "java-kotlin-persistence",
+    "mode": "review",
+    "context": "Два экземпляра работают с PostgreSQL READ COMMITTED; unique constraint отсутствует. Email обязан быть уникальным.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Transactional fun create(email: String) { if (!repo.existsByEmail(email)) repo.insert(email) }"
+      }
+    ]
+  },
+  {
+    "id": "persistence-C",
+    "skill": "java-kotlin-persistence",
+    "mode": "review",
+    "context": "PostgreSQL имеет UNIQUE(email). Сервис вставляет запись и на реальной transaction boundary переводит подтвержденный unique conflict в договоренный ответ.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "INSERT INTO account (email) VALUES (:email)"
+      }
+    ]
+  },
+  {
+    "id": "sql-migrations-P",
+    "skill": "java-kotlin-sql-migrations",
+    "mode": "review",
+    "context": "Примененная Flyway V1 уже создала таблицу на постоянном стенде. В PR редактируется V1 для новой колонки; новые миграции не добавлены.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "-- V1__create_items.sql (already applied)\nCREATE TABLE items (id bigint primary key, title text);"
+      }
+    ]
+  },
+  {
+    "id": "sql-migrations-C",
+    "skill": "java-kotlin-sql-migrations",
+    "mode": "review",
+    "context": "Проверено, что работает только остановленная старая версия. Новая versioned migration добавляет nullable column без бизнес-backfill; существующий код ее не читает.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "ALTER TABLE items ADD COLUMN description text;"
+      }
+    ]
+  },
+  {
+    "id": "collections-P",
+    "skill": "java-kotlin-collections",
+    "mode": "review",
+    "context": "Нужно сохранить все слова с одинаковой начальной буквой.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val byLetter = listOf(\"apple\", \"apricot\").associateBy { it.first() }"
+      }
+    ]
+  },
+  {
+    "id": "collections-C",
+    "skill": "java-kotlin-collections",
+    "mode": "review",
+    "context": "Нужно суммировать веса красных объектов в пределах int; порядок эффектов не требуется, lambda чистые.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "int total = widgets.stream().filter(w -> w.color() == RED).mapToInt(Widget::weight).sum();"
+      }
+    ]
+  },
+  {
+    "id": "generics-P",
+    "skill": "java-kotlin-generics",
+    "mode": "review",
+    "context": "Внешний JSON декодирован как Any; список может содержать числа. Требуется доказанно получить строки.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Suppress(\"UNCHECKED_CAST\")\nval names = decoded as List<String>"
+      }
+    ]
+  },
+  {
+    "id": "generics-C",
+    "skill": "java-kotlin-generics",
+    "mode": "review",
+    "context": "Generic API только производит T; преобразований внешних данных нет.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "interface Source<out T> { fun next(): T }"
+      }
+    ]
+  },
+  {
+    "id": "nullability-P",
+    "skill": "java-kotlin-nullability",
+    "mode": "review",
+    "context": "Отсутствующая цена означает неизвестную цену, а 0 - бесплатный товар. Сейчас неизвестное становится бесплатным.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val price = dto.price ?: BigDecimal.ZERO"
+      }
+    ]
+  },
+  {
+    "id": "nullability-C",
+    "skill": "java-kotlin-nullability",
+    "mode": "review",
+    "context": "Отсутствующая подпись по явно заданному UI-контракту должна отображаться пустой строкой.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val caption = dto.caption.orEmpty()"
+      }
+    ]
+  },
+  {
+    "id": "testing-P",
+    "skill": "java-kotlin-testing",
+    "mode": "review",
+    "context": "Тест обязан доказать, что Spring method validation отклоняет ввод до service. Экземпляр создается вручную, реальный MVC/proxy path не проверяется.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val controller = Controller(service)\ncontroller.create(Request(\"\"))"
+      }
+    ]
+  },
+  {
+    "id": "testing-C",
+    "skill": "java-kotlin-testing",
+    "mode": "review",
+    "context": "Чистое локальное правило границ не зависит от Spring и БД. Unit test проверяет допустимый край и отклонение следующего числа.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "assertEquals(65535, validatePort(65535))\nassertThrows<IllegalArgumentException> { validatePort(65536) }"
+      }
+    ]
+  },
+  {
+    "id": "resources-P",
+    "skill": "java-kotlin-resources",
+    "mode": "review",
+    "context": "Источник Files.lines должен оставаться открыт во время потребления вызывающим.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Stream<String> load(Path p) throws IOException { try (var s = Files.lines(p)) { return s.filter(x -> !x.isBlank()); } }"
+      }
+    ]
+  },
+  {
+    "id": "resources-C",
+    "skill": "java-kotlin-resources",
+    "mode": "review",
+    "context": "Небольшой локальный файл обрабатывается до возврата count.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "try (var lines = Files.lines(path)) { return lines.filter(s -> !s.isBlank()).count(); }"
+      }
+    ]
+  },
+  {
+    "id": "security-P",
+    "skill": "java-kotlin-security",
+    "mode": "review",
+    "context": "Пользователь может читать только свой tenant. tenantId берется прямо из JSON клиента и нигде не сверяется с principal.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "repo.findByIdAndTenantId(request.id, request.tenantId)"
+      }
+    ]
+  },
+  {
+    "id": "security-C",
+    "skill": "java-kotlin-security",
+    "mode": "review",
+    "context": "Tenant получен из проверенного principal; query использует bind parameters и условие tenant; другой tenant не возвращается. Фильтры безопасности реально активны.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "SELECT id FROM orders WHERE id = :id AND tenant_id = :authorizedTenantId"
+      }
+    ]
+  },
+  {
+    "id": "refactoring-P",
+    "skill": "java-kotlin-refactoring",
+    "mode": "review",
+    "context": "Ревью предложенного рефакторинга с сохранением поведения. load имеет I/O-эффект; на неизвестный ID вызываться не должен.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Before: if (isKnown(id)) load(id) else null\nAfter: val result = load(id); if (isKnown(id)) result else null"
+      }
+    ]
+  },
+  {
+    "id": "refactoring-C",
+    "skill": "java-kotlin-refactoring",
+    "mode": "review",
+    "context": "Локальный pure lookup возвращает null для неизвестного ID, load вызывается только для известного.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "if (!isKnown(id)) return null\nreturn load(id)"
+      }
+    ]
+  },
+  {
+    "id": "interop-P",
+    "skill": "java-kotlin-interop",
+    "mode": "review",
+    "context": "Опубликованная Kotlin/JVM библиотека имеет Java binary clients, собранные против read(Path). Bridge не добавлен.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Before: fun read(path: Path): ByteArray\nAfter: fun read(path: Path, limit: Int = 100): ByteArray"
+      }
+    ]
+  },
+  {
+    "id": "interop-C",
+    "skill": "java-kotlin-interop",
+    "mode": "review",
+    "context": "Kotlin extension overloads отличаются generic-параметром; разные JVM-имена заданы намеренно.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "fun List<String>.valid(): Boolean = all { it.isNotBlank() }\n@JvmName(\"validInts\") fun List<Int>.valid(): Boolean = all { it > 0 }"
+      }
+    ]
+  },
+  {
+    "id": "serialization-P",
+    "skill": "java-kotlin-serialization",
+    "mode": "review",
+    "context": "kotlinx.serialization; требуется round trip nullable description без изменения null на default.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Serializable data class Item(val description: String? = \"fallback\")\nval mapper = Json { explicitNulls = false }\nval decoded = mapper.decodeFromString<Item>(mapper.encodeToString(Item(null)))"
+      }
+    ]
+  },
+  {
+    "id": "serialization-C",
+    "skill": "java-kotlin-serialization",
+    "mode": "review",
+    "context": "Публичный JSON field должен оставаться name; меняется лишь Kotlin property.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Serializable data class Item(@SerialName(\"name\") val displayName: String)"
+      }
+    ]
+  },
+  {
+    "id": "validation-P",
+    "skill": "java-kotlin-validation",
+    "mode": "review",
+    "context": "Вызов через действующий Validator. ids обязательно и должно содержать 1..100 элементов; других проверок null нет.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "data class Input(@field:Size(min = 1, max = 100) val ids: List<String>?)"
+      }
+    ]
+  },
+  {
+    "id": "validation-C",
+    "skill": "java-kotlin-validation",
+    "mode": "review",
+    "context": "Действующий Validator; только требование обязательного списка 1..100, содержимое строк не ограничено.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "data class Input(@field:NotNull @field:Size(min = 1, max = 100) val ids: List<String>?)"
+      }
+    ]
+  },
+  {
+    "id": "time-P",
+    "skill": "java-kotlin-time",
+    "mode": "review",
+    "context": "Нужно следующее местное полуденное событие, Europe/Berlin 2024-03-30 12:00.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "val next = start.plusHours(24)"
+      }
+    ]
+  },
+  {
+    "id": "time-C",
+    "skill": "java-kotlin-time",
+    "mode": "review",
+    "context": "Нужно измерить локально прошедший интервал, значение не сериализуется и не сравнивается между процессами.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "long started = System.nanoTime();\nrunOperation();\nlong elapsedNanos = System.nanoTime() - started;"
+      }
+    ]
+  },
+  {
+    "id": "numeric-modeling-P",
+    "skill": "java-kotlin-numeric-modeling",
+    "mode": "review",
+    "context": "Требуется точное десятичное число 0.1 для дальнейшего расчета.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "BigDecimal rate = new BigDecimal(0.1);"
+      }
+    ]
+  },
+  {
+    "id": "numeric-modeling-C",
+    "skill": "java-kotlin-numeric-modeling",
+    "mode": "review",
+    "context": "Проверяется только числовое равенство, scale не часть контракта, объект не является map key.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "boolean equal = new BigDecimal(\"2.0\").compareTo(new BigDecimal(\"2.00\")) == 0;"
+      }
+    ]
+  },
+  {
+    "id": "resilience-P",
+    "skill": "java-kotlin-resilience",
+    "mode": "review",
+    "context": "Resilience4j CircuitBreaker CLOSED. Требование: не более 8 concurrent calls; другого лимита нет.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "CircuitBreakerConfig.custom().slidingWindowSize(8).build()"
+      }
+    ]
+  },
+  {
+    "id": "resilience-C",
+    "skill": "java-kotlin-resilience",
+    "mode": "review",
+    "context": "POST может быть принят удаленно до IOException, idempotency API не поддерживается.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "catch (IOException ex) { return Outcome.Unknown(ex); } // no automatic retry"
+      }
+    ]
+  },
+  {
+    "id": "messaging-P",
+    "skill": "java-kotlin-messaging",
+    "mode": "review",
+    "context": "At-least-once доставка. inbox.markSeen самостоятельно коммитит отдельную транзакцию до изменения бизнес-данных.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "if (inbox.markSeen(event.id)) { updateOrder(event); }\nack();"
+      }
+    ]
+  },
+  {
+    "id": "messaging-C",
+    "skill": "java-kotlin-messaging",
+    "mode": "review",
+    "context": "DB inbox ID и изменение order атомарны в одной транзакции, duplicate skip корректно обработан, ack после commit.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "transaction { insertUniqueEventId(event.id); updateOrder(event); }\nack();"
+      }
+    ]
+  },
+  {
+    "id": "caching-P",
+    "skill": "java-kotlin-caching",
+    "mode": "review",
+    "context": "Spring cache активен. Один экземпляр обслуживает tenants; результат load зависит от tenant в SecurityContext; key только id.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Cacheable(\"orders\")\nfun find(id: Long): OrderView = load(currentTenant(), id)"
+      }
+    ]
+  },
+  {
+    "id": "caching-C",
+    "skill": "java-kotlin-caching",
+    "mode": "review",
+    "context": "Небольшой локальный справочник, 5 минут устаревания допустимы, общий cache instance ограничен.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Cache<String, String> cache = Caffeine.newBuilder().maximumSize(1000).expireAfterWrite(Duration.ofMinutes(5)).build();\nreturn cache.get(key, this::load);"
+      }
+    ]
+  },
+  {
+    "id": "observability-P",
+    "skill": "java-kotlin-observability",
+    "mode": "review",
+    "context": "Micrometer counter создается на каждого пользователя, ID неограниченно растут.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "registry.counter(\"requests\", \"userId\", user.id.toString()).increment()"
+      }
+    ]
+  },
+  {
+    "id": "observability-C",
+    "skill": "java-kotlin-observability",
+    "mode": "review",
+    "context": "OpenTelemetry Span уже создан; operation не требует дополнительной ручной instrumentation ошибки в этой задаче.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "try (Scope ignored = span.makeCurrent()) { operation.run(); } finally { span.end(); }"
+      }
+    ]
+  },
+  {
+    "id": "configuration-P",
+    "skill": "java-kotlin-configuration",
+    "mode": "review",
+    "context": "Spring Boot Duration binding. Требование connectTimeout 10 секунд, @DurationUnit отсутствует.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "remote.connect-timeout=10"
+      }
+    ]
+  },
+  {
+    "id": "configuration-C",
+    "skill": "java-kotlin-configuration",
+    "mode": "review",
+    "context": "ConfigurationProperties bean зарегистрирован, принято положительное Duration, 2 секунды соответствует контракту.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "remote.connect-timeout=2s"
+      }
+    ]
+  },
+  {
+    "id": "performance-P",
+    "skill": "java-kotlin-performance",
+    "mode": "review",
+    "context": "JMH benchmark должен измерять Math.sqrt(input), результат не используется.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "@Benchmark public void sqrt() { Math.sqrt(input); }"
+      }
+    ]
+  },
+  {
+    "id": "performance-C",
+    "skill": "java-kotlin-performance",
+    "mode": "review",
+    "context": "Малая ограниченная коллекция, Stream последовательно считает сумму, performance-дефекта не предъявлено.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "int sum = values.stream().mapToInt(Value::weight).sum();"
+      }
+    ]
+  },
+  {
+    "id": "reactive-P",
+    "skill": "java-kotlin-reactive",
+    "mode": "review",
+    "context": "WebFlux event loop собирает Mono, blockingRead - blocking I/O.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "return Mono.just(blockingRead()).subscribeOn(Schedulers.boundedElastic());"
+      }
+    ]
+  },
+  {
+    "id": "reactive-C",
+    "skill": "java-kotlin-reactive",
+    "mode": "review",
+    "context": "Consumer отображает текущее состояние; промежуточные состояния можно пропускать, команды здесь не передаются.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "states.conflate().collect { render(it) }"
+      }
+    ]
+  },
+  {
+    "id": "modularity-P",
+    "skill": "java-kotlin-modularity",
+    "mode": "review",
+    "context": "В проекте приняты закрытые Spring Modulith modules. payments импортирует orders.internal.OrderRepository.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "import app.orders.internal.OrderRepository;"
+      }
+    ]
+  },
+  {
+    "id": "modularity-C",
+    "skill": "java-kotlin-modularity",
+    "mode": "review",
+    "context": "Небольшой монолит, явная API-граница и ациклические связи, deployable service не требуется.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "import app.orders.OrderLookup; // exported module API"
+      }
+    ]
+  },
+  {
+    "id": "build-dependencies-P",
+    "skill": "java-kotlin-build-dependencies",
+    "mode": "review",
+    "context": "Gradle dependency verification обнаружила mismatch; источник новой суммы не проверен.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "Proposed fix: delete verification-metadata.xml and regenerate it from the downloaded artifacts."
+      }
+    ]
+  },
+  {
+    "id": "build-dependencies-C",
+    "skill": "java-kotlin-build-dependencies",
+    "mode": "review",
+    "context": "Согласованный Java target 17, JDK 17 доступен, build runs with appropriate Gradle JVM.",
+    "request": "Проверь указанный код в рамках задачи. Обоснуй содержательные замечания. Код не меняй.",
+    "files": [
+      {
+        "path": "Snippet.txt",
+        "content": "java { toolchain.languageVersion.set(JavaLanguageVersion.of(17)) }\ntasks.withType<JavaCompile>().configureEach { options.release.set(17) }"
+      }
+    ]
+  }
+]

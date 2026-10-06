@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Нарушена авторизация на уровне tenant (IDOR/BOLA). tenantId присылает клиент, поэтому фильтр по tenant не ограничивает доступ.",
+      "evidence": "В вызове repo.findByIdAndTenantId(request.id, request.tenantId) оба аргумента взяты из JSON. По условию задачи tenantId не сверяется с principal. Аутентифицированный пользователь tenant A может передать tenantId=B и id объекта tenant B и получить чужие данные. Условие по tenant_id проверяет только, что id и tenantId соответствуют друг другу, но не право вызывающего на этот tenant. Непредсказуемый id (например, UUID) проблему не устраняет.",
+      "fix": "Передавать в репозиторий tenantId из доверенного контекста (principal/SecurityContext), а не из DTO. Если клиенту разрешено выбирать tenant, сначала проверить право principal на request.tenantId и при отсутствии права отказать (403 или 404 по контракту API). Добавить тесты через полный security path: чужой tenantId приводит к отказу, свой — к успешному чтению."
+    }
+  ],
+  "summary": "Дефект подтверждается условием задачи: изоляцию tenant можно обойти, подменив tenantId в JSON, и читать данные других tenant. tenantId нужно брать из principal или сверять с principal до запроса к репозиторию."
+}

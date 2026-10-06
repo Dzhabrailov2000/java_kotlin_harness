@@ -1,0 +1,115 @@
+{
+  "started_utc": "2026-10-06T07:26:03.195097+00:00",
+  "engine": "claude",
+  "model_requested": "claude-opus-5-5",
+  "effort": "max",
+  "prompt_sha256": "c2e0585df07fa5324edeb8acc4dee788f7af2944729a9c07cd850025ba4f6a72",
+  "prompt_chars": 62,
+  "proxy": "http://127.0.0.1:43132",
+  "cost_usd": null,
+  "usage": {
+    "input_tokens": 480,
+    "cached_input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "uncached_input_tokens": 480,
+    "output_tokens": 81,
+    "reasoning_output_tokens": 72
+  },
+  "runner_sha256": "29e3f2a705a3eb5de5ffd1fe19d933fc6ea49b16cf348aa609eebe18e3c03476",
+  "command": [
+    "claude",
+    "--setting-sources",
+    "",
+    "--settings",
+    "{\"enabledPlugins\": {\"jkh@jkh\": false, \"agents-md@builtin\": false, \"telemetry@builtin\": false, \"plugin-authoring@builtin\": false}}",
+    "--safe-mode",
+    "--print",
+    "--model",
+    "claude-opus-5-5",
+    "--effort",
+    "max",
+    "--tools",
+    "",
+    "--disable-slash-commands",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--no-session-persistence",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--system-prompt",
+    "Perform the supplied text-only review or evaluation. Do not use tools."
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "seconds": 5.539,
+  "session_id": "fcd61bb6-9760-4af1-a53b-4accc0db3c15",
+  "initialization": {
+    "model": "claude-opus-5-5",
+    "tools": [],
+    "mcp_servers": [],
+    "skills": [],
+    "plugins": [],
+    "agents": [
+      "claude",
+      "Explore",
+      "general-purpose",
+      "Plan"
+    ]
+  },
+  "tool_events": 0,
+  "raw_usage": {
+    "input_tokens": 480,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 81,
+    "output_tokens_details": {
+      "thinking_tokens": 72
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 480,
+        "output_tokens": 81,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "reported_list_cost_usd": 0.00354,
+  "model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 480,
+      "outputTokens": 81,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.00354,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 72,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "num_turns": 1,
+  "answer_chars": 14
+}

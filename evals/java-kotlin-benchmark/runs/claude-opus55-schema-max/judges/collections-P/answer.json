@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "В итоге `byLetter == {a=apricot}`, слова «apple» в результате нет. … Заменить на `groupBy { it.first() }`.",
+      "reason": "Ответ верно описывает, как работает associateBy: при совпадении ключа 'a' последний элемент apricot заменяет apple, и apple теряется. В качестве исправления предложен groupBy с корректным результатом {a=[apple, apricot]}. Ответ правильно отмечает смену типа на Map<Char, List<String>>. Ответ не считает associateBy эквивалентом groupBy, а прямо противопоставляет их. Несуществующих дефектов и вредных советов нет."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "При совпадении ключей `associateBy` сохраняет последний элемент, поэтому результат равен {a=apricot} … Заменить вызов на `groupBy { it.first() }`.",
+      "reason": "Ответ корректно показывает, что apple вытесняется словом apricot ({a=apricot}), и предлагает groupBy, который сохраняет все слова и их порядок. Смена типа указана верно. Ответ прямо говорит, что любой вариант с одним значением на ключ задачу не решает, то есть associateBy и groupBy явно разведены. Замечание про first() подаётся как отсутствие дефекта на этом входе, а не как ложный дефект. Обратные слэши в цитатах внутри summary — лишь мелкий артефакт форматирования."
+    }
+  ]
+}

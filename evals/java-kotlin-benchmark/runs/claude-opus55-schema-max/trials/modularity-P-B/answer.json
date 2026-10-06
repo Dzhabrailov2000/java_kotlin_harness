@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Модуль payments зависит от внутреннего типа orders.internal.OrderRepository. Это нарушает принятую в проекте модель закрытых модулей Spring Modulith.",
+      "evidence": "В payments есть `import app.orders.internal.OrderRepository;`. В закрытом модуле orders другие модули могут обращаться только к базовому пакету app.orders и к явно объявленным named interfaces. Пакет orders.internal считается внутренним. Проверка `ApplicationModules.of(Application.class).verify()` отклонит зависимость от неэкспонированного типа. Это правило Modulith, а не компилятора. Чем это вредно: payments получает прямой доступ к хранилищу заказов в обход контракта orders. Любая правка хранения данных в orders (смена сигнатуры, переименование, перенос) сломает payments.",
+      "fix": "В app.orders объявить узкий публичный API (например, OrderLookup) только с теми операциями, которые реально нужны payments. Для чтения он возвращает DTO, а не entity. Изменения выполняет команда orders, которая сохраняет его инварианты. Реализацию оставить в orders.internal поверх OrderRepository и перевести payments на этот API. Не скрывать нарушение через @NamedInterface на internal или через open module. Проверить, что не появился цикл orders↔payments, и прогнать verify()."
+    }
+  ],
+  "summary": "Есть дефект границы: payments импортирует внутренний репозиторий закрытого модуля orders. Проверка verify() это отклонит, а деталь хранения данных orders становится зависимостью payments. Нужен узкий API в базовом пакете orders."
+}

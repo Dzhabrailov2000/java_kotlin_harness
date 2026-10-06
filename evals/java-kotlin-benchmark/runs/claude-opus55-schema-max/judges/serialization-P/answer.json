@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "При explicitNulls = false значение null не записывается в JSON, поэтому encodeToString(Item(null)) даёт {}. При чтении {} отсутствующее поле получает default \"fallback\"",
+      "reason": "Ответ правильно связывает explicitNulls = false в настройке mapper с пропуском поля и подстановкой default \"fallback\" при чтении. Правило «отсутствует → null» верно ограничено полями без default, поэтому запрет о трёх состояниях не нарушен. Предложенные исправления корректны: explicitNulls = true (это значение по умолчанию) или default = null с оговоркой о контракте. Совет завести отдельный Json — разумная оговорка о влиянии на другие DTO, а не вредная архитектура."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "При explicitNulls = false энкодер пропускает свойства со значением null, поэтому encodeToString(Item(null)) возвращает \"{}\"... decoded == Item(\"fallback\"), а не Item(null).",
+      "reason": "Ответ точно находит замену null на default после пропуска поля и проверяет настройку mapper, включая корректное замечание о совместной работе с encodeDefaults = false. Он верно ссылается на асимметрию, описанную в документации, и не утверждает, что nullable гарантирует три состояния. Исправления корректны, а их компромиссы оговорены."
+    }
+  ]
+}

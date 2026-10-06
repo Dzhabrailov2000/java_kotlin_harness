@@ -1,0 +1,157 @@
+{
+  "generated_utc": "2026-10-06T08:36:51.692883+00:00",
+  "run": "claude-opus55-schema-max",
+  "run_config": {
+    "engine": "claude",
+    "model": "claude-opus-5-5",
+    "effort": "max",
+    "proxy": "http://127.0.0.1:43132",
+    "workers": 2,
+    "timeout": 180,
+    "manifest_sha256": "36b6238b5686ac9884aaaf8d6e57158ffc744016686a4be306eb2f24a04c730c",
+    "base_prompt_sha256": "99290c297ad33fd0dcdf1d4fd6d173599c92290ce8aed80ea35cc9cba6c94b3e",
+    "answer_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "issue",
+            "ok"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "problem": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "problem",
+              "evidence",
+              "fix"
+            ]
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "findings",
+        "summary"
+      ]
+    },
+    "runner_sha256": "b7dad40fdcbb8e11055d7db41899a5d14530384d2a5aca7dfa8faac8b7b22ee4"
+  },
+  "display": {
+    "label": "Claude / claude-opus-5-5 / max",
+    "model_note": "Model ID из modelUsage: claude-opus-5-5. Идентификатор не гарантирует неизменяемую серверную реализацию.",
+    "cost_note": "Вход Claude = input_tokens + cache_read_input_tokens + cache_creation_input_tokens. Cached - чтение кэша; создание показано отдельно. Thinking входит в output. CLI возвращает оценку по прайс-листу, не счет по подписке; фактическая денежная стоимость неизвестна."
+  },
+  "observed_model_ids": [
+    "claude-opus-5-5"
+  ],
+  "metrics": {
+    "A": {
+      "attempted": 60,
+      "completed": 60,
+      "graded": 60,
+      "passed": 59,
+      "verdict_matches": 60,
+      "input_tokens": 92582,
+      "cached_input_tokens": 37004,
+      "cache_creation_input_tokens": 55458,
+      "output_tokens": 171963,
+      "reasoning_output_tokens": 141575,
+      "mean_seconds": 31.31,
+      "median_seconds": 26.91,
+      "answer_chars": 62306,
+      "problem_passed": 29,
+      "correct_passed": 30,
+      "false_positives": 0,
+      "harmful_advice": 0,
+      "tool_events": 0,
+      "structured_output_events": 60
+    },
+    "B": {
+      "attempted": 60,
+      "completed": 60,
+      "graded": 60,
+      "passed": 60,
+      "verdict_matches": 60,
+      "input_tokens": 231846,
+      "cached_input_tokens": 38280,
+      "cache_creation_input_tokens": 193446,
+      "output_tokens": 220742,
+      "reasoning_output_tokens": 187644,
+      "mean_seconds": 38.95,
+      "median_seconds": 30.45,
+      "answer_chars": 69748,
+      "problem_passed": 30,
+      "correct_passed": 30,
+      "false_positives": 0,
+      "harmful_advice": 0,
+      "tool_events": 0,
+      "structured_output_events": 60
+    }
+  },
+  "pairs": {
+    "both_pass": 59,
+    "B_only": 1
+  },
+  "judge_completed": 60,
+  "judge_usage": {
+    "input_tokens": 169018,
+    "cached_input_tokens": 41934,
+    "cache_creation_input_tokens": 126964,
+    "uncached_input_tokens": 120,
+    "output_tokens": 297131,
+    "reasoning_output_tokens": 260640
+  },
+  "manual_audit": {
+    "created_utc": "2026-10-06T08:20:59.917087+00:00",
+    "checked": [
+      "resilience-P",
+      "configuration-P",
+      "rest-api-P",
+      "performance-C",
+      "security-C",
+      "concurrency-P",
+      "generics-C",
+      "contracts-C",
+      "modularity-C",
+      "build-dependencies-C"
+    ],
+    "overrides": [],
+    "note": "Автор-ИИ проверил 10 заранее выбранных пар, включая единственную пару с провалом или расхождением (configuration-P). Все оценки сохранены без поправок. Неполнота по составной рубрике не приравнивается к пропущенному дефекту.",
+    "case_notes": {
+      "resilience-P": "Both distinguish the statistics window from concurrency and propose maxConcurrentCalls(8). A overinterprets the absence of other limits and invents an earlier default configuration. Its fix does not require removing the circuit breaker or mandate a new statistics window; it says to choose the window for failure detection, with the default only as an example. Under the frozen definition this is not a mandatory fix for a nonexistent defect. The blinded judge independently flags the same scope overinterpretation and passes both. Keep grades; retain this qualitative limitation rather than claiming flawless prose.",
+      "generics-C": "Both retain Source<out T>, explain producer covariance and do not demand casts or redesign. B hypothetical future consume method is explicitly not a defect. No false-positive claim observed.",
+      "modularity-C": "Both preserve public module API and the modular monolith; neither demands microservices. Optional verification is explicitly limited/conditional. B mentions Modulith only if app is the base package and does not require adding it.",
+      "performance-C": "Both retain the sequential primitive stream and reject unmeasured optimization. Conditional integer overflow discussion is explicitly not a finding; no mandatory parallelism/cache/JMH rewrite.",
+      "concurrency-P": "Both demonstrate a lost increment interleaving and choose AtomicInteger or a common lock. A LongAdder alternative is acceptable for the stated no-lost-increments requirement, which does not demand linearizable concurrent reads. B protects other writes as part of its fix.",
+      "security-C": "Both retain bind parameters and the trusted tenant filter. Neither invents cross-tenant IDOR or mandates an unspecified within-tenant ownership policy. B proposes relevant preservation tests.",
+      "build-dependencies-C": "Both keep Java 17 toolchain/release and do not demand an upgrade. Kotlin advice in B is conditional on a Kotlin plugin not shown. A includes unnecessary explanation about source/target settings but does not require changing the given configuration.",
+      "configuration-P": "Both correctly diagnose 10 ms rather than 10 s and propose 10s/PT10S. Only B recommends a real Boot-context binding test and checking overridden sources. A therefore misses one part of the unchanged composite must; keep A fail/B pass. This is completeness, not an additional detected defect or harmful advice. In a text-only task checking binding can mean recommending a check, not executing it. B also makes an unverified generalization about localhost timing; this does not establish an additional defect.",
+      "rest-api-P": "Both identify false 201/completed after enqueue, choose 202/pending and provide an operation status identifier/URL. Both meet the frozen asynchronous contract criterion; B splits status-code/body into two findings but no new distinct bug is established.",
+      "contracts-C": "Both preserve valid empty Guava closedOpen(5,5), explain isEmpty true and contains(5) false, and do not strengthen the precondition to start < end. No unrelated redesign."
+    },
+    "selection": "audit-plan.json",
+    "reviewer": "author AI assistant; not independent human review",
+    "complete": true,
+    "completed_utc": "2026-10-06T08:35:19.841733+00:00"
+  }
+}

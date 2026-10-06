@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Ранний возврат ясно отделяет особый исход от основного сценария; дополнительное упрощение не требуется.",
+      "reason": "Ответ явно одобряет существующий guard clause, верно объясняет контракт и не предлагает новых слоёв или расширения задачи."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "для неизвестного ID сразу возвращается null, а load(id) вызывается только при isKnown(id) == true",
+      "reason": "Ответ признаёт существующее решение корректным и сохраняет guard clause без изменений. Выдуманных дефектов, новых слоёв и расширения задачи нет."
+    }
+  ]
+}

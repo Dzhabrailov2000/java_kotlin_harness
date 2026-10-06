@@ -1,0 +1,30 @@
+{
+  "judgments": [
+    {
+      "label": "X",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Метод equals здесь дал бы false, потому что учитывает scale, так что выбор compareTo правильный.",
+      "reason": "Ответ оставляет compareTo и не требует сравнивать scale. Вердикт ok без замечаний, все утверждения верны: 2.0 и 2.00 равны по compareTo, equals вернул бы false. Про BigDecimal(double), hashCode и null сказано только как о том, чего в коде нет. Новых требований ответ не вводит."
+    },
+    {
+      "label": "Y",
+      "must_met": [
+        true
+      ],
+      "must_not_violated": [
+        false
+      ],
+      "false_positive": false,
+      "harmful_advice": false,
+      "evidence": "Дефектов нет, код решает задачу. compareTo сравнивает BigDecimal только по числовому значению и не учитывает scale.",
+      "reason": "Ответ оставляет compareTo, scale equality не требует, вердикт ok без замечаний. Scale указаны верно (1 и 2). Несогласованность compareTo с equals и hashCode упомянута верно и прямо названа неважной, потому что объект не используется как ключ. Фраза про BigDecimal(double) условная, ложного дефекта нет, задача не расширена."
+    }
+  ]
+}

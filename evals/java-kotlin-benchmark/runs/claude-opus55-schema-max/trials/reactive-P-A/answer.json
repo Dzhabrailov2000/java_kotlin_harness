@@ -1,0 +1,11 @@
+{
+  "verdict": "issue",
+  "findings": [
+    {
+      "problem": "Блокирующий blockingRead() всё равно выполняется на потоке event loop, и subscribeOn этого не исправляет.",
+      "evidence": "Java вычисляет аргумент Mono.just(...) сразу, когда вызывающий код строит цепочку. Это происходит на потоке event loop ещё до подписки. subscribeOn(boundedElastic()) переносит на другой пул только подписку и выдачу уже готового значения. Поэтому блокирующий I/O занимает event loop и задерживает все соединения, которые обслуживает этот поток. Тот же жадный вызов даёт ещё несколько проблем. Исключение из blockingRead() вылетает синхронно и не попадает в onError/onErrorResume. Повторная подписка или retry() не выполнит чтение заново: Mono.just каждый раз выдаёт уже полученное значение. Чтение происходит, даже если на Mono никто не подпишется. Если blockingRead() вернёт null, Mono.just выбросит NullPointerException.",
+      "fix": "Перенести вызов на момент подписки: Mono.fromCallable(this::blockingRead).subscribeOn(Schedulers.boundedElastic()). Тогда чтение выполнится на boundedElastic, исключения придут как сигнал onError, а при результате null Mono просто завершится без значения."
+    }
+  ],
+  "summary": "Есть дефект: Mono.just(blockingRead()) выполняет блокирующее чтение сразу и на потоке event loop, поэтому subscribeOn(boundedElastic()) ничего не даёт. Нужно Mono.fromCallable(this::blockingRead).subscribeOn(Schedulers.boundedElastic())."
+}

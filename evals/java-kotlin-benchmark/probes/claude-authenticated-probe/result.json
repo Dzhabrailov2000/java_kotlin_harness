@@ -1,0 +1,84 @@
+{
+  "started_utc": "2026-10-06T07:21:43.238075+00:00",
+  "engine": "claude",
+  "model_requested": "opus",
+  "effort": "max",
+  "prompt_sha256": "c2e0585df07fa5324edeb8acc4dee788f7af2944729a9c07cd850025ba4f6a72",
+  "prompt_chars": 62,
+  "proxy": "http://127.0.0.1:43132",
+  "cost_usd": 0.003668,
+  "usage": {
+    "input_tokens": 477,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 88,
+    "output_tokens_details": {
+      "thinking_tokens": 79
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "not_available",
+    "iterations": [
+      {
+        "input_tokens": 477,
+        "output_tokens": 88,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 0
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard"
+  },
+  "runner_sha256": "6e4ddfe011c151fc24583ca1548944a41c312c21f1dd3f1b650ee6c8023ca01e",
+  "command": [
+    "claude",
+    "--safe-mode",
+    "--print",
+    "--model",
+    "opus",
+    "--effort",
+    "max",
+    "--tools",
+    "",
+    "--disable-slash-commands",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--no-session-persistence",
+    "--output-format",
+    "json",
+    "--system-prompt",
+    "Perform the supplied text-only review or evaluation. Do not use tools."
+  ],
+  "status": "completed",
+  "exit_code": 0,
+  "seconds": 14.921,
+  "model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 477,
+      "outputTokens": 88,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.003668,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 79,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "answer_chars": 14
+}
