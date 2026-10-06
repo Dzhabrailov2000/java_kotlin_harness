@@ -49,7 +49,6 @@
 | `agents/judge.md` | Проверка документа по критериям и источникам, вердикт с доказательствами |
 | `agents/defect-reviewer.md` | Поиск critical и major дефектов в изменениях кода |
 | `hooks/` | Хук ASCII-пунктуации на Write и Edit |
-| `statusline/statusline.js` | Строка состояния: контекст и лимиты; работает только в терминале |
 
 ## Использование навыков
 
@@ -88,7 +87,7 @@
 ## Установка
 
 1. Клонировать репозиторий в `~/IdeaProjects/java_kotlin_harness`. Другой путь - поправить его в шагах
-   ниже. Для хука и строки состояния нужен Node.js.
+   ниже. Для хука нужен Node.js.
 2. Плагин:
 
    ```bash
@@ -106,11 +105,9 @@
    mkdir -p ~/.claude/rules && ln -s ~/IdeaProjects/java_kotlin_harness/rules/kotlin.md ~/.claude/rules/kotlin.md
    ```
 
-4. По желанию строка состояния в `~/.claude/settings.json`:
-
-   ```json
-   "statusLine": {"type": "command", "command": "node \"$HOME/IdeaProjects/java_kotlin_harness/statusline/statusline.js\""}
-   ```
+4. Codex, по желанию. Он не раскрывает `@`-импорт и не знает `rules/`, поэтому в `~/.codex/AGENTS.md`
+   нужно прямое указание прочитать `core.md`, а для Kotlin - `rules/kotlin.md`. Навыки - ссылками из
+   `~/.agents/skills` на каталоги `skills/`.
 
 Проверка:
 - `claude --plugin-dir ~/IdeaProjects/java_kotlin_harness plugin details jkh` - инвентарь источника: ожидаются 36 навыков
