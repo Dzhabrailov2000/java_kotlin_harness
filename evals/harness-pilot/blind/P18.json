@@ -1,0 +1,69 @@
+{
+  "id": "P18",
+  "task": "T05",
+  "kind": "review",
+  "instruction": "Проверь PaymentService. Контракт: один вызов charge - одна логическая оплата. Gateway атомарно\nдедуплицирует по idempotencyKey; IOException может означать потерю ответа ПОСЛЕ списания.\nПовторить IOException можно до трех попыток; RejectedCharge повторять нельзя. Отдельные\nвызовы charge, даже с одинаковыми данными, означают отдельные оплаты. Проверка суммы,\nbackoff и долговременное хранение ключей выполняются вызывающим слоем и не входят в задачу.\n\nСделай ревью исходников, при необходимости используй терминал и тесты. Код и существующие\nтесты не изменяй. Сохрани review.json вида {\"findings\":[{\"file\":\"...\",\"line\":1,\n\"severity\":\"critical|major\",\"problem\":\"...\",\"scenario\":\"...\",\"fix\":\"...\"}]},\nгде findings может быть пустым. Включай только доказанные дефекты поведения; стиль и\nпредположения о неуказанных требованиях не являются дефектами. Не нужно искать заданное\nчисло ошибок. В конце кратко сообщи вывод.\n",
+  "original": {
+    "src/main/kotlin/pilot/PaymentService.kt": "package pilot\nimport java.io.IOException\nclass PaymentService(private val gateway:PaymentGateway,private val newKey:()->String) {\n  fun charge(request:Charge):Receipt {\n    for(attempt in 1..3) {\n      try { return gateway.charge(request,newKey()) }\n      catch(e:IOException) { if(attempt==3)throw e }\n    }\n    error(\"unreachable\")\n  }\n}\n",
+    "src/main/kotlin/pilot/PaymentTypes.kt": "package pilot\nimport java.io.IOException\ndata class Charge(val accountId:String,val cents:Long)\ndata class Receipt(val id:String)\nclass RejectedCharge:RuntimeException()\nfun interface PaymentGateway { fun charge(request:Charge,idempotencyKey:String):Receipt }\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/PaymentService.kt": "package pilot\nimport java.io.IOException\nclass PaymentService(private val gateway:PaymentGateway,private val newKey:()->String) {\n  fun charge(request:Charge):Receipt {\n    for(attempt in 1..3) {\n      try { return gateway.charge(request,newKey()) }\n      catch(e:IOException) { if(attempt==3)throw e }\n    }\n    error(\"unreachable\")\n  }\n}\n",
+    "src/main/kotlin/pilot/PaymentTypes.kt": "package pilot\nimport java.io.IOException\ndata class Charge(val accountId:String,val cents:Long)\ndata class Receipt(val id:String)\nclass RejectedCharge:RuntimeException()\nfun interface PaymentGateway { fun charge(request:Charge,idempotencyKey:String):Receipt }\n"
+  },
+  "review": {
+    "findings": [
+      {
+        "file": "src/main/kotlin/pilot/PaymentService.kt",
+        "line": 6,
+        "severity": "critical",
+        "problem": "При повторе после IOException вызывается newKey(), поэтому попытки одной логической оплаты получают разные idempotencyKey. Дедупликация в Gateway не предотвращает повторное списание с новым ключом.",
+        "scenario": "Первый вызов Gateway списывает деньги с ключом K1, но ответ теряется и выбрасывается IOException. Вторая попытка внутри того же вызова PaymentService.charge получает ключ K2. Gateway считает ее новой оплатой, повторно списывает деньги и возвращает Receipt. Один вызов charge приводит к двум списаниям. Если ответ второй попытки тоже потеряется, третья попытка может привести к третьему списанию.",
+        "fix": "Создавать ключ один раз в начале каждого вызова PaymentService.charge, перед циклом попыток, и передавать этот ключ во все попытки. Для каждого отдельного вызова charge создавать новый ключ, в том числе при одинаковых данных запроса."
+      }
+    ]
+  },
+  "rubric": {
+    "has_issue": true,
+    "required_issue": "A fresh idempotency key on each retry can charge again after a committed payment with a lost response.",
+    "must_not": [
+      "Require deduplication between separate logical calls.",
+      "Require unspecified backoff or validation.",
+      "Treat style or a hypothetical change as a present defect."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 3,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T05",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T05",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": null,
+  "protected_file_changes": []
+}

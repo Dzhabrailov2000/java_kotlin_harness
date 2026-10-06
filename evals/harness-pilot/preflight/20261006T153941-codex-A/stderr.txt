@@ -1,0 +1,6 @@
+----- Native stack trace -----
+
+ 1: 0x108a450cc node::InitializeOncePerProcessInternal(std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, std::__1::allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>>> const&, node::ProcessInitializationFlags::Flags) (.cold.3) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 2: 0x1079c84ac node::InitializeOncePerProcessInternal(std::__1::vector<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, std::__1::allocator<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>>> const&, node::ProcessInitializationFlags::Flags) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 3: 0x1079c9088 node::Start(int, char**) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 4: 0x185cc3e80 start [/usr/lib/dyld]

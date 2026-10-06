@@ -1,0 +1,161 @@
+--- before/src/main/java/pilot/CatalogReader.java
++++ after/src/main/java/pilot/CatalogReader.java
+@@ -1,10 +1,21 @@
+ package pilot;
+-import java.io.*;
+-import java.util.*;
++import java.util.List;
+ import java.util.function.Supplier;
+ import java.util.stream.Stream;
+ public final class CatalogReader {
+   public List<String> read(Supplier<Stream<String>> source, int limit) {
+-    return source.get().filter(line -> !line.isBlank()).map(String::trim).limit(limit).toList();
++    if (limit < 0) {
++      throw new IllegalArgumentException("limit must be non-negative");
++    }
++    if (limit == 0) {
++      return List.of();
++    }
++    try (Stream<String> lines = source.get()) {
++      return lines.sequential()
++          .map(String::trim)
++          .filter(line -> !line.isEmpty())
++          .limit(limit)
++          .toList();
++    }
+   }
+ }
+--- before/src/test/kotlin/pilot/CatalogReaderTest.kt
++++ after/src/test/kotlin/pilot/CatalogReaderTest.kt
+@@ -0,0 +1,131 @@
++package pilot
++
++import org.junit.jupiter.api.Assertions.assertEquals
++import org.junit.jupiter.api.Assertions.assertSame
++import org.junit.jupiter.api.Assertions.assertThrows
++import org.junit.jupiter.api.Test
++import java.util.stream.Stream
++
++class CatalogReaderTest {
++    private val reader = CatalogReader()
++
++    @Test
++    fun `returns first nonempty trimmed lines preserving order and duplicates`() {
++        var closes = 0
++        val source = Stream.of("\u0000\t ", " first ", "\u2003", " ", "first", " last ")
++            .parallel()
++            .onClose { closes++ }
++
++        val result = reader.read({ source }, 3)
++
++        assertEquals(listOf("first", "\u2003", "first"), result)
++        assertEquals(1, closes)
++    }
++
++    @Test
++    fun `rejects negative limit before opening source`() {
++        assertThrows(IllegalArgumentException::class.java) {
++            reader.read({ throw AssertionError("Source must not be opened") }, -1)
++        }
++    }
++
++    @Test
++    fun `returns empty list for zero limit without opening source`() {
++        val result = reader.read({ throw AssertionError("Source must not be opened") }, 0)
++
++        assertEquals(emptyList<String>(), result)
++    }
++
++    @Test
++    fun `returns available lines and closes exhausted source`() {
++        var closes = 0
++        val source = Stream.of(" ", " only ", "\t").onClose { closes++ }
++
++        val result = reader.read({ source }, 5)
++
++        assertEquals(listOf("only"), result)
++        assertEquals(1, closes)
++    }
++
++    @Test
++    fun `closes empty source`() {
++        var closes = 0
++        val source = Stream.empty<String>().onClose { closes++ }
++
++        val result = reader.read({ source }, 1)
++
++        assertEquals(emptyList<String>(), result)
++        assertEquals(1, closes)
++    }
++
++    @Test
++    fun `stops reading infinite source after enough nonempty lines and closes it`() {
++        var visits = 0
++        var closes = 0
++        val source = Stream.iterate(0) { it + 1 }
++            .map { index ->
++                visits++
++                if (visits > 4) throw AssertionError("Read past the requested prefix")
++                if (index % 2 == 0) " " else " entry "
++            }
++            .onClose { closes++ }
++
++        val result = reader.read({ source }, 2)
++
++        assertEquals(listOf("entry", "entry"), result)
++        assertEquals(4, visits)
++        assertEquals(1, closes)
++    }
++
++    @Test
++    fun `propagates source opening failure`() {
++        val failure = IllegalStateException("Opening failed")
++
++        val thrown = assertThrows(IllegalStateException::class.java) {
++            reader.read({ throw failure }, 1)
++        }
++
++        assertSame(failure, thrown)
++    }
++
++    @Test
++    fun `closes source and propagates traversal error`() {
++        var closes = 0
++        val failure = AssertionError("Traversal failed")
++        val source = Stream.generate<String> { throw failure }.onClose { closes++ }
++
++        val thrown = assertThrows(AssertionError::class.java) {
++            reader.read({ source }, 1)
++        }
++
++        assertSame(failure, thrown)
++        assertEquals(1, closes)
++    }
++
++    @Test
++    fun `preserves traversal failure and suppresses close failure`() {
++        val traversalFailure = IllegalStateException("Traversal failed")
++        val closeFailure = IllegalArgumentException("Close failed")
++        val source = Stream.generate<String> { throw traversalFailure }
++            .onClose { throw closeFailure }
++
++        val thrown = assertThrows(IllegalStateException::class.java) {
++            reader.read({ source }, 1)
++        }
++
++        assertSame(traversalFailure, thrown)
++        assertEquals(listOf(closeFailure), thrown.suppressed.toList())
++    }
++
++    @Test
++    fun `propagates close failure after successful traversal`() {
++        val failure = IllegalStateException("Close failed")
++        val source = Stream.of(" entry ").onClose { throw failure }
++
++        val thrown = assertThrows(IllegalStateException::class.java) {
++            reader.read({ source }, 1)
++        }
++
++        assertSame(failure, thrown)
++    }
++}

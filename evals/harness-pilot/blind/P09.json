@@ -1,0 +1,60 @@
+{
+  "id": "P09",
+  "task": "T01",
+  "kind": "implement",
+  "instruction": "Реализуй HTTP API постановки экспорта в очередь в ExportController. POST /exports принимает JSON\n{\"accountId\":\"...\",\"format\":\"csv\"}. Непустой accountId проверяется после trim, формат только csv\nили json. На неверный ввод ответ 400 и очередь не вызывается. На принятый запрос ответ 202,\nLocation: /exports/{id}, JSON {\"id\":\"...\",\"state\":\"pending\"}. Очередь вызывается ровно один раз\nс нормализованным accountId. QueueUnavailableException означает ответ 503, без exception message\nв теле. Экспорт пока не выполнен. Сохрани контракт ExportQueue. Запусти тесты.\n",
+  "original": {
+    "src/main/kotlin/pilot/ExportController.kt": "package pilot\nimport org.springframework.web.bind.annotation.RestController\n@RestController\nclass ExportController(private val queue: ExportQueue)\n",
+    "src/main/kotlin/pilot/ExportQueue.kt": "package pilot\ninterface ExportQueue { fun enqueue(accountId: String, format: String): String }\nclass QueueUnavailableException(message: String) : RuntimeException(message)\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/ExportController.kt": "package pilot\n\nimport org.springframework.http.HttpStatus\nimport org.springframework.http.ResponseEntity\nimport org.springframework.web.bind.annotation.PostMapping\nimport org.springframework.web.bind.annotation.RequestBody\nimport org.springframework.web.bind.annotation.RestController\nimport org.springframework.web.util.UriComponentsBuilder\n\n@RestController\nclass ExportController(private val queue: ExportQueue) {\n    @PostMapping(\"/exports\")\n    fun enqueueExport(@RequestBody request: Map<String, Any?>): ResponseEntity<ExportResponse> {\n        val accountId = (request[\"accountId\"] as? String)?.trim()\n        val format = request[\"format\"] as? String\n        if (accountId.isNullOrEmpty() || (format != \"csv\" && format != \"json\")) {\n            return ResponseEntity.badRequest().build()\n        }\n\n        val id = try {\n            queue.enqueue(accountId, format)\n        } catch (exception: QueueUnavailableException) {\n            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build()\n        }\n\n        val location = UriComponentsBuilder.fromPath(\"/exports\").pathSegment(id).build().encode().toUri()\n        return ResponseEntity.accepted().location(location).body(ExportResponse(id, \"pending\"))\n    }\n}\n\ndata class ExportResponse(val id: String, val state: String)\n",
+    "src/main/kotlin/pilot/ExportQueue.kt": "package pilot\ninterface ExportQueue { fun enqueue(accountId: String, format: String): String }\nclass QueueUnavailableException(message: String) : RuntimeException(message)\n"
+  },
+  "review": null,
+  "rubric": {
+    "quality": [
+      "Request/response intent is clear; no positional nested container.",
+      "No speculative layers or public API changes."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 4,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T01",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T01",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protected_file_changes": []
+}

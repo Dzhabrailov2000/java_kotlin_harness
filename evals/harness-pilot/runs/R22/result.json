@@ -1,0 +1,78 @@
+{
+  "id": "R22",
+  "task": "T06",
+  "engine": "codex",
+  "arm": "A",
+  "started": "2026-10-06T18:11:53.690069+00:00",
+  "workspace": "/private/tmp/jkh-agent-pilot/trial-49ddfaad2baf4d16833e04d758ad3c48/workspace",
+  "returncode": 0,
+  "seconds": 52.755,
+  "http_requests": 7,
+  "changed_files": [
+    "review.json"
+  ],
+  "protected_file_changes": [],
+  "evidence": {
+    "session_id": "01a1126a-41ff-7030-826f-65aca6f764cb",
+    "client_completed": true,
+    "model_requests": 5,
+    "requested_models": [
+      "gpt-6-astra"
+    ],
+    "requested_efforts": [
+      {
+        "effort": "xhigh",
+        "context": "all_turns"
+      },
+      {
+        "effort": "xhigh",
+        "context": "all_turns"
+      },
+      {
+        "effort": "xhigh",
+        "context": "all_turns"
+      },
+      {
+        "effort": "xhigh",
+        "context": "all_turns"
+      },
+      {
+        "effort": "xhigh",
+        "context": "all_turns"
+      }
+    ],
+    "core_present": false,
+    "kotlin_rule_present": false,
+    "skill_catalog_present": false,
+    "unexpected_context_markers": [],
+    "tool_calls": 4,
+    "forbidden_delegation": [],
+    "skill_calls": [],
+    "skill_file_accesses": [],
+    "hook_responses": [],
+    "permission_denials": [],
+    "usage": {
+      "input_total": 50466,
+      "cache_read": 38656,
+      "cache_write": 0,
+      "output": 894,
+      "list_price_estimate_usd": null,
+      "raw": {
+        "input_tokens": 50466,
+        "cached_input_tokens": 38656,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 894,
+        "reasoning_output_tokens": 290
+      }
+    },
+    "final": "Доказанных нарушений контракта не найдено. Сохранён [review.json](/private/tmp/jkh-agent-pilot/trial-49ddfaad2baf4d16833e04d758ad3c48/workspace/review.json) с `{\"findings\":[]}`.\n\n`./gradlew test` прошёл; существующий тест проверяет только запуск среды. Код и тесты не изменены.",
+    "context_valid": true
+  },
+  "review": {
+    "findings": []
+  },
+  "review_schema_valid": true,
+  "task_pass": null,
+  "valid_attempt": true,
+  "finished": "2026-10-06T18:12:46.799375+00:00"
+}

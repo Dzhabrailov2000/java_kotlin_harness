@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="pilot.ExportContractTest" tests="3" skipped="0" failures="3" errors="0" timestamp="2026-10-06T19:31:40.761Z" hostname="w992303it2.corp.tander.ru" time="0.446">
+  <properties/>
+  <testcase name="accepted means queued only and uses normalized account()" classname="pilot.ExportContractTest" time="0.349">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;202&gt; but was: &lt;404&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;202&gt; but was: &lt;404&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:569)
+	at pilot.ExportContractTest.accepted means queued only and uses normalized account(ExportContractTest.kt:31)
+</failure>
+  </testcase>
+  <testcase name="queue outage does not disclose internal details()" classname="pilot.ExportContractTest" time="0.019">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;503&gt; but was: &lt;404&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;503&gt; but was: &lt;404&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:569)
+	at pilot.ExportContractTest.queue outage does not disclose internal details(ExportContractTest.kt:47)
+</failure>
+  </testcase>
+  <testcase name="invalid request never queues()" classname="pilot.ExportContractTest" time="0.016">
+    <failure message="org.opentest4j.AssertionFailedError: {&quot;accountId&quot;:&quot; &quot;,&quot;format&quot;:&quot;csv&quot;} ==&gt; expected: &lt;400&gt; but was: &lt;404&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: {&quot;accountId&quot;:&quot; &quot;,&quot;format&quot;:&quot;csv&quot;} ==&gt; expected: &lt;400&gt; but was: &lt;404&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:601)
+	at pilot.ExportContractTest.invalid request never queues(ExportContractTest.kt:40)
+</failure>
+  </testcase>
+  <system-out><![CDATA[22:31:41.150 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:31:41.152 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:31:41.153 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+22:31:41.164 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No mapping for POST /exports
+22:31:41.166 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No endpoint POST /exports.
+22:31:41.190 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:31:41.190 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:31:41.190 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+22:31:41.191 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No mapping for POST /exports
+22:31:41.191 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No endpoint POST /exports.
+22:31:41.206 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:31:41.206 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:31:41.206 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+22:31:41.206 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No mapping for POST /exports
+22:31:41.206 [Test worker] WARN org.springframework.web.servlet.PageNotFound -- No endpoint POST /exports.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

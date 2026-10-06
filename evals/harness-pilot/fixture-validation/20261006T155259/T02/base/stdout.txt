@@ -1,0 +1,25 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :processResources NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :compileKotlin
+> Task :compileJava NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :jar
+> Task :compileTestKotlin
+> Task :compileTestJava NO-SOURCE
+> Task :testClasses UP-TO-DATE
+
+> Task :test FAILED
+
+SalesReportTest > groups sorts retains accounts and removes only identical deliveries() FAILED
+    kotlin.NotImplementedError at SalesReportTest.kt:9
+
+SalesReportTest > conflicting duplicates are not silently overwritten() FAILED
+    org.opentest4j.AssertionFailedError at SalesReportTest.kt:16
+        Caused by: kotlin.NotImplementedError at SalesReportTest.kt:16
+
+SalesReportTest > empty and exact decimal sums() FAILED
+    kotlin.NotImplementedError at SalesReportTest.kt:20
+4 actionable tasks: 4 executed

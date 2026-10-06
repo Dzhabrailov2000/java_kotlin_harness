@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="pilot.SalesReportTest" tests="3" skipped="0" failures="3" errors="0" timestamp="2026-10-06T15:53:18.941Z" hostname="w992303it2.corp.tander.ru" time="0.024">
+  <properties/>
+  <testcase name="groups sorts retains accounts and removes only identical deliveries()" classname="pilot.SalesReportTest" time="0.011">
+    <failure message="kotlin.NotImplementedError: An operation is not implemented: implement" type="kotlin.NotImplementedError">kotlin.NotImplementedError: An operation is not implemented: implement
+	at pilot.SalesReport.summarize(SalesReport.kt:5)
+	at pilot.SalesReportTest.groups sorts retains accounts and removes only identical deliveries(SalesReportTest.kt:9)
+</failure>
+  </testcase>
+  <testcase name="conflicting duplicates are not silently overwritten()" classname="pilot.SalesReportTest" time="0.008">
+    <failure message="org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: &lt;java.lang.IllegalArgumentException&gt; but was: &lt;kotlin.NotImplementedError&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: &lt;java.lang.IllegalArgumentException&gt; but was: &lt;kotlin.NotImplementedError&gt;
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3234)
+	at pilot.SalesReportTest.conflicting duplicates are not silently overwritten(SalesReportTest.kt:16)
+Caused by: kotlin.NotImplementedError: An operation is not implemented: implement
+	at pilot.SalesReport.summarize(SalesReport.kt:5)
+	at pilot.SalesReportTest.conflicting_duplicates_are_not_silently_overwritten$lambda$0(SalesReportTest.kt:16)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:54)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	... 2 more
+</failure>
+  </testcase>
+  <testcase name="empty and exact decimal sums()" classname="pilot.SalesReportTest" time="0.001">
+    <failure message="kotlin.NotImplementedError: An operation is not implemented: implement" type="kotlin.NotImplementedError">kotlin.NotImplementedError: An operation is not implemented: implement
+	at pilot.SalesReport.summarize(SalesReport.kt:5)
+	at pilot.SalesReportTest.empty and exact decimal sums(SalesReportTest.kt:20)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

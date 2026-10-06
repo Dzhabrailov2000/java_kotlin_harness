@@ -1,0 +1,59 @@
+{
+  "id": "P24",
+  "task": "T08",
+  "kind": "review",
+  "instruction": "Проверь SQL-миграцию migrations/V2__balance_check.sql для PostgreSQL. accounts - большая\nтаблица; balance BIGINT NOT NULL, существующие значения неотрицательны. Цель - добавить и\nпровалидировать CHECK balance >= 0. Допустимо кратко заблокировать записи при добавлении\nограничения, но длительное сканирование VALIDATE не должно удерживать блокировку, которая\nнесовместима с обычными SELECT, INSERT и UPDATE. Каждая явная транзакция в SQL исполняется\nотдельно: внешний runner НЕ заворачивает файл целиком в транзакцию. Никакого backfill,\nизменения типа, удаления колонки или дополнительного ограничения не требуется.\nВ README описана команда воспроизведения lock modes на подготовленной локальной БД.\n\nСделай ревью исходников, при необходимости используй терминал и тесты. Код и существующие\nтесты не изменяй. Сохрани review.json вида {\"findings\":[{\"file\":\"...\",\"line\":1,\n\"severity\":\"critical|major\",\"problem\":\"...\",\"scenario\":\"...\",\"fix\":\"...\"}]},\nгде findings может быть пустым. Включай только доказанные дефекты поведения; стиль и\nпредположения о неуказанных требованиях не являются дефектами. Не нужно искать заданное\nчисло ошибок. В конце кратко сообщи вывод.\n",
+  "original": {
+    "migrations/V2__balance_check.sql": "BEGIN;\nALTER TABLE accounts ADD CONSTRAINT balance_nonnegative CHECK (balance >= 0) NOT VALID;\nCOMMIT;\nBEGIN;\nALTER TABLE accounts VALIDATE CONSTRAINT balance_nonnegative;\nCOMMIT;\n"
+  },
+  "submitted": {},
+  "review": {
+    "findings": []
+  },
+  "rubric": {
+    "has_issue": false,
+    "required_issue": null,
+    "must_not": [
+      "Claim VALIDATE by itself takes AccessExclusiveLock.",
+      "Require transaction separation when the supplied SQL already commits between phases.",
+      "Invent absent legacy negative data or a wrapping transaction contrary to the task."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 0,
+      "observation": {
+        "applied": true,
+        "lock_modes_during_validation": [
+          "ShareUpdateExclusiveLock"
+        ],
+        "blocks_regular_writes": false
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T08",
+      "variant": "base",
+      "expected": true,
+      "valid": true
+    },
+    {
+      "returncode": 1,
+      "observation": {
+        "applied": true,
+        "lock_modes_during_validation": [
+          "AccessExclusiveLock",
+          "ShareUpdateExclusiveLock"
+        ],
+        "blocks_regular_writes": true
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T08",
+      "variant": "mutation",
+      "expected": false,
+      "valid": true
+    }
+  ],
+  "grader_counts": null,
+  "protected_file_changes": []
+}

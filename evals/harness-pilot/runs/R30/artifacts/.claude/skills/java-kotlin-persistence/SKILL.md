@@ -1,0 +1,122 @@
+---
+name: java-kotlin-persistence
+description: "Проектирует и проверяет работу Java/Kotlin с БД: Spring-транзакции, JPA/JDBC-запросы, конкурентные записи, загрузку связей и ограничения данных. Применяется при изменении persistence-кода и его гарантий."
+disable-model-invocation: true
+---
+
+# База данных и транзакции
+
+Порядок работы и выбор исправления - методика этого навыка. Метки S1 и далее подтверждают
+указанные факты API или рекомендации авторов; они не делают всю методику требованием языка.
+Проверь применимость документации к версиям проекта. Примеры ниже адаптированы, если не указано иное.
+
+Обеспечь нужную согласованность и понятную стоимость запроса. В новом коде реализуй границу;
+в ревью покажи нарушающий сценарий, меняй код только по заданию.
+
+## Установи контракт БД
+
+- Прочитай реальные schema, constraints, запросы, transaction manager, изоляцию и версии.
+  Установи одну бизнес-операцию, ее чтения/записи и конкурирующих участников.
+
+- Разделяй инвариант объекта и общий инвариант данных. Проверка существования перед insert
+  не обеспечивает уникальность: нужен constraint или другой доказанный общий протокол. [S1]
+
+- Защищай check-then-write одной подходящей операцией, optimistic version или lock по задаче.
+  Проверь affected row count и результат конфликта. synchronized одного процесса недостаточен. [S2] [S3]
+
+- При serialization failure повторяй весь нужный transaction с новым чтением, если операция
+  допускает повтор. Не повторяй только последний SQL поверх устаревших решений и внешних эффектов. [S2]
+
+## Проверь Spring-границу
+
+- Проверь вызов через proxy, self-invocation, final/open, propagation и выбранный manager.
+  Аннотация сама не доказывает начало новой транзакции. Внутренний вызов может исполняться
+  в уже существующей транзакции, но не получает заявленные новые proxy-настройки. [S4] [S5]
+
+- Установи действующие rollback rules. По обычному default unchecked exceptions/Error вызывают
+  rollback, checked - нет; конфигурация и версия могут менять это, включая ALL_EXCEPTIONS.
+  Kotlin отсутствие checked-синтаксиса не меняет Java-классификацию IOException. [S6] [S7]
+
+- Не глотай отказ и не возвращай успех из уже rollback-only transaction. Не обещай, что
+  любой Result.failure автоматически приводит к rollback. Проверь поддержку конкретного типа. [S6] [S8]
+
+- Не переноси ThreadLocal-транзакцию произвольно на другой thread/coroutine. Для reactive stack
+  установи его контекст и поддерживаемый API; не смешивай JDBC/JPA и R2DBC по названию @Transactional. [S4]
+
+- Держи transaction достаточным для согласованности, но не удерживай locks/connection во время
+  медленного HTTP без необходимости. DB commit не атомарен с обычной отправкой сообщения/HTTP.
+  Для требуемой надежной публикации выбери существующий outbox/протокол, не добавляй его каждому CRUD. [S9]
+
+- readOnly не является универсальным запретом записей. Проверь реальную гарантию драйвера и БД. [S10]
+
+## Проверь запросы и ORM
+
+- Запрашивай нужные данные и объем. Проверь N+1 на реальном доступе к связям, pagination,
+  порядок и кардинальность join. Не лечи все связи глобальным EAGER. [S3]
+
+- Fetch join коллекции может размножить строки и изменить pagination; projection, отдельное
+  чтение ID или batch выбирай по результату и измерению, а не по количеству строк Java-кода. [S3]
+
+- Не считай save/flush/commit синонимами. Constraint может проявиться при flush или commit.
+  Batch/bulk update может рассинхронизировать persistence context и обходить callbacks. [S3]
+
+- Установи lifecycle lazy-данных. Не отдавай наружу entity/Stream, требующий уже закрытой сессии.
+  Для нового endpoint получи нужное представление внутри корректной границы. [S3]
+
+- Связывай значения параметрами SQL. Dynamic sort/identifier выбирай из фиксированного набора.
+  Индекс оправдай конкретным query plan и нагрузкой; учитывай цену записи и хранения. [S11] [S12]
+
+## Примеры
+
+В [Spring Data JpaRepository](https://github.com/spring-projects/spring-data-jpa/blob/a408240829696aafaf2b1bc33a3ed97541a40daa/spring-data-jpa/src/main/java/org/springframework/data/jpa/repository/JpaRepository.java#L55)
+saveAndFlush добавляет flush, а не обещание завершенного внешнего commit.
+getReferenceById не эквивалентен проверке существования: доступ к данным ссылки может отказать позже.
+
+Адаптированная атомарная запись для требования "уменьшить остаток на один, только если он есть":
+
+~~~sql
+UPDATE stock
+SET available = available - 1
+WHERE product_id = :productId AND available > 0;
+~~~
+
+Успех требует одной измененной строки и успешного завершения transaction. Ноль строк - отдельный
+исход по контракту; не объявляй его автоматически конкретной причиной без дополнительного знания.
+Другие пути записи также должны сохранять инвариант. [S2]
+
+## Проверь
+
+Используй СУБД и значимые настройки проекта. Для ORM проверь flush/commit, для гонки - два
+конкурирующих transaction, для query - результат, число запросов и план по необходимости.
+H2 не доказывает поведение PostgreSQL. Откатываемый тест не доказывает успешный commit и доставку события.
+В находке укажи SQL/путь вызова, неправильный результат, минимальный механизм и проверку. [S13]
+
+## Источники по тезисам
+
+- [S1] - PostgreSQL: constraints, UNIQUE и CHECK/null.
+- [S2] - PostgreSQL: isolation и retry serialization failures.
+- [S3] - Hibernate ORM 6.6: fetching, flush, identity и bulk DML.
+- [S4] - Spring: @Transactional, proxy, propagation и context.
+- [S5] - Spring AOP: self-invocation, final и proxy.
+- [S6] - Spring: rollback rules и поддерживаемые результаты.
+- [S7] - Java API со стороны Kotlin: platform types, exceptions.
+- [S8] - Spring: rollback-only и propagation.
+- [S9] - Richardson: outbox и отдельные внешние эффекты.
+- [S10] - Spring TransactionDefinition: readOnly является hint.
+- [S11] - OWASP: SQL parameters и dynamic identifiers.
+- [S12] - PostgreSQL: EXPLAIN и реальное выполнение ANALYZE.
+- [S13] - Spring: transaction tests, flush и preemptive timeout.
+
+[S1]: https://www.postgresql.org/docs/current/ddl-constraints.html
+[S2]: https://www.postgresql.org/docs/current/transaction-iso.html
+[S3]: https://docs.hibernate.org/orm/6.6/userguide/html_single/Hibernate_User_Guide.html
+[S4]: https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html
+[S5]: https://docs.spring.io/spring-framework/reference/core/aop/proxying.html
+[S6]: https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/rolling-back.html
+[S7]: https://kotlinlang.org/docs/java-interop.html
+[S8]: https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html
+[S9]: https://microservices.io/patterns/data/transactional-outbox.html
+[S10]: https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/TransactionDefinition.html#isReadOnly()
+[S11]: https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+[S12]: https://www.postgresql.org/docs/current/using-explain.html
+[S13]: https://docs.spring.io/spring-framework/reference/testing/testcontext-framework/tx.html

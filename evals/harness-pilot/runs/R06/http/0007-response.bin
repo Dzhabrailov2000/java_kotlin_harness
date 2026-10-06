@@ -1,0 +1,387 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfmHUExYGDZi3YzLWkzXH","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":2,"cache_creation_input_tokens":1611,"cache_read_input_tokens":27009,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1611},"output_tokens":3,"service_tier":"standard","inference_geo":"not_available"},"diagnostics":null,"context_management":null}        }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}   }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":50}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":null}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"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"}        }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0             }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Ми"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"грация не выполняет глав"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ное требование."}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Н"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ашел один дефект у"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ровня critical, он"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" записан в `"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"review.json`.\n\n**"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Проблема.** `AD"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"D CONSTRAIN"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"T ... NOT VAL"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ID` (строка 2)"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" и `VALIDATE"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" CONSTRAINT"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"` (строка 3) ст"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"оят в одной тран"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"закции `BEGI"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"N`/`COMMI"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"T`. Стро"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ка 2 берет на `"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"accounts` бл"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"окировку ACCESS"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" EXCLUSIV"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"E. Это"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" самый"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" сильный режим, он"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" нес"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"овместим и"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" с SELECT, и с"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" INSERT/UPD"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ATE, и держ"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ится до `"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"COMMIT` в стро"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ке 4. Значит,"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" все время полного сканирования"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" большой таблицы в V"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ALIDATE чтение"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" и запись балансов забл"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"окированы, и `NO"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"T VALID` "}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ничего не дает.\n\n**"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Как"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" про"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"верил"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"**"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" (на"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" под"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"готовленной локальной Б"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Д):\n- `./observe"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"-locks` на исходном"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" файле: после VALID"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ATE и до COMMI"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"T транзакция держит `"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"LOCK:Access"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ExclusiveLock`"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" и `LOCK:"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ShareUpdateExcl"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"usiveLock`."}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n- Вариант,"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" в котором ш"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"аги ид"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ут от"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"дельными транзакциями"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", я отправил на тот"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" же локальный наблюд"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"атель пр"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ямо в запросе, фай"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"л миграции не мен"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ял. После VALIDAT"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"E там"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" остается только `LOCK"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":":ShareUpdate"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ExclusiveLock`"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":". Этот режим не м"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ешает SELECT,"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" INSERT и UPD"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ATE. Так я ис"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ключил друг"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ое объяснение,"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" что "}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ACCESS EXCL"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"USIVE берет с"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ам VALIDATE."}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Исправление.**"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" В"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ставить `COMMIT"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"; BEGIN;`"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" между строками 2 и "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"3. Тогда AC"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"CESS EXCLU"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"SIVE держится только на"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" короткое изменение сх"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"емы, а это"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" по"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" условию доп"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"устимо.\n\nОсталь"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ное в пор"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ядке."}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Условие `CHECK"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" (balance >= 0)"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"` со"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ответствует правилу."}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Проблем"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ы с NULL нет,"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" потому что колонка N"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"OT NULL. Back"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"fill не нужен."}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n`"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"./gradlew test` я"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" не запускал: единственный"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" тест `SmokeT"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"est` проверяет только верс"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ию Java и к миграции"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" не относится. Код и т"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"есты не"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" мен"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ял."}   }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1           }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":2,"cache_creation_input_tokens":1611,"cache_read_input_tokens":27009,"output_tokens":1117,"output_tokens_details":{"thinking_tokens":395},"iterations":[{"input_tokens":2,"output_tokens":1117,"cache_read_input_tokens":27009,"cache_creation_input_tokens":1611,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1611},"type":"message"}]},"context_management":{"applied_edits":[]}            }
+
+event: message_stop
+data: {"type":"message_stop"}
+

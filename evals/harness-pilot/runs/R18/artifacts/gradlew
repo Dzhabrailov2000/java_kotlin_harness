@@ -1,0 +1,2 @@
+#!/bin/sh
+exec gradle --offline --no-daemon --console=plain --max-workers=2 "$@"

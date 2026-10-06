@@ -1,0 +1,16 @@
+{
+  "id": "T05",
+  "kind": "review",
+  "postgres": false,
+  "rubric": {
+    "has_issue": true,
+    "required_issue": "A fresh idempotency key on each retry can charge again after a committed payment with a lost response.",
+    "must_not": [
+      "Require deduplication between separate logical calls.",
+      "Require unspecified backoff or validation.",
+      "Treat style or a hypothetical change as a present defect."
+    ]
+  },
+  "expected_test_count": 3,
+  "origin": "New author-created public-domain fixture; no private project code; not copied from skill examples."
+}

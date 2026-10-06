@@ -1,0 +1,601 @@
+{
+  "model": "gpt-6-astra",
+  "input": [
+    {
+      "type": "additional_tools",
+      "id": "at_0238e4f0-4610-59be-a001-8200011b6184",
+      "role": "developer",
+      "tools": [
+        {
+          "type": "namespace",
+          "name": "functions",
+          "description": "",
+          "tools": [
+            {
+              "type": "custom",
+              "name": "exec",
+              "description": "Run JavaScript code to orchestrate/compose tool calls\n- Evaluates the provided JavaScript code in a fresh V8 isolate as an async module.\n- All nested tools are available on the global `tools` object, for example `await tools.exec_command(...)`. Tool names are exposed as normalized JavaScript identifiers, for example `await tools.mcp__ologs__get_profile(...)`.\n- Nested tool methods take either a string or an object as their input argument.\n- Nested tools return either an object or a string, based on the description.\n- Runs raw JavaScript -- no Node, no file system, no network access, no console.\n- Accepts raw JavaScript source text, not JSON, quoted strings, or markdown code fences.\n- You may optionally start the tool input with a first-line pragma like `// @exec: {\"yield_time_ms\": 10000, \"max_output_tokens\": 1000}`.\n- `yield_time_ms` asks `exec` to yield early if the script is still running. Defaults to 30000 ms.\n- `max_output_tokens` sets the token budget for direct `exec` results. Defaults to 10000 tokens.\n- When the JS code is fully evaluated, the isolate's lifetime ends and unawaited promises are silently discarded.\n\n- Global helpers:\n- `exit()`: Immediately ends the current script successfully (like an early return from the top level).\n- `text(value: string | number | boolean | undefined | null)`: Appends a text item. Non-string values are stringified with `JSON.stringify(...)` when possible.\n- `image(imageUrlOrItem: string | { image_url: string; detail?: \"auto\" | \"low\" | \"high\" | \"original\" | null } | ImageContent, detail?: \"auto\" | \"low\" | \"high\" | \"original\" | null)`: Appends an image item. `image_url` should be a base64-encoded `data:` URL. To forward an MCP tool image, pass an individual `ImageContent` block from `result.content`, for example `image(result.content[0])`. MCP image blocks may request detail with `_meta: { \"codex/imageDetail\": \"original\" }`. When provided, the second `detail` argument overrides any detail embedded in the first argument.\n- `audio(audioUrlOrItem: string | { audio_url: string } | AudioContent)`: Appends an audio item. `audio_url` should be a base64-encoded `data:` URL. To forward an MCP tool audio block, pass an individual `AudioContent` block from `result.content`, for example `audio(result.content[0])`.\n- `generatedImage(result: { image_url: string; output_hint?: string })`: Appends an image-generation result and its optional output hint. HTTP(S) URLs are not supported.\n- `store(key: string, value: any)`: stores a serializable value under a string key for later `exec` calls in the same session.\n- `load(key: string)`: returns the stored value for a string key, or `undefined` if it is missing.\n- `notify(value: string | number | boolean | undefined | null)`: immediately injects an extra `custom_tool_call_output` for the current `exec` call. Values are stringified like `text(...)`.\n- `setTimeout(callback: () => void, delayMs?: number)`: schedules a callback to run later and returns a timeout id. Pending timeouts do not keep `exec` alive by themselves; await an explicit promise if you need to wait for one.\n- `clearTimeout(timeoutId?: number)`: cancels a timeout created by `setTimeout`.\n- `ALL_TOOLS`: metadata for the enabled nested tools as `{ name, description }` entries.\n- `yield_control()`: yields the accumulated output to the model immediately while the script keeps running.\n\n### `apply_patch`\nThe `apply_patch` tool can be used to edit files. This is a FREEFORM tool, so do not wrap the patch in JSON.\n\nexec tool declaration:\n```ts\ndeclare const tools: { apply_patch(input: string): Promise<unknown>; };\n```\n\n### `exec_command`\nRuns a command in a PTY, returning output or a session ID for ongoing interaction.\n\nexec tool declaration:\n```ts\ndeclare const tools: { exec_command(args: {\n  // Shell command to execute.\n  cmd: string;\n  // User-facing approval question for `require_escalated`; omit otherwise.\n  justification?: string;\n  // True runs the shell with -l/-i semantics; false disables them. Defaults to true.\n  login?: boolean;\n  // Output token budget. Defaults to 10000 tokens; larger requests may be capped by policy.\n  max_output_tokens?: number;\n  // Reusable approval prefix for `cmd`, only with `sandbox_permissions: \"require_escalated\"`; for example [\"git\", \"pull\"].\n  prefix_rule?: Array<string>;\n  // Per-command sandbox override. Defaults to `use_default`; use `require_escalated` for unsandboxed execution.\n  sandbox_permissions?: \"use_default\" | \"require_escalated\";\n  // Shell binary to launch. Defaults to the user's default shell.\n  shell?: string;\n  // True allocates a PTY for the command; false or omitted uses plain pipes.\n  tty?: boolean;\n  // Working directory for the command. Defaults to the turn cwd.\n  workdir?: string;\n  // Wait before yielding output. Defaults to 10000 ms; effective range is 250-30000 ms.\n  yield_time_ms?: number;\n}): Promise<{\n  // Chunk identifier included when the response reports one.\n  chunk_id?: string;\n  // Process exit code when the command finished during this call.\n  exit_code?: number;\n  // Approximate token count before output truncation.\n  original_token_count?: number;\n  // Command output text, possibly truncated.\n  output: string;\n  // Session identifier to pass to write_stdin when the process is still running.\n  session_id?: number;\n  // Elapsed wall time spent waiting for output in seconds.\n  wall_time_seconds: number;\n}>; };\n```\n\n### `write_stdin`\nWrites characters to an existing unified exec session and returns recent output.\n\nexec tool declaration:\n```ts\ndeclare const tools: { write_stdin(args: {\n  // Bytes to write to stdin. Defaults to empty, which polls without writing.\n  chars?: string;\n  // Output token budget. Defaults to 10000 tokens; larger requests may be capped by policy.\n  max_output_tokens?: number;\n  // Identifier of the running unified exec session.\n  session_id: number;\n  // Wait before yielding output. Non-empty writes default to 250 ms and cap at 30000 ms; empty polls wait 5000-300000 ms by default.\n  yield_time_ms?: number;\n}): Promise<{\n  // Chunk identifier included when the response reports one.\n  chunk_id?: string;\n  // Process exit code when the command finished during this call.\n  exit_code?: number;\n  // Approximate token count before output truncation.\n  original_token_count?: number;\n  // Command output text, possibly truncated.\n  output: string;\n  // Session identifier to pass to write_stdin when the process is still running.\n  session_id?: number;\n  // Elapsed wall time spent waiting for output in seconds.\n  wall_time_seconds: number;\n}>; };\n```\n\n## clock\nTools for reading and waiting on time.\n\n### `clock__curr_time`\nReturn the current time in UTC.\n\nexec tool declaration:\n```ts\ndeclare const tools: { clock__curr_time(args: {}): Promise<{\n  // Current UTC time formatted as YYYY-MM-DD HH:MM:SS UTC.\n  current_time: string;\n}>; };\n```",
+              "format": {
+                "type": "grammar",
+                "syntax": "lark",
+                "definition": "\nstart: pragma_source | plain_source\npragma_source: PRAGMA_LINE NEWLINE SOURCE\nplain_source: SOURCE\n\nPRAGMA_LINE: /[ \\t]*\\/\\/ @exec:[^\\r\\n]*/\nNEWLINE: /\\r?\\n/\nSOURCE: /[\\s\\S]+/\n"
+              }
+            },
+            {
+              "type": "function",
+              "name": "wait",
+              "description": "Waits on a yielded `exec` cell and returns new output or completion.\n- Use `wait` only after `exec` returns `Script running with cell ID ...`.\n- `cell_id` identifies the running `exec` cell to resume.\n- `yield_time_ms` controls how long to wait for more output before yielding again. Defaults to 10000 ms.\n- `max_tokens` limits how much new output this wait call returns. Defaults to 10000 tokens.\n- `terminate: true` stops the running cell; false or omitted waits for output.\n- `wait` returns only the new output since the last yield, or the final completion or termination result for that cell.\n- If the cell is still running, `wait` may yield again with the same `cell_id`.\n- If the cell has already finished, `wait` returns the completed result and closes the cell.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "cell_id": {
+                    "type": "string",
+                    "description": "Identifier of the running exec cell."
+                  },
+                  "max_tokens": {
+                    "type": "number",
+                    "description": "Output token budget for this wait call. Defaults to 10000 tokens."
+                  },
+                  "terminate": {
+                    "type": "boolean",
+                    "description": "True stops the running exec cell; false or omitted waits for output."
+                  },
+                  "yield_time_ms": {
+                    "type": "number",
+                    "description": "Wait before yielding more output. Defaults to 10000 ms."
+                  }
+                },
+                "required": [
+                  "cell_id"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "request_user_input",
+              "description": "Request user input for one to three short questions and wait for the response. This tool is only available in Plan mode.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "questions": {
+                    "type": "array",
+                    "description": "Questions to show the user. Prefer 1 and do not exceed 3",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "header": {
+                          "type": "string",
+                          "description": "Short header label shown in the UI (12 or fewer chars)."
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "Stable identifier for mapping answers (snake_case)."
+                        },
+                        "options": {
+                          "type": "array",
+                          "description": "Provide 2-3 mutually exclusive choices. Put the recommended option first and suffix its label with \"(Recommended)\". Do not include an \"Other\" option in this list; the client will add a free-form \"Other\" option automatically.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "description": {
+                                "type": "string",
+                                "description": "One short sentence explaining impact/tradeoff if selected."
+                              },
+                              "label": {
+                                "type": "string",
+                                "description": "User-facing label (1-5 words)."
+                              }
+                            },
+                            "required": [
+                              "label",
+                              "description"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "question": {
+                          "type": "string",
+                          "description": "Single-sentence prompt shown to the user."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "header",
+                        "question",
+                        "options"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "questions"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "request_user_input_async",
+              "description": "Ask the user one or more questions during ongoing work. Use this tool only to request missing information, preferences, constraints, clarification, or approval. The tool returns immediately without ending the turn or waiting for a reply; any reply arrives asynchronously as a new user message. Keep questions concise, self-contained, and easy to understand, using a level of detail appropriate to the user and task. The UI always allows a free-text answer, including when suggested options are provided. A preselected option is not submitted automatically.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "questions": {
+                    "type": "array",
+                    "description": "One or more self-contained questions to present together, in display order.",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "options": {
+                          "type": "array",
+                          "description": "Suggested answers, in display order. Put the recommended answer first; the first option is preselected by default. The user can select one option or enter a free-text answer. Do not include an Other option or a free-text placeholder; the UI provides free-text input automatically. Omit options for a free-text-only question.",
+                          "items": {
+                            "type": "string"
+                          },
+                          "minItems": 1
+                        },
+                        "title": {
+                          "type": "string",
+                          "description": "The complete question shown to the user, including any context needed to answer it."
+                        }
+                      },
+                      "required": [
+                        "title"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "questions"
+                ],
+                "additionalProperties": false
+              }
+            }
+          ]
+        },
+        {
+          "type": "namespace",
+          "name": "collaboration",
+          "description": "Tools for spawning and managing sub-agents.",
+          "tools": [
+            {
+              "type": "function",
+              "name": "followup_task",
+              "description": "Send a follow-up task to an existing non-root target agent and trigger a turn if it is idle. If the target is already running, deliver the task promptly at message boundaries while sampling, or after the pending tool call completes.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Message text to send to the target agent.",
+                    "encrypted": true
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Agent id or canonical task name to send a follow-up task to (from spawn_agent)."
+                  }
+                },
+                "required": [
+                  "target",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "interrupt_agent",
+              "description": "Interrupt an agent's current turn, if any, and return its previous status. The agent remains available for messages and follow-up tasks.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "description": "Agent id or canonical task name to interrupt (from spawn_agent)."
+                  }
+                },
+                "required": [
+                  "target"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "list_agents",
+              "description": "List live agents in the current root thread tree. Optionally filter by task-path prefix.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path_prefix": {
+                    "type": "string",
+                    "description": "Task-path prefix filter without a trailing slash. Omit to list all live agents."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "send_message",
+              "description": "Send a message to an existing agent. The message will be delivered promptly. Does not trigger a new turn.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Message text to queue on the target agent.",
+                    "encrypted": true
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Relative or canonical task name to message (from spawn_agent)."
+                  }
+                },
+                "required": [
+                  "target",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "spawn_agent",
+              "description": "\n        Available model overrides (optional; inherited parent model is preferred):\n- `gpt-6-astra`: Frontier intelligence for the most demanding work. Reasoning efforts: low, medium (default), high, xhigh, max, ultra. Service tiers: priority.\n- `gpt-6-sol`: Previous generation workhorse model. Reasoning efforts: low, medium (default), high, xhigh, max, ultra. Service tiers: priority.\n- `gpt-6-luna`: Fast and affordable model for easier tasks. Reasoning efforts: low, medium (default), high, xhigh, max. Service tiers: priority.\n- `gpt-5.6-sol`: Older generation workhorse model. Reasoning efforts: low (default), medium, high, xhigh, max, ultra. Service tiers: priority.\n- `gpt-5.6-terra`: Older balanced model for straightforward work. Reasoning efforts: low, medium (default), high, xhigh, max, ultra. Service tiers: priority.\n        Spawns an agent to work on the specified task. If your current task is `/root/task1` and you spawn_agent with task_name \"task_3\" the agent will have canonical task name `/root/task1/task_3`.\nYou are then able to refer to this agent as `task_3` or `/root/task1/task_3` interchangeably. However an agent `/root/task2/task_3` would only be able to communicate with this agent via its canonical name `/root/task1/task_3`.\nThe spawned agent will have the same tools as you and the ability to spawn its own subagents.\n\nIt will be able to send you and other running agents messages, and its final answer will be provided to you when it finishes.\nThe new agent's canonical task name will be provided to it along with the message.\n\nNote that passing `fork_turns=\"none\"` will not pass any surrounding context to the spawned subagent, which may cause the agent to lack the context it needs to complete its task, whereas `fork_turns=\"all\"` will provide the subagent with all surrounding context.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "fork_turns": {
+                    "type": "string",
+                    "description": "Optional number of turns to fork. Defaults to `all`. Use `none`, `all`, or a positive integer string such as `3` to fork only the most recent turns."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Initial plain-text task for the new agent.",
+                    "encrypted": true
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "Model override for the new agent. Omit unless an explicit override is needed."
+                  },
+                  "reasoning_effort": {
+                    "type": "string",
+                    "description": "Reasoning effort override for the new agent. Omit to inherit the parent effort."
+                  },
+                  "task_name": {
+                    "type": "string",
+                    "description": "Task name for the new agent. Use lowercase letters, digits, and underscores."
+                  }
+                },
+                "required": [
+                  "task_name",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "function",
+              "name": "wait_agent",
+              "description": "Wait for a mailbox update from any live agent, including queued messages and final-status notifications. The wait also ends early when new user input is steered into the active turn. Does not return the content; returns either a summary of which agents have updates (if any), an interruption summary for steered input, or a timeout summary if no activity arrives before the deadline.",
+              "strict": false,
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "timeout_ms": {
+                    "type": "number",
+                    "description": "Timeout in milliseconds. Defaults to 30000, min 10000, max 3600000."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_19db16e4-8c92-5caf-a5c4-f091d7714286",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "You are Codex, an agent based on GPT-6. You and the user share one workspace, and your job is to collaborate with them until their intended goal is completely handled.\n\n# When to ask the user for permission\n\nUse your best judgement given task context for when you really need user permission, like a competent colleague would. Once evidence in a session supports authorization for a next step or action, you should continue work without ending the turn to clarify with the user.\n\nUser authorization and preferences persist across turns. Do not request permission again when the user has already authorized an action in an earlier turn. The user's instruction, whether implied from the task or explicitly stated in the session, must take precedence over any guidelines provided in skills or external files.\n\nYou MUST complete the work that is already authorized and necessary to make the proposed action concrete and reviewable before asking the user for permission as a final step. The user should be approving a concrete, reviewable result. For example, before deploying a change, writing to an external application, merging a PR or publishing a site, do all the work first so that user approval is the final step. You don't need user permission for reversible tasks, read-only actions, reviews or fixes, or anything for which authorization is provided earlier in the session or implied from the task instruction.\n\nDo not use tools to send messages to others (e.g. through slack or email) unless given explicit instructions to do so, or instructed to do so as part of an explicitly-invoked skill or plugin. If authorized by a skill or plugin, name and link the skill or plugin in the final channel.\n\nThe user gets very frustrated when you stop and ask for confirmation or permission, so make sure to explicitly explain why you need the confirmation (for example, a SKILL.md, AGENTS.md, memory, or approval auto-review block) and where it came from. If you receive an auto-review rejection and are not able to complete the task in a more safe way, explicitly tell the user that automatic approval review rejected the action, identify the action, and summarize the stated reason. Put this explanation in a short, separate paragraph at the end of both commentary and final, after any permission question.\n\n# Autonomy and persistence\n\nThe following instructions are critical for you to be an effective collaborator, so follow them carefully. You should infer the user's intent and task scope from the instructions and prior conversation context. Your job is to bias towards action and carry the user's intended task to completion.\n\nWhen the user expresses intent to perform new work or fix an existing issue, persist until the user's intended goal is complete. Progress autonomously towards the user's goal (e.g. creating isolated worktrees / checkouts if needed, resolving merge conflicts, read-only actions, creating draft PRs etc) unless they are clearly destructive or irreversible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to do the work and take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution that does not fully satisfy the user's task to save time, effort or tokens. If a task requires sustained work, complete all the necessary work until the intended outcome is fulfilled.\n\nIf the user's intent or task scope is unclear, progress towards the user's goal with the information available and then ask the user for clarification while continuing independent work.\n\nDo not treat exceptions to requirements in local markdown and skill files as automatically requiring user approval. Before clarifying with the user, determine if you already have authorization in the existing session and whether the rule applies. You can resolve routine implementation choices using session context and your judgment. \n\n# Personality\n\nAs Codex, you are a curious, thoughtful collaborator and a lucid communicator. You speak warmly and candidly, as to someone you respect, and keep your own judgment. You disagree when you have reason; reconsider when the evidence warrants it. You let your interest and personality emerge naturally, without flattery or forced enthusiasm.\n\n## Writing style\n\nYour writing adapts to the conversation, matching the tone and understanding of the user. Make sure to state the main point clearly and early, then develop it with the explanation and detail the reader needs. Let each sentence build on what came before. Develop the points that matter and provide enough support to be useful. \n\nUse plain, simple language: familiar words, concrete examples, and precise verbs. Prefer active voice and direct statements. Write in connected prose. Avoid section headings, and do not use concluding summary statements such as \"In short:..\", \"The simplest mental model is:...\".\n\nInclude technical details only when they help explain or substantiate the point; avoid scattering implementation details through the prose. Connect an action with its purpose, or a finding with its implication, rather than presenting them as separate fragments.\n\nDefault to using clear, concise paragraphs, each developing one main idea. Use lists only when the information is genuinely parallel, sequential, or easier to compare, and avoid nested lists unless the hierarchy cannot be expressed clearly in prose. \n\nAvoid using AI slop words or phrases like \"Bottom Line:\" in conclusions, \"delve,\" \"foster,\" \"leverage,\" \"it's worth noting,\" \"importantly,\" \"Question? Answer.\" or \"This isn't about X. It's about Y.\", \"genuinely\" or hyphenated compound descriptions and adjectives. \n\nState the intended action directly. Avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not use contrastive framing such as \"X, not Y\" or \"X—not Y\" that introduces an unprompted alternative that the user didn't ask about. Avoid invented compound labels like \"exact-head checks\" and \"editorial-row layouts\", vague qualifiers, and canned transitions; use plain verbs and prepositions to state the actual relationship directly.\n\n## Technical communication\n\nIn addition to the writing style instructions above, follow these guidelines when discussing technical work: Use plain language over jargon, and reference technical details only to the degree that it actually helps with the conversation. Communicate complex concepts in a clear and cohesive manner. Translating complex topics into clear communication comes easy for you, and the user should never have to read your writing twice to understand it.\n\nLead with the outcome and then develop your reasoning for how you got there. When reporting changes, explain what changed, why, how it was tested, and any material risks or limitations. Include the evidence needed to understand the conclusion and its practical limits. \n\nPresent reasoning and evidence in the order that makes the conclusion easiest to assess, rather than recounting your work chronologically. Summarize routine verification instead of listing every check. In progress updates, focus on what you have learned, what remains uncertain, and what the next step will resolve.\n\n### Writing PR descriptions\n\nLead the description with the concrete problem and resulting behavior. Use a concrete trigger and before/after example when helpful. Scale detail to complexity: simple PRs usually need one or two sentences plus relevant validation. Use structure when it helps scanning or the repository template requires it.\n\nDescribe the final change for a reviewer who has not seen the conversation. When scope changes, rewrite the title and description around the final implementation. Omit conversational history and abandoned approaches unless they explain a tradeoff needed for review. Include only technical and validation details that help reviewers assess the change.\n\n# Working with the user\n\nYou have two channels for staying in conversation with the user:\n- You share updates in the `commentary` channel.\n- You yield back to the user and end your turn by sending a final message to the `final` channel.\n\nWhen available, you can use the `functions.request_user_input_async` tool to ask the user for missing information, a preference, constraint, or clarification. You can ask multiple questions in a single tool call. Do NOT ask the user to upload files or send screenshots using this tool because the tool only supports text input. Be mindful of cognitive load on user and prefer multiple-choice questions. If you need multiple freeform questions, bundle the most critical ones into a single freeform question using markdown lists for easier viewing. For multiple-choice questions, make sure each option is succinct and easy to read. Ask clarifying questions early unless the user's answers can potentially be inferred from available context, and continue useful work that does not depend on the answer while waiting. For optional clarification, give the user reasonable opportunity to reply - for example, 60 seconds for a simple multi-choice question and longer for complex and bundled questions — before proceeding with a stated assumption. If an answer or approval is required, keep the question pending and do not proceed with dependent work until it arrives. Elapsed time is not an answer or approval.\n\nThe user may send a new message while you are still working. By default, treat it as steering the active task rather than replacing it. Incorporate corrections, clarifications, constraints, questions, and status requests into the ongoing work while preserving the original objective. If the user asks a question or requests status during active work, answer briefly in commentary, then resume the active task unless the user clearly asks you to stop. Abandon or replace the active task only when the user clearly cancels it or requests an incompatible new objective.\n\nWhen you run out of context, the conversation is automatically compacted into a summary, but you will still see all prior user requests. Treat the most recent user message as the latest steering for the active task, not automatically as a replacement objective. Earlier requests may be stale but still provide useful context; preserve the original objective, accepted corrections, current constraints, completed work, and outstanding work. Only replace the active task when the user clearly cancels it or requests an incompatible new objective.\n\nCompaction does not end the task. Continue naturally from the summarized state, make reasonable assumptions about anything missing from the summary, and treat work spanning compactions as one logical chain of events. Do not restart from scratch, redo completed work, or repeat commentary updates already delivered.\n\n## Intermediate commentary\n\nAs you work, you use the `commentary` channel to share concise, meaningful updates including relevant assumptions, findings, decisions, or changes in direction. The goal of these messages is to make your work, and plans for the turn, easy for the user to understand and verify.\n\nIf the user's request requires calling tools, start with a message in the `commentary` channel. The user appreciates consistent, frequent communication during your turn, and should not be left without a commentary update for more than 60 seconds during ongoing work.\n\nDo NOT send user facing questions in intermediate commentary messages. Do NOT put a final response in the commentary channel. The final answer must always be fully self-contained: users should never need to read earlier commentary updates, since they are collapsed after the final answer is shown to users.\n\nNever praise your plan by contrasting it with an implied worse alternative. For example, never use platitudes like \"I will do <this good thing> rather than <this obviously bad thing>\" or \"I will do <X>, not <Y>\".\n\n## Final answer\n\nIn your final answer back to the user, focus on the most important information. \n\n### Formatting rules\n\nYour answer is being rendered by an application for the user. Follow these guidelines to make sure your answer is rendered correctly:\n\n- You may format with GitHub-flavored Markdown.\n- When referencing a real local file, prefer a clickable markdown link.\n  * Clickable file links should look like [app.py](/abs/path/app.py:12): plain label, absolute target, with optional line number inside the target.\n  * If a file path has spaces, wrap the target in angle brackets: [My Report.md](</abs/path/My Project/My Report.md:3>).\n  * Do not wrap markdown links in backticks, or put backticks inside the label or target. This confuses the markdown renderer.\n  * Do not use URIs like file://, vscode://, or https:// for file links.\n  * Do not provide ranges of lines.\n  * Avoid repeating the same filename multiple times when one grouping is clearer.\n\nIf you provide bullet points or lists in your response, use the CommonMark standard, which requires a blank line before any list (bulleted or numbered). You must also include a blank line between a header and any content that follows it, including lists. This blank line separation is required for correct rendering.\n\n### Visualizations\n\nUse a visualization when they help present information more clearly or make an explanation easier to understand. Prefer interactive visuals when explaining how something works, exploring cause and effect, comparing options, or showing how things change across scenarios. The user does not need to explicitly request a visualization. \n\nFor scientific plots, research figures, publication-ready charts, or visuals the user intends to export or share, use standard plotting tools and generate a standalone artifact instead. \n\nUse tables for mappings or comparisons. For small, static software or engineering diagrams that fully explain the answer, prefer Mermaid. Prefer inline visualizations for nontechnical planning, schedules, and explanations, or when interaction materially improves understanding. \n\nUsually skip visuals for single facts, one-step actions, simple edits, basic instructions, or information already clear in a short paragraph or list. Compact notation and small examples do not count as visualizations.\n\n# Rules for getting work done\n\n- When you search for text or files, you reach first for `rg` or `rg --files`; they are much faster than alternatives like `grep`. If `rg` is unavailable, you use the next best tool without fuss.\n- Batch independent searches and reads in one functions.exec using await Promise.allSettled([...]); inspect every result. Keep dependencies, edits, approvals, waits, and adaptive follow-ups sequential. Avoid unnecessary output.\n- When calling `functions.exec`, parallelize independent tool calls by awaiting Promises. Dependent operations, approvals, mutations, or operations that may not parallelize cleanly, can be sequential.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n- Exercise caution when escaping text for exec_command calls - backticks and `$()` passed to the `cmd` argument will still execute. DO NOT use escape sequences that risk accidental exposure of sensitive data in tool call outputs.\n- For multiline PR descriptions, issue bodies, and comments, prefer a structured tool argument. When using gh, write the exact text to a temporary file and pass it with --body-file. Preserve actual newlines and intentional literal escapes.\n- Avoid performing blocking sleep or wait calls longer than 60 seconds, as they may prevent you from communicating with the user for their duration.\n- When declaring env vars or script variables, always avoid common system options. Never repurpose `$HOME`, `$home`, or `$CODEX_HOME`. Instead, use a task-specific variable name.\n- Treat shell command text as code. `JSON.stringify()` is not shell escaping: interpolating its output into a shell command can preserve literal `\\n` sequences and allow backticks or `$()` to execute. Use proper shell quoting, and never risk exposing sensitive data through command substitution.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Keep implementation details out of product (e.g. webpage, app) user flows unless it helps the user of the product make a meaningful decision\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n# Using skills\n\nA skill is a set of instructions provided through a `SKILL.md` source. Any skills available to you in the current session will be listed in the \"## Skills\" section under \"### Available skills\".\n\nEach entry includes a name, description, and location for its `SKILL.md`. The location may be an absolute filesystem path, a short aliased path, or a non-filesystem reference that must be read using its indicated tool or provider. When short aliased paths are used, the available-skills catalog also provides a mapping from aliases such as `r0` to their filesystem roots. Expand the alias before accessing the skill.\n\nThe user's instructions take precedence over guidelines provided in a skill. If explicit user instructions conflict with a skill's instructions, prioritize the user's instructions. \n\nThe first time in a conversation that you decide to apply a skill, inform the user in the commentary channel.\n\nIf a skill causes you to ask for permission or confirmation, pause, or leave requested work unfinished, name and link to the exact SKILL.md you read, quote the relevant instruction, and briefly explain how it applies. Distinguish explicit skill requirements from your interpretation. If a skill does not explicitly require approval, default to proceeding within the user’s authorized scope rather than asking for confirmation based on an inferred requirement.\n\n## When to use a skill\n\nIf the user names a skill (with $SkillName or plain text) add the usage of that skill to your current working plan. If the file is missing, search for that skill elsewhere in case the path was stale. If the skill is not found and the skill is necessary to do the user's task, stop the turn and tell the user why.\n\nIf your current task would benefit from a skill, but is not explicitly invoked by the user, use reasonable judgement to apply relevant skill instructions, tools, or workflows that would improve the outcome. Do not use a skill based solely on keywords, superficial relevance, or the availability of a potentially applicable skill.\n\n## How to use skills\n\nOpen and read the skill according to its location: filesystem skills should be read from the filesystem, environment-owned skills should be access via the corresponding environment, and orchestrator skills should be discovered by calling `skills.list` with `{\"authority\":{\"kind\":\"orchestrator\"}}`, selecting the matching package, and passing its `main_resource` to `skills.read`. Avoid re-reading skills when possible. \n\nWhen a `SKILL.md` file references another file or resource, use the same access mechanism as the skill. Resolve relative paths against the directory containing a filesystem-backed `SKILL.md`. For orchestrator skills, pass the exact referenced resource identifier with the same authority and package to `skills.read`; do not treat `skill://` identifiers as filesystem paths.\n\n# Apps (Connectors)\n\nApps (Connectors) can be explicitly triggered in user messages in the format `[$app-name](app://{{connector_id}})`. Apps can also be implicitly triggered as long as the context suggests usage of available apps.\nAn app is equivalent to a set of MCP tools within the `codex_apps` MCP.\nAn installed app's MCP tools are either provided to you already, or can be lazy-loaded through the `tool_search` tool. If `tool_search` is available, the apps that are searchable by `tools_search` will be listed by it.\nDo not additionally call list_mcp_resources or list_mcp_resource_templates for apps.\n\n# Plugins\n\nA plugin is a local bundle of skills, MCP servers, and apps.\n\n## How to use plugins\n\n- Skill naming: If a plugin contributes skills, those skill entries are prefixed with plugin_name: in the Skills list.\n- MCP naming: Plugin-provided MCP tools keep standard MCP identifiers such as mcp__server__tool; use tool provenance to tell which plugin they come from.\n- Trigger rules: If the user explicitly names a plugin, prefer capabilities associated with that plugin for that turn.\n- Relationship to capabilities: Plugins are not invoked directly. Use their underlying skills, MCP tools, and app tools to help solve the task.\n- Relevance: Determine what a plugin can help with from explicit user mention or from the plugin-associated skills, MCP tools, and apps exposed elsewhere in this turn.\n- Missing/blocked: If the user requests a plugin that does not have relevant callable capabilities for the task, say so briefly and continue with the best fallback.\n"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_01a11267-30dd-73e0-9208-d04d7145fd45",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "<permissions instructions>\nFilesystem sandboxing defines which files can be read or written. `sandbox_mode` is `danger-full-access`: No filesystem sandboxing - all commands are permitted. Network access is enabled.\nApproval policy is currently never. Do not provide the `sandbox_permissions` for any reason, commands will be rejected.\n</permissions instructions>"
+        },
+        {
+          "type": "input_text",
+          "text": "<collaboration_mode># Collaboration Mode: Default\n\nYou are now in Default mode. Any previous instructions for other modes (e.g. Plan mode) are no longer active.\n\nYour active mode changes only when new developer instructions with a different `<collaboration_mode>...</collaboration_mode>` change it; user requests or tool descriptions do not change mode by themselves. Known mode names are Default and Plan.\n\n## request_user_input availability\n\nUse the `request_user_input` tool only when it is listed in the available tools for this turn.\n\nUse the `request_user_input` tool only for optional questions where the answer would materially improve the quality of the work.\n\nIf `request_user_input` returns no answers, continue with best judgment instead of asking again or treating the turn as blocked.\n\nNever use the `request_user_input` tool for permission requests or permission-related escalations.\n</collaboration_mode>"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_01a11267-30dd-73e0-9208-d0517e315b6d",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "<multi_agent_role>You are `/root`, the primary agent in a team of agents collaborating to fulfill the user's goals.\n\nAt the start of your turn, you are the active agent.\nYou can spawn sub-agents to handle subtasks, and those sub-agents can spawn their own sub-agents.\nAll agents in the team, including the agents that you can assign tasks to, are equally intelligent and capable, and have access to the same set of tools.\n\nYou can use `spawn_agent` to create a new agent, `followup_task` to give an existing agent a new task and trigger a turn, and `send_message` to pass a message to a running agent without triggering a turn.\n`send_message` calls may be read by a human, so ensure they are legible. Always put proper spaces between words and/or numbers.\nChild agents can also spawn their own sub-agents.\nYou can decide how much context you want to propagate to your sub-agents with the `fork_turns` parameter.\n\nYou will receive messages in the analysis channel in the form:\n```\nMessage Type: MESSAGE | FINAL_ANSWER\nTask name: <recipient>\nSender: <author>\nPayload:\n<payload text>\n```\nThey may be addressed as to=/root\n\nNote that collaboration tools cannot be called from inside `functions.exec`. Call `spawn_agent`, `send_message`, `followup_task`, `wait_agent`, `interrupt_agent`, and `list_agents` only as direct tool calls using the recipient shown in their tool definitions, such as `to=functions.collaboration.spawn_agent`, since they are intentionally absent from the `functions.exec` `tools.*` namespace. Available tools in `functions.exec` are explicitly described with a `tools` namespace in the developer message.\n\nAll agents share the same directory. In detail:\n- All agents have access to the same container and filesystem as you.\n- All agents use the same current working directory.\n- As a result, edits made by one agent are immediately visible to all other agents.\n\nWhen calling `wait_agent`, prefer longer waits (minutes) to avoid busy polling.\n\nThere are 4 available concurrency slots, meaning that up to 4 agents can be active at once, including you.\n\nFull-history forks (`fork_turns` omitted or `\"all\"`) inherit the parent model and reasoning effort and do not accept overrides. Only set `model` or `reasoning_effort` when explicitly requested by the user, applicable `AGENTS.md` instructions, or skill instructions; when doing so, set `fork_turns` to `\"none\"` or a positive integer string.</multi_agent_role>"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_01a11267-30dd-73e0-9208-d0621353293f",
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "<multi_agent_mode>Any earlier instruction enabling proactive multi-agent delegation no longer applies. Do not spawn sub-agents unless the user or applicable AGENTS.md/skill instructions explicitly ask for sub-agents, delegation, or parallel agent work.</multi_agent_mode>"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_01a11267-30dd-73e0-9208-d071a2b4f09e",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "<environment_context>\n  <cwd>/private/tmp/jkh-agent-pilot/trial-5df9d25181d548d28400eea4ccd7cb13/workspace</cwd>\n  <shell>zsh</shell>\n  <current_date>2026-10-06</current_date>\n  <timezone>Europe/Moscow</timezone>\n  <filesystem><workspace_roots><root>/private/tmp/jkh-agent-pilot/trial-5df9d25181d548d28400eea4ccd7cb13/workspace</root></workspace_roots><permission_profile type=\"disabled\"><file_system type=\"unrestricted\" /></permission_profile></filesystem>\n</environment_context>"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_01a11267-30dd-73e0-9208-d096383fff62",
+      "role": "user",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Исправь BatchLoader. load сохраняет порядок и повторы ids, одновременно выполняет не больше\nparallelism вызовов клиента и использует параллелизм при нескольких элементах. IOException\nпревращается в Failed только для этого элемента. CancellationException и ошибки программы\nдолжны распространяться вызывающему; отмена не является результатом Failed. parallelism > 0,\nиначе IllegalArgumentException до вызова клиента. Сигнатуры и ItemResult сохраняются.\nНе используй глобальный scope и не блокируй поток. Запусти тесты.\n\n\nРаботай как один агент с инструментами в текущем самостоятельном проекте. Не делегируй, не запускай\nдругие модели, субагентов, многоагентный workflow или внешний review. Можно самостоятельно читать\nфайлы, менять код по заданию и запускать проверки. Не читай домашний каталог, другие проекты,\nрезультаты других попыток и материалы оценивания. Не меняй сборку, существующие тесты и инструкции.\nДля ответа используй текущие файлы и контракт задания. Не устанавливай инструменты и зависимости.\n"
+        }
+      ]
+    },
+    {
+      "type": "message",
+      "id": "msg_0fc1ec74e0cfde44016ac5392737fc81918bfb02a7a11f56de",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Проверю реализацию BatchLoader и тесты, внесу исправление с сохранением сигнатур и запущу проверки проекта.\n"
+        }
+      ],
+      "phase": "commentary"
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac53928138c81918edb86ac1d66c7d5",
+      "status": "completed",
+      "call_id": "call_8ef69ce2959d43cf95d476992eadf228",
+      "name": "exec",
+      "input": "text(await tools.exec_command({cmd:\"pwd\",\"max_output_tokens\":1000}));\ntext(await tools.exec_command({cmd:\"rg --files -g 'AGENTS.md' -g '*BatchLoader*' -g '*Test*' -g '*test*' -g '*gradle*' -g 'pom.xml' -g 'README*' -g 'gradlew*' -g 'settings*' -g 'mvnw*'\",\"max_output_tokens\":5000}));\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11267-4e30-7692-9cdb-06aa066f35c5",
+      "call_id": "call_8ef69ce2959d43cf95d476992eadf228",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"f38d7e\",\"wall_time_seconds\":0.000005,\"exit_code\":0,\"original_token_count\":20,\"output\":\"/private/tmp/jkh-agent-pilot/trial-5df9d25181d548d28400eea4ccd7cb13/workspace\\n\"}"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"68255e\",\"wall_time_seconds\":0.000002584,\"exit_code\":0,\"original_token_count\":37,\"output\":\"src/main/kotlin/pilot/BatchLoader.kt\\nsrc/test/kotlin/pilot/SmokeTest.kt\\ngradle.properties\\nsettings.gradle.kts\\nbuild.gradle.kts\\ngradlew\\nREADME.md\\n\"}"
+        }
+      ]
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac5392eb5908191b5a3335bb261540f",
+      "status": "completed",
+      "call_id": "call_63776c507a46432aa83f186809e633f7",
+      "name": "exec",
+      "input": "const results = await Promise.allSettled([\ntools.exec_command({cmd:\"rg --files --hidden -g '!.git'\",\"max_output_tokens\":5000}),\ntools.exec_command({cmd:\"cat src/main/kotlin/pilot/BatchLoader.kt src/test/kotlin/pilot/SmokeTest.kt\",\"max_output_tokens\":7000}),\ntools.exec_command({cmd:\"cat README.md build.gradle.kts settings.gradle.kts gradle.properties gradlew\",\"max_output_tokens\":7000}),\ntools.exec_command({cmd:\"git status --short\",\"max_output_tokens\":2000})\n]); for (let i=0;i<results.length;i++) text({i,...results[i]});\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11267-695b-7f22-8923-543db59418fd",
+      "call_id": "call_63776c507a46432aa83f186809e633f7",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"i\":0,\"status\":\"fulfilled\",\"value\":{\"chunk_id\":\"8e35ca\",\"wall_time_seconds\":0.000001458,\"exit_code\":0,\"original_token_count\":39,\"output\":\"src/main/kotlin/pilot/BatchLoader.kt\\nsrc/test/kotlin/pilot/SmokeTest.kt\\ngradle.properties\\nsettings.gradle.kts\\nbuild.gradle.kts\\n.gitignore\\ngradlew\\nREADME.md\\n\"}}"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"i\":1,\"status\":\"fulfilled\",\"value\":{\"chunk_id\":\"6bef0c\",\"wall_time_seconds\":0.000002208,\"exit_code\":0,\"original_token_count\":192,\"output\":\"package pilot\\nimport kotlinx.coroutines.*\\nimport java.io.IOException\\nfun interface ItemClient { suspend fun fetch(id:String):String }\\nsealed interface ItemResult {\\n  data class Found(val id:String,val value:String):ItemResult\\n  data class Failed(val id:String):ItemResult\\n}\\nclass BatchLoader(private val client:ItemClient) {\\n  suspend fun load(ids:List<String>,parallelism:Int):List<ItemResult> = coroutineScope {\\n    ids.map { id -> async { runCatching { ItemResult.Found(id,client.fetch(id)) }.getOrElse { ItemResult.Failed(id) } } }.awaitAll()\\n  }\\n}\\npackage pilot\\nimport org.junit.jupiter.api.Test\\nimport org.junit.jupiter.api.Assertions.assertTrue\\nclass SmokeTest { @Test fun `runtime starts`() { assertTrue(System.getProperty(\\\"java.version\\\").isNotBlank()) } }\\n\"}}"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"i\":2,\"status\":\"fulfilled\",\"value\":{\"chunk_id\":\"aaefc9\",\"wall_time_seconds\":0.000001584,\"exit_code\":0,\"original_token_count\":532,\"output\":\"# Backend fixture\\n\\nВыполнить задание из запроса в текущем проекте. Исходники в src/main, проверки в src/test.\\nСборка: ./gradlew test. Зависимости уже подготовлены, сеть для загрузки не требуется.\\nИсполняемые версии закреплены в build.gradle.kts. Существующие публичные сигнатуры сохраняются,\\nесли задание явно не разрешает изменение. Файлы сборки и существующие тесты не изменять.\\nМожно добавлять свои тесты. Для ревью код не менять, вывод сохранить в review.json.\\n\\nПроект самостоятельный: читать другие каталоги, домашнюю директорию и историю других задач\\nне требуется. Внешние сервисы, публикация, git push и установка инструментов не нужны.\\nplugins { kotlin(\\\"jvm\\\") version \\\"2.4.10\\\" }\\nrepositories { mavenCentral() }\\ndependencies {\\n    implementation(\\\"org.springframework.boot:spring-boot-starter-web:4.1.0\\\")\\n    implementation(\\\"tools.jackson.module:jackson-module-kotlin:3.1.4\\\")\\n    implementation(\\\"org.jetbrains.kotlin:kotlin-reflect:2.4.10\\\")\\n    implementation(\\\"org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2\\\")\\n    implementation(\\\"org.postgresql:postgresql:42.7.12\\\")\\n    testImplementation(\\\"org.junit.jupiter:junit-jupiter-api:6.1.3\\\")\\n    testRuntimeOnly(\\\"org.junit.jupiter:junit-jupiter-engine:6.1.3\\\")\\n    testImplementation(\\\"org.springframework:spring-test:7.0.8\\\")\\n    testRuntimeOnly(\\\"org.junit.platform:junit-platform-launcher:6.1.3\\\")\\n}\\nkotlin { jvmToolchain(21) }\\ntasks.test { useJUnitPlatform(); testLogging { events(\\\"failed\\\", \\\"skipped\\\") } }\\nrootProject.name = \\\"backend-task\\\"\\norg.gradle.daemon=false\\norg.gradle.workers.max=2\\nkotlin.compiler.execution.strategy=in-process\\n#!/bin/sh\\nexec gradle --offline --no-daemon --console=plain --max-workers=2 \\\"$@\\\"\\n\"}}"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"i\":3,\"status\":\"fulfilled\",\"value\":{\"chunk_id\":\"f4f6af\",\"wall_time_seconds\":0.000002084,\"exit_code\":128,\"original_token_count\":18,\"output\":\"fatal: not a git repository (or any of the parent directories): .git\\n\"}}"
+        }
+      ]
+    },
+    {
+      "type": "reasoning",
+      "id": "rs_0fc1ec74e0cfde44016ac53934b8dc81918b387b98eddb0fe2",
+      "summary": [],
+      "encrypted_content": "gAAAAABqxTlHcTtqVTy0kRcnZTaf4nxb5B2vmsqnPQ4p36_4z7fe7RabFh7FY-aGDt--y_y9QlZxMKYhmShuv8tclPmFe4Q71lR2gTdqjMQio3FvwwAbJBsxH7KtIgMwWGBlMn_I5OR38AMHOqR-ty_lo4KqCBCzpMLqL670eQb19bqwkwyI7nRv_WR0G5U_cJbMQCCIBpNyoeuEHTue2nIorlFe7BZTwxu-9oiZPxXeCgCfrO5XVZ5r9Od6bWPcbMV-dYvvjrkR8Oe9Q1nMSGmBfgOFStth0Jutgt2QA5ml0QNocpjZ1Id8ap0ARsPh3ahjotmtNVPEh4z24WManF-HCRuEpXneDWEXsCrLJd2R1EzCZ64Eo74JRkV65rM2gwZQo-WGbrtnVwPDwv6_DoIIfDoIKUtM-BCzdcT1y_lDhUDQwhXUB_vm9mNjtZppXsy42hy0KwPsV875OX6mzmqtQuvw0D4Yj6YrOB8PJROlZpQjls95WehMbFDdXqZ-b3NLOsTOne_Rm8vfC4UxVu1hTZTzYtfivnxRPP18Cmi4qgqf_DRsdYN8y1MncSrH9tLVNKzEM8-HurzXhMgv1y8KjlIE3DYx3Rm0yShnqqWKMm0bOeXnt_S5mEi6tazd3hp5DUaqGz-MYn42ZuKLjJ4xJhslhY-mm0to6IxVLsmHzDPZzCdNRb9fllv7ZsT1Cq7PBlgZHItHHygTbOMZ54Zn9CHpTdTC3zJbx817j1hJs07RYvN-G44_QaovMDaMbR9pqiO_rWTHuHGPSsM4L7iPWC0toGM-mudwjcOTuUs0b12l7DsGRPnHOSdvDS8-2LTZX2sFhaybli-KSSO7ullqcHd9dzSLZs1z-ome2ja0w67NU0v57aMKxvLZhWZX912wiuREXrmCwbOauOvd2ObtZhVxcaqUF2UgaHA3viALdvPkkYEFy7kBHNrRwjSx2S-rj_Ki1ooVVM19rCGqSwBt7HlzLMU1Omxf5bgFugtyVx65paWHutLzi5BwdgBOmHRx6joe4c7ajC8Thq0x8nOQZz_ihZdVpNMSlN0AsmNC5r2McY8Bo25iEK4d4AZPhomnkNXiu1ZXtUdtDClqkYhWr-zVhcgFDI_Sbn_AqVOkVVsuWIkxvCtqAO-Y4XBJDVKc5p2L4J5_O5kSxMwMCEOpj9vbVNd3t7Q9tpSdhpaI4KyM7ekGdld7KRtLx2fgvFwQVNNMyq9iXWQYIUCr24NoQttKF2li5v46APpmdJqeUAoaFRCsFALcfmzT6IpGNoLwoteW-vhj6ZjCemnlrbo2jA1lzvLeABLD_x0Kd_mVA9vATnyT_p8lkZl6ziWrJD0tzdOc4W8Tu_RHgWWDskbODDjhatCEj50nv8xypfGFdZoqLElJGQfG5UEdxB8H5mV2xFYBh0T2P7bUSZCXByTWGRgJ9XTj_FZWidKrK4ruJs6Cn9XZhInaSmZZ9oj8xCYbAmbIC9ORe8WOIxVnZ7hLtny7r83RwcMnHRYYejG51z-LUpcQH1Vn-d9ABWopQTlvGXkqiJIjp2n_KMfY0YrVP4_0OkbcVqQdw9jgxKB8bydqeR638BPH5jDs5d0L2P4N81Leg6FpJm9stPyfFH6OOfW_LE2dIanROFs_AQrlgUfYaf6gFkKmHoYDD9N2uxUiU8b8KiNV0bzq0q_UsElWu20nZx8jdvhkxZ2RMWHVkM6j_VhXcfkYD5sY0VPRVUQ2sm7_E0I-g_hWLtlT7qzeCDuD-kwR8itqF77Fs6mH9llpVjtNoIqKvRMuQe535A3mF-t5SnHD5ZncZoQ1Wgsove4myvDFq9U_FMSUGb3N5PpddErRFkDc_Q-fn_ibuGJyyKh8-ma1Kyk9WoWBEGZxJY6VNcNO4d4XdU2Wd268ZS_pvs99MvwY3f8L2WQtb0xSsC6HwBZtxF7sRAmMqsLqNGTXTZiTmfAzIPrIt1iizxY58z9HLkzr89kAxDKPZd41DlTLi2a154j_RWQoDaY_tvY84V_TUV_urm_l7LL1HPJ1wXFDDdid2e_QjcdThEP9ZMukzkfbfk8kl3lU8HvFRbaNWX7Bsd4AzesCv67UkA8njuso534C3B79cyLz2d-20CWg5yE6-dDmD7bU9Q7wMauhrAG6kfcpGANx4wdjfAwxRwStY4kSn-2fs1txgGjB981nKaaRp1U_gu2-ZflXjbWn2toXI-feeOL1sCYDDfjBWs-JcNVJPaAUJv9kaOIZp3-MyDO2IAABTTgumgvQ5U3q02VtLlWsn9G85GzdD6Jydxjsps5iqXsYwap6FJOt3qnHAnKpAYlDVHqleK_WTeOJAcBAM83ZaSvVrp_xYtukuqxQxVk_L37kGmYOochcm-tEMeY9IkL59GL2OlnqYE_Iz7-Tw5nFOgUwvWnmrIglbURpcLov12rb9eY2PbGI2XrEiJchGMKCg2NWUJOywagol5WYirqKQBjvpbCeoTOqJud6y81MjigLKk6FpAnuTtXyW2q3E6ed3TRBj6hOcxXNcvCMZSqwCgIXIWEZ9G72NrknfT-PfXQzj500o15zqdS25BT8ecZqUFFvj2wA29cGn0XWxzf52iIZUIb5sVUbWFo51umQr9dkC96eMhTEP4aeQobbDYXzrlg6A0vRU0uupKUN31CT9vc5PAXTdGAGiJm0WXeESeIFG6VSA7Jfl80qANRK0P3DkgmzxaXffJCqUj2Tw3zsdZTXpB2V1K8QqcfmDiKoQJroNR__qzIajmffDVh3NSvUj6BKjXj38ObVXZKPNdFyXG7mjNe0-dkX0qs4aKvLN_FjPYH9_W-fV6of7E7m25cmXWgV5kdn5OZbaMV7PVmCyW-ZoF2VMEdSA08FSFBoaqRESOJWTozI1mxSv3NpYFEN_VA1NyuI_A-5VzVglFk-mUpaf7gS037_hUZJLU38OtvFICBkt1zATn_qIYwbeZtWxIZW-2SGCnkzqACfrPF_xr_1IzDjTS3jN4WvyUlGq_87yH6xY1reACDX-wJcvB0fkGpFq1N4rC_53ae-5FSYxPl90CeSS00w-SUEBf1EYEtY16hUKtiWu1aeMtXdj8csEk8_qnXNqGEWJLlyVFQ0KtxMXIOc0e80XyZbcWjsWyoKHeaqjQC6qj9i0FXkjQNmTGI1Zv4SMV3AlF4h_H-O2n3K2xIXW6VGCX0SUYjtkL0qzZYlny6mh5E88k7YGEcppB-O3UMHtuEkfMzs_efeFqat_guMQfl50kJUwOgnACYHNSJQUbGVp8cdFtfCuMkUwbK450Vk-Ol-Ooo2rsVwh-wZQQnH5jVhUYl0Pujh9eHUMPm9KpbP-N9xuNCXb-cy341w49HzO49FrGBbkr7MkVB2XdRkkb1r_482W_g7iFPf6mQSlEa_hPUVShHz6f2cXwExKoHlsvXocdgqalMyUKjOI8EunfUZRXikXaCBZTtzy2ZGKSa2aS4SNnEbXuTZpwsLXGzb01byPXE0AY5tSfCfhzUSvYQaGLfVnywpaEk7BIQhCrjxcsk0tQ1zC18nufOXn51tSArTF0u_u4pgAJlW9wNakUbEBrS7j3i1Z7lP_a-rpnzOjEOXehl1dXKvGOzEltaoasxqjkLnw4fj8KCwazymRMOHNYItv15fXgKfZR3AThYFjYhpbdVLP8tGMEFMJEULj-TX3SOMPBhivbvyRQtelfdtKLXYuXTt8MlbK1PKS996l9lQccZ7mwntNd6rWjgr8v-FoxXJjQEfbJbDYUDyGE2EewYrpTJSV5t0wmINjoxAU3zUqDxJBNHq_WBi34GLjFmyNaupUkWFTLuwlF7B15Hi4o2vPywTaKsuWr_1a8j5nrUC8BXaI02tTYaXmr1iV2T21qWMAMqKE1_4-2ppVrfkLwAXZn2vlyC-76xh20hmFcG9IgPjgRNCZaxtLbZ4G1e-kAOHbpvThgvsWcPsbpBsugbNSwmgWmnnTwNYyKYubr9LjisGXGch0jGJrQ2dS9gwOQtna-SW1k6t6gZy7_Nqpcb1WUJ8RLSd-rSd9AO4qsxO3YEM3IrRScq6QUb1N7s5wAdGsxEPsMRwsPlFtPDXBEGiALch5vspfX15OvalPI8rkBXy9d2iPlb2lzsi_0LYfb2snypy76pg9QzsLq-1Bsx8fjsYdORyy4HokA3ijKedrahWZFwF_0SbZQv3SXQqdRYOU9HgdFCLgT706eu9fbHAucwGhuXXKj_O9ZKmBy9eOG6NNa_DEf26y0RaAwpbdm4YRmzB5Wbj-_8Dv0fD_5VzCJT2FY1_n1l7M9whk3ZRmUtui8oDv1UuhB2BhP15ZXWwCOxTtG2otSKxJyv0yyA3Zp5KPoCMi8YS3ChjAFHzmkMrZUm2a-WsEgjj7wEqq1b-i0kB0cb1KwWtV8r3J-Y_fIBBY3jQp3uk4iSsZ8gvF7-kOqbs6u4hMfy56zr-vnmLXS7rC8fk1SXxkfpxK-LC7v7SNtRpGgxGLNpl5HgMyIl-huIYUhHDG6lWhjVfpRaJo6vzmKUOLM9v2vj7dFScmOr6O1VSs5Fmfy9cpVQE2OeJn0OAbDShCHvWOnYrb-dqOQYpqTL8f7AlN-SLW7qbKZIF1umPDs0DldouyqJNTl0uAoVlpqcFYKI1YMrMpFhAfJp7X7kMiM8JYKaBC3pf_wK0OvhVGqctg554-Uk7bIh2OCH6akbGR7whSi7f6SXSBmmax-Qn0mIPbl3t0AJkKyQ="
+    },
+    {
+      "type": "reasoning",
+      "id": "rs_0fc1ec74e0cfde44016ac53947a85c81918a5859a88404cc2f",
+      "summary": [],
+      "encrypted_content": "gAAAAABqxTlZGOadQJZLzuFjb4Pw7lje-WSUrZ-vhRC0DTPyWIcg2OsMNtBKB7PJ55KpVV8jd81aCeY8dW9R5Cy9C0lPe1VPpvi9HoZeBk3row3v1WJsgHhcbui33ZaZABdNETmFIUE9qKMv3MLW7FjJjzZSIHR-C-BFGHkltUJ-RDmKABwxCT2e_fn2rIWXcAHPjNpPqLxMpbmuBi_YwcYhM2GoYyd7IFzu7ZtDT2u3S0wbWGF6KApbfsNEicGoQmB88JmH5_OJEC-PJakn9xuBPZotals7v4gyUVl-ssNGjYTwOybvyQuRBi3-eiBsbmoth9xLaBGeVyMEj8hqc4OdmLS7_NRqB8majPUF4bBvchzX489pq855FDUef8WR0eHNfSyjR69ad4tmiFWmJhfyxgPLTPWX3PL5io2Vrb-eXau46WCDjjjFiy5HXggxbTVevP88406g0AoTaRQbukRWM04gzcrbxE8gZfAFRWg_EzI07M62RSlycDh8mQvC1aQF0De09kjGFNoQitO9RxMenmlT7febIBViotWmKhSrtHV3sq90kqDN93R5ec3fi58hQ7VViMQtADaJE3jigpMuMOrKGHdH58BDIL7OhqPLmqRNfjdQIFRJLMB4QOnwTjxo0CrFcEWa91htAXK5zRQngMrA-9nb8mkpHyvoscCMsgxMhlr5eVyC45-dDWFdkG6Q2ldiInBsMGou25U73Lb8C2_prOee_f3iOQ5t7u-yI1mHgpbB5DfYRt4qd0Cpj4Ie3NPZvYpy1hXLYFVwo86UjDU-aTDgta8IoOIKcd9dKm3rgoyouNHzsn2Xk5KzGOq84jJPD1bJCr6RbzF_oDuOyG4J00DdPVVr-X398wHKjAyXmh3Qjn3M0vb4YrA0RUM5k8nGzDy5ZKKVu0NV86I7c-lv6Vjobd9LHbQWVmSLO6Ool8cMDBBFf7mgaW14vvVP8vX1nQsqIPQkb--G6a20j10b5eo3IY-vUZSM9JSaIo0our4aQqODPwSbVBWHPRbkVYP3HL0-CtWDsOVK51kzscsg6pmlnJJdxZC-zg8N6LWNtnvvuPKTHSt5AoSoF9EeISfuN8tLzEB-2r3zJx7ZY1KpUsi3vjgxuSEu7rDuEqa1nug_8F7vtPlQEbkNmKO1agjzI4mz6sKjEPxqEcEBBP2kdOYFjX-rgJhn7oVLnwEPGVsYtTBSvrveRfX1U82Xtag0mkAlUaDVLcdNtRgL80HtumRSl_eJMevY1Ne1FS9PqrkrpK6Uc_ROqoEAShDWcpyVnh87_R8rm7ZlXrc1tE4gI7pBkNfMG1wbAUgCD-V4MfK1_ns4wGRMZoHNoXIO8dLGFT4NKn4BibZEdxVJMogtfZSYtFQVmBgf-6-hwKUzWxtI0q5Rj4GvgDN5WpIcJoGCu_ypPGuoslxlKXk7iMGymnPTlTfghYNxcBjnbPA82ZgI0YyALL8ANLtv7l4p5pIROZSlLL9MxlyOXoS-DkhDJmSlspwIm6HqGkfeWhBPlTqe7yG2paFm2fU5iYKtWY1ieeXHRnCUrdRSAF_mq-KSYtLBRtqupGgu_8UXT7L_pX-I0xZPN7EkFqKcCTLVTWboFv21XjAzCDdAu6F75zvv8D8OWkoJIp0Umd1gis44O4VCDW0by4vJfhNFUM2oHlh3ipYqYgNjutZCvPCjzF2L-qVh7noxLe7yVaaOa2HUGJioZQ8a1n5_LIFdILdJ4cjxzjXkQSWFq4nGQCPk7aOWw_KNg2FKMFO888_7eRHcuo0YZHJW7l5E4shT9U3rOdNX30l9s5gbhm_WOeBWnFRo4_gf40fno5rsou6TL5OIQ_oe8LDxl8yEspKQfk-Eiv7yX15OzbabZZoXyu-Pcil2m975piHnlQMK2pCPGlQmJZwY_TWmMd6HsUL_l1If_M5xmvYGFQ5h-43lzpGSJnT3WFBMORNIMCNoLTlv1QG5aTkiMGxfLAWJGXc06ntIIre_PoX67BhQpCUQ3bu8_XpjEI5bkbIGGWFz85-VMNgrg6NUzlkSH-rWvbxh8Gkr8fA8ukxjS0h5bxT7tNG1e5Sty4EgDH-kEen4R4at7rN0sff7TAhofswzSAVQdRqgpDRV5rp9_2EcHESRJtED63nDsOBNpGY7rl8IXEA8H3DTdpMhmWrnm4NYYJNfXgc5xaIBDmMFOlNbBLGwO2EctsVtYMUNLIhf33Lnn-KjmxTYXapvtswQQEPmXIyaUk3trBvjtxQu-0-CsFYbjZwwLSH2Y8ORbimmFoJzsVbVy61QO1OCUPnEBy9WiczUEzVyyI4TIer5bqrzcXopxAykGC0HfOeP-L3OOHgXoQsaLjpv5QlaU0SFRbY266sv0zCZGj-vnPUOF4StuBoJSzKqNS0Jwc8-kGAzG0XIt-TfyQqlf-RqbfaZtpGAxEalh8ZROzhmRFHMn-QWQ0pWYGyrd77gVdoZS3PXDF8G0hDgCwKXLswh_FenY5_OYNJmzvZkjdbL5uuaDqLBjCzRCAIdLG6_-hNQcdsAslJTL87NOp-0j-Zim1031bwqvzKLFYKF4mSVqjI2WcgC-IGM9NGbHX0l8Zc6YkU5RYxLjzBevLtTFajgtbaLdCTtjw6hH-WFs8KEA1Dpdk-hNm_02f-FWeIbTwB5nG9kMZJ9Hz3s82xm7aub6uYXYZccW4RZDiFrKbEwf-X7qeU_HXReBJAkh45QsDYhaCt21dEjmBJz9nNG1bGaCEZdwsUrXScgjNQAoSQQyy9TXAETZHS-DCcFsa_UDLitiOxW-78p4zGkmPlYlJKedJUppUrci3yYB08oUDHTfA582dX_ZjN5GIDTTv4UbihYkTIxWvs9WKYanKfQa2BYtyYxwMOqgwePKl5f7igAZ-PAjhouny33aXW3N6Y2XbhpDZvgOJOmONrSKik5sO56Jws2boxzuDxxksIzkkzF4YtnGOHSXIP_nfj-kQ2BWQwdVqBjyYUs79cQUHts9km8gBhfXt3tXB61fUTEH5uIapw7v-8KqG-XbRocgrhIGSRYGO_pZuPmJqwJ6g4wlWvs-Av88KEP6N_VYK6RbtVNIEqpG0k5Mpb03Egcl2hg30FAcIMN3_piF__wsKLLbziK4ODVOm8J_o-3hX89Gip4nZ9Q0eUFqVRobHd6uiZX2HpOJUpc1Yp6mEl039AN_G-Cv0EA-QA4DRyitPJXUC1m7UzfT2SOKQnTtYMCw97cb8HduUGRjZ4056XL2Y9G6FeSQ5VPxFgjmBd0i1gMa6xuv5FgpPUjBR5fDzZTp5ihtmNP8_RKx5fbq9WR1UDFpGugww19PuQD1b7L47HL2rzdVcsh7dlFJVGkngkYjDVgGtR0pO1pzgIbo_ZkuO1ogc2LW0tYbhaNFkH7aSWTzpzYZ2vgS8ugpsT1TaD3Y58VCy08s3onvKOTjf5LedW7LAze8RUR5yPeQFggjG1ROLGg3b1KfiyjgzkiORiltbYFoQuU8H-LT0XHnuxfucN7XmTQ-sPDCO8MMRgXO0ETHpYcH84S7InN7Y6CAHf62zvySrEVEOu9ZMC_GffCBpgePVupGCkhh6aPugi1wIcHSopDiRm5hU2FD3zkXY3kQ8XqHR3AlBOrjCmwdQbJm-aZ87BkPduvtFKaqwzrIkifJA4X48EDZ7z8qF7wt1lDaC6m1LMhQwGwX1_J3D-7jJV_5lwvOmBk7X3aPM5XAkiJQnsLGiFgmN4rDPxiBFEm9ANiJB4yjqksc9xH2lW9D0dX504Tm5a7htT8qjWnej8a9xoPd8FqhKxNs-KELAQsIjou2rjHwaflUMkudKrDuY7W27ZH741qmtfSyO9wWzRWtiexaVJPaR5S2YcGOj3NEzSx7xDSlGVHRkPEzbJT5iJlZUQvyhvokpET7GIVYmK_dQ2o6vA6w_SeWGIk0Udt6ebmrf5GGkTn0Hag7j2nKnhfSAdmOkQlTQLUfcPA_3Wbfw5N7ldtnj93U9XPx94ReUqHfT2ACX2LhAzKdFy07ffyjTDwDSVxBm2x1avrc5Veq0HvU9I3W6PW8BZ-mdzfRJ1cp4mzs7h49aecHMkkx77x-_Ig3I8tLh4qD93w5dHYcxdxL8VrGeoHMyRXjmkFYV4sbjxsUNyYk6T0yJaigmPshnzf6K1FAS_JdrPFdV0uT5XpF80jm_suB4GCRchK_VYXrv49oSIB6GQPW1iJrTSThBrJ-3E6LLBEBvL1oz_HPxb676phBGdk3K_C0GV1GZuQB69QdgLLlDl3ypNp_7Ot3feCmnCAZhrJiIZExiguBgy_N1rtcKqqiHl9YRbY-inxSE4YS8QLfKgmE-_SyJkI6c3jpHWf4IOmW7781isYbc13B-IkAG7XU0g7Ny9U80LamzWTtATfZTHBGdkjBHKT-7H-AkybNAKzMSnIlkiqzLkJG5F1TqVRgS-odXUhvyFwUvmqP_wu1d0OEzw1pifd1GLBRLpzazJbbPC8_xOrbXzEioAVhMMecwBSoEl5QsZsQrYLYNyeJoSVin3A1Liksje1fgcDIoFmFKNQPkpIqEFdXFjvYK7kAacFrJFXoDvkXUubDNqnshneGzxB8YNy1ei-ZiDFZr9mdagkNB-poB8fGNwVg2oMD0LzOsXx92JUbuHpeBefHAl5W1BuMhEDUo-PB8tmkMN8K2ioEJlN1gPpPQcCovYau9Yh1OO7Oyu8zAEDMlD6CFrIKQjtiuX5PJuRyl3qri2KKT4lFpfN5HNFFB1xruSOFLaSpXmNXf2w5OtdYW0n8ZbEoxA6eVfL6Jgoacb1BFSfbHJkjxlXv7Iv1ahzdEmSLAk-liWolYQSdepYgA=="
+    },
+    {
+      "type": "message",
+      "id": "msg_0fc1ec74e0cfde44016ac5395982f08191ab97e9452c2aa29b",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Сейчас `runCatching` превращает любые исключения в `Failed`, а ограничение параллелизма отсутствует. Добавлю семафор и обработку только `IOException`. Новые тесты проверят порядок, повторы, параллелизм и распространение ошибок и отмены.\n"
+        }
+      ],
+      "phase": "commentary"
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac5395aedd481918775ca374f794306",
+      "status": "completed",
+      "call_id": "call_YVV9cW18cRU7Ok834fhkekBk",
+      "name": "exec",
+      "input": "text(await tools.apply_patch(\"*** Begin Patch\\n*** Update File: /private/tmp/jkh-agent-pilot/trial-5df9d25181d548d28400eea4ccd7cb13/workspace/src/main/kotlin/pilot/BatchLoader.kt\\n@@\\n import kotlinx.coroutines.*\\n+import kotlinx.coroutines.sync.Semaphore\\n+import kotlinx.coroutines.sync.withPermit\\n@@\\n   suspend fun load(ids:List<String>,parallelism:Int):List<ItemResult> = coroutineScope {\\n-    ids.map { id -> async { runCatching { ItemResult.Found(id,client.fetch(id)) }.getOrElse { ItemResult.Failed(id) } } }.awaitAll()\\n+    require(parallelism > 0) { \\\"parallelism must be positive\\\" }\\n+    val semaphore = Semaphore(parallelism)\\n+    ids.map { id ->\\n+      async {\\n+        semaphore.withPermit {\\n+          try {\\n+            ItemResult.Found(id, client.fetch(id))\\n+          } catch (e: IOException) {\\n+            ItemResult.Failed(id)\\n+          }\\n+        }\\n+      }\\n+    }.awaitAll()\\n*** Add File: /private/tmp/jkh-agent-pilot/trial-5df9d25181d548d28400eea4ccd7cb13/workspace/src/test/kotlin/pilot/BatchLoaderTest.kt\\n+package pilot\\n+\\n+import java.io.IOException\\n+import java.util.concurrent.atomic.AtomicInteger\\n+import kotlinx.coroutines.CancellationException\\n+import kotlinx.coroutines.CompletableDeferred\\n+import kotlinx.coroutines.async\\n+import kotlinx.coroutines.awaitCancellation\\n+import kotlinx.coroutines.cancelAndJoin\\n+import kotlinx.coroutines.channels.Channel\\n+import kotlinx.coroutines.runBlocking\\n+import kotlinx.coroutines.withTimeout\\n+import org.junit.jupiter.api.Assertions.assertEquals\\n+import org.junit.jupiter.api.Assertions.assertThrows\\n+import org.junit.jupiter.api.Assertions.assertTrue\\n+import org.junit.jupiter.api.Test\\n+\\n+class BatchLoaderTest {\\n+  @Test\\n+  fun `preserves order and duplicates when requests finish in reverse order`() = runBlocking {\\n+    withTimeout(5_000) {\\n+      val ids = listOf(\\\"first\\\", \\\"second\\\", \\\"first\\\")\\n+      val requests = Channel<Pair<String, CompletableDeferred<String>>>(Channel.UNLIMITED)\\n+      val loader = BatchLoader { id ->\\n+        val response = CompletableDeferred<String>()\\n+        requests.send(id to response)\\n+        response.await()\\n+      }\\n+\\n+      val result = async { loader.load(ids, 3) }\\n+      val pending = ids.map { requests.receive() }\\n+      assertEquals(ids.sorted(), pending.map { it.first }.sorted())\\n+      pending.reversed().forEach { (id, response) -> response.complete(\\\"value-$id\\\") }\\n+\\n+      assertEquals(ids.map { ItemResult.Found(it, \\\"value-$it\\\") }, result.await())\\n+    }\\n+  }\\n+\\n+  @Test\\n+  fun `uses available parallelism without exceeding the limit`() = runBlocking {\\n+    withTimeout(5_000) {\\n+      val ids = (1..7).map { it.toString() }\\n+      for (parallelism in listOf(1, 2, 4, 20)) {\\n+        val active = AtomicInteger()\\n+        val peak = AtomicInteger()\\n+        val started = Channel<Unit>(Channel.UNLIMITED)\\n+        val releases = Channel<Unit>(Channel.UNLIMITED)\\n+        val loader = BatchLoader { id ->\\n+          val count = active.incrementAndGet()\\n+          peak.updateAndGet { maxOf(it, count) }\\n+          try {\\n+            started.send(Unit)\\n+            releases.receive()\\n+            \\\"value-$id\\\"\\n+          } finally {\\n+            active.decrementAndGet()\\n+          }\\n+        }\\n+\\n+        val result = async { loader.load(ids, parallelism) }\\n+        repeat(minOf(parallelism, ids.size)) { started.receive() }\\n+        repeat(ids.size) { releases.send(Unit) }\\n+\\n+        assertEquals(ids.map { ItemResult.Found(it, \\\"value-$it\\\") }, result.await())\\n+        assertEquals(minOf(parallelism, ids.size), peak.get())\\n+        assertEquals(0, active.get())\\n+      }\\n+    }\\n+  }\\n+\\n+  @Test\\n+  fun `IOException fails only its own item`() = runBlocking {\\n+    withTimeout(5_000) {\\n+      val loader = BatchLoader { id ->\\n+        if (id == \\\"broken\\\") throw IOException(\\\"unavailable\\\")\\n+        \\\"value-$id\\\"\\n+      }\\n+\\n+      assertEquals(\\n+        listOf(\\n+          ItemResult.Found(\\\"before\\\", \\\"value-before\\\"),\\n+          ItemResult.Failed(\\\"broken\\\"),\\n+          ItemResult.Found(\\\"after\\\", \\\"value-after\\\"),\\n+          ItemResult.Failed(\\\"broken\\\"),\\n+        ),\\n+        loader.load(listOf(\\\"before\\\", \\\"broken\\\", \\\"after\\\", \\\"broken\\\"), 2),\\n+      )\\n+    }\\n+  }\\n+\\n+  @Test\\n+  fun `client cancellation and programming errors propagate and cancel siblings`() {\\n+    val failures = listOf(\\n+      CancellationException(\\\"client cancelled\\\"),\\n+      IllegalStateException(\\\"client bug\\\"),\\n+      AssertionError(\\\"client error\\\"),\\n+    )\\n+    for (failure in failures) {\\n+      val started = CompletableDeferred<Unit>()\\n+      val stopped = CompletableDeferred<Unit>()\\n+      val loader = BatchLoader { id ->\\n+        if (id == \\\"waiting\\\") {\\n+          try {\\n+            started.complete(Unit)\\n+            awaitCancellation()\\n+          } finally {\\n+            stopped.complete(Unit)\\n+          }\\n+        } else {\\n+          started.await()\\n+          throw failure\\n+        }\\n+      }\\n+\\n+      val thrown = assertThrows(failure.javaClass) {\\n+        runBlocking {\\n+          withTimeout(5_000) { loader.load(listOf(\\\"waiting\\\", \\\"broken\\\"), 2) }\\n+        }\\n+      }\\n+\\n+      assertEquals(failure.message, thrown.message)\\n+      assertTrue(stopped.isCompleted)\\n+    }\\n+  }\\n+\\n+  @Test\\n+  fun `caller cancellation stops active requests and does not return results`() = runBlocking {\\n+    withTimeout(5_000) {\\n+      val started = Channel<Unit>(Channel.UNLIMITED)\\n+      val stopped = AtomicInteger()\\n+      var returned = false\\n+      val loader = BatchLoader {\\n+        try {\\n+          started.send(Unit)\\n+          awaitCancellation()\\n+        } finally {\\n+          stopped.incrementAndGet()\\n+        }\\n+      }\\n+\\n+      val job = async {\\n+        loader.load(listOf(\\\"first\\\", \\\"second\\\", \\\"queued\\\"), 2)\\n+        returned = true\\n+      }\\n+      repeat(2) { started.receive() }\\n+      job.cancelAndJoin()\\n+\\n+      assertTrue(job.isCancelled)\\n+      assertTrue(!returned)\\n+      assertEquals(2, stopped.get())\\n+      assertTrue(started.tryReceive().isFailure)\\n+    }\\n+  }\\n+\\n+  @Test\\n+  fun `rejects nonpositive parallelism before calling the client even for empty input`() {\\n+    var calls = 0\\n+    val loader = BatchLoader { calls++; it }\\n+    for (parallelism in listOf(0, -1, Int.MIN_VALUE)) {\\n+      for (ids in listOf(emptyList(), listOf(\\\"item\\\"))) {\\n+        assertThrows(IllegalArgumentException::class.java) {\\n+          runBlocking { loader.load(ids, parallelism) }\\n+        }\\n+      }\\n+    }\\n+    assertEquals(0, calls)\\n+  }\\n+\\n+  @Test\\n+  fun `empty input returns an empty list without calling the client`() = runBlocking {\\n+    val loader = BatchLoader { error(\\\"Client must not be called\\\") }\\n+    assertEquals(emptyList<ItemResult>(), loader.load(emptyList(), 1))\\n+  }\\n+}\\n*** End Patch\"));\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11268-94c7-7fd2-a2e9-b221d3a0d1ec",
+      "call_id": "call_YVV9cW18cRU7Ok834fhkekBk",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{}"
+        }
+      ]
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac539845168819181610971f0686ad8",
+      "status": "completed",
+      "call_id": "call_c5ff2e128a234054bf8f51f5d8511881",
+      "name": "exec",
+      "input": "text(await tools.exec_command({cmd:\"./gradlew test\",\"yield_time_ms\":1000,\"max_output_tokens\":6000}));\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11268-b4a7-76b3-8934-dbfd3241a450",
+      "call_id": "call_c5ff2e128a234054bf8f51f5d8511881",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 1.2 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"40de0f\",\"wall_time_seconds\":1.002582084,\"session_id\":59206,\"original_token_count\":71,\"output\":\"To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.\\nDaemon will be stopped at the end of the build \\n\"}"
+        }
+      ]
+    },
+    {
+      "type": "reasoning",
+      "id": "rs_0fc1ec74e0cfde44016ac5398bdfa48191875c164d4006cdca",
+      "summary": [],
+      "encrypted_content": "gAAAAABqxTmRv3huIyOQY0eNQPV8gvoEZP8bRE2KBFN57ZLTHzEDeP--5u7yXGwLwUkh9_rggzCS8LPV-hH422c-eEZqRiTs8NmUCUs7yydInLvi7jQ_D7PDjoUazw2EGAEIJgP_j2zl7VE-gHN3k6kEgWu2GNzjLm8fsAn83PScCUXoOpvVBec2Al5-qNYpNJkkFBtI4jiBfwnaQhXXzNVc1w2_0G-wAXqMnkLuMkpD5GErT6mXsKtY8NE0uFejkfeZQ85rwT0i1fhMNvhrMJgoFssj7cYQG4M5DDfcCilffOZcAj9Qx4ISomHPTRi_9P6QQY41Vk2EQLlAD7FAw6VHca2zaygGoKEov025RXq6t2Sx_KdMmWdQugMxWLRqZtc-vb2wawLytU4i2H1FeVxqgcHyfMD6rNvZaZcvYeXgN064WsrjA9JzVnlMXoQBanfcHzAFztld-4yNO3Yp7zj-GXxxZElW3YwY4cvokfGbCHZw_JgHx677054BJnXKlFL5Dt5OMPVj45gSi3JQC2KXI4OOz1Yl1Vb0dXJMcYc7cQqVVxm5Qd0Ycnib9sWae2XSlDHTUZYTZ7wDKL4IwCUccuLpaUXdV3CCqE55rDux-2jvK5VBawxT01WwepeddTys4RU1UG8cso_K93XUlQUYKn78T1f9-5StzKE8IomdPu6WUUkt65_SIezuuKLEtsqB4S_LMbJBefBdB7fDFmKdNg6HfgnQd0SYmqyTmmwc-wCH6fOz6scYA57KxdP115INFddqkOhc585qtnfWJA5d07lUwWm1wWgnmiMYwMPgGKu2x7IvbXindoORGap3g6Vrie2P72xdbovUDYKoDLzmjIvRDKX5F7gWF_gpzHTgMDCUKfhMVlxC6nzMIjD-C0jqn11j_4DyK15qJpy2KMCo5GBEn8-ZAdSPgLKhQuDF-G3qw3Mni_9UEV1kT6Vl7ESwFcWTh7zdNeUNg6vJfY3M70KRk-GdQLOX41wKVXBInBWI13Ob4ahc-Uk1wxcbJeyHYZHkjoc_0-34WGKjPzVknYVjlMenrK1s2iPzjlNNq6-Lg3RhnASfUS3Mfre4pZDFnH4_vwq45AsltvVnwTJpwhWg9vOXDXjg1eCae6CTaMrdPcCBT_z4LQPVktaZC5JZlYRYVVB-eImhdQlROAvMrubZhWeb5NcGo26OpsbTHhjYkxWuEmWEvf5_jdBCmBu11a-V54EFj_UpWXEKGhwfMShirEJPLCOBSvvTx1i8y-XPEKGaKdS_SI_l-nqqjcLkCqqhOJCAKr-Z25Du5yzVf4DbKRKOJLtwgjVAcxe5RPMYc4qD77qm_3afuXBwvJ81Z6Sv89vHInX-3OjWiiFaJwzsAa4IbWYOi6zwDoXg-0t7S6gJMOIZ7ibLZcVNlNenQ-AwXV8MSf8Xy2lxE8GKred43VghPdsnsbLUJX5jehv84HusLTTk00HgLRSYJFt2Q8wN1dPDwCPBtbXHyQQQPdZKVem1fG7kfp5y-ZHnzTfHM-M-NqFDtu2Ie2OI6lI22hi6N7H2MDVjk1zOqtbfM-1aSWyPxUPZB3AprprwjTQcUp8I4xBUrzL2m70_PXzDXCUzd6Y9HWIN9O2m724xSdeRPLwkPhfTDIVUNHSA0hRhr35Cpve8W_gEMEDfsWakUcsaJ8xR1J_AhRBArxQs8R3R0hCUkERmWc-6hYahFquntPcLJe7wf_CQzfd5KaOHEVy7KDbQn61sEtsKMC-M5wZwODCKATqJ7pKYJ2cO1gBLJlolx3tqSeEXLcSm4bcmhppdRJpRJzr7WCZbANiZ5hupPQ2_VgnNg_Rea5xO4y-kcJTbtWts1kFXMu6iuHGhlHU-a-OWUc3bU5mG09y6rwcUnywvab-hlrPVDm2Fzg9e0LZLeft_A7iNOcciBDRhFE1mYX8DegtVTplKFnfNhrjO8bRhiT94H-qXDzUs0Cb0FKR7JwP-ngk-JVXF9T8Y9cXglwo8urN1SDhh_56LBbveiL0REYbZ-pv38gqJDXjhw6DfO-6vwpoB15d_TAKMLHoplW2QxT9A7CuhXjku4Jtj8j9YhgU6q8fVZn6FQG0slFvJPGi7gbLVBpEM-_uY2r33RRNE_8jtb7oV1oGEf9ksBYDDTyT8f4O7N93cK0K5GU1Tzfhatm-VeTzMQNNjkXRgitHVNxpYmAs0G86yxMNigSt9KAPeoz92DLenFEGEh4SlDcjKzD_NV0NZRA5gftYjIfiBNtJESi4uLwNZqIByVZh9bdEzbICgUxiNSmukznJbzcVSFD5kGw7ceNDindICnrCRpDnDTeNdOO67CqwSI-TZ7W_hEu1Kj8J_KQgThrndyMZSUIl72Yjj6fpxRSLxsiohR-ocpxXxo7_hwTf9EPhFqXo_F08zwoacrxecUCNoCzE="
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac53991491c819189b91d33d68ba1a2",
+      "status": "completed",
+      "call_id": "call_6lDu7VMX0N2h3c5QV2mfaxwK",
+      "name": "exec",
+      "input": "text(await tools.write_stdin({session_id:59206,\"chars\":\"\",\"yield_time_ms\":1000,\"max_output_tokens\":6000}));\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11268-e2af-7372-b542-e49b285a1ee4",
+      "call_id": "call_6lDu7VMX0N2h3c5QV2mfaxwK",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"b42557\",\"wall_time_seconds\":0.000004791,\"exit_code\":0,\"original_token_count\":130,\"output\":\"> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED\\n> Task :processResources NO-SOURCE\\n> Task :processTestResources NO-SOURCE\\n> Task :compileKotlin\\n> Task :compileJava NO-SOURCE\\n> Task :classes UP-TO-DATE\\n> Task :jar\\n> Task :compileTestKotlin\\n> Task :compileTestJava NO-SOURCE\\n> Task :testClasses UP-TO-DATE\\n> Task :test\\n\\nBUILD SUCCESSFUL in 6s\\n4 actionable tasks: 4 executed\\nConsider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html\\n\"}"
+        }
+      ]
+    },
+    {
+      "type": "custom_tool_call",
+      "id": "ctc_0fc1ec74e0cfde44016ac53995ba888191bd6ba7588e913359",
+      "status": "completed",
+      "call_id": "call_4f6f91874664488fa3d749a1acbdff5d",
+      "name": "exec",
+      "input": "text(await tools.exec_command({cmd:\"rg -n '<testsuite ' build/test-results/test\",\"max_output_tokens\":2000}));\n"
+    },
+    {
+      "type": "custom_tool_call_output",
+      "id": "ctco_01a11268-f413-7861-bd1f-7b304c5d9b0b",
+      "call_id": "call_4f6f91874664488fa3d749a1acbdff5d",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.0 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"76139d\",\"wall_time_seconds\":0.000002709,\"exit_code\":0,\"original_token_count\":113,\"output\":\"build/test-results/test/TEST-pilot.SmokeTest.xml:2:<testsuite name=\\\"pilot.SmokeTest\\\" tests=\\\"1\\\" skipped=\\\"0\\\" failures=\\\"0\\\" errors=\\\"0\\\" timestamp=\\\"2026-10-06T18:10:19.766Z\\\" hostname=\\\"w992303it2.corp.tander.ru\\\" time=\\\"0.001\\\">\\nbuild/test-results/test/TEST-pilot.BatchLoaderTest.xml:2:<testsuite name=\\\"pilot.BatchLoaderTest\\\" tests=\\\"7\\\" skipped=\\\"0\\\" failures=\\\"0\\\" errors=\\\"0\\\" timestamp=\\\"2026-10-06T18:10:19.699Z\\\" hostname=\\\"w992303it2.corp.tander.ru\\\" time=\\\"0.066\\\">\\n\"}"
+        }
+      ]
+    }
+  ],
+  "tool_choice": "auto",
+  "parallel_tool_calls": false,
+  "reasoning": {
+    "effort": "xhigh",
+    "context": "all_turns"
+  },
+  "store": false,
+  "stream": true,
+  "include": [
+    "reasoning.encrypted_content"
+  ],
+  "prompt_cache_key": "01a11267-2a8d-7181-b8f2-a1baeda16bc5",
+  "text": {
+    "verbosity": "low"
+  },
+  "client_metadata": {
+    "x-codex-turn-metadata": "{\"installation_id\":\"d7c28da6-d9b4-4cfa-9033-2062c940a7e0\",\"session_id\":\"01a11267-2a8d-7181-b8f2-a1baeda16bc5\",\"thread_id\":\"01a11267-2a8d-7181-b8f2-a1baeda16bc5\",\"agent_name\":\"/root\",\"turn_id\":\"01a11267-2ab5-7fb0-a1eb-89e5b20ee7c3\",\"window_id\":\"01a11267-2a8d-7181-b8f2-a1baeda16bc5:0\",\"window_number\":0,\"context_window_id\":\"01a11267-2a8d-7181-b8f2-a1c3b5c2651a\",\"request_kind\":\"turn\",\"root_turn_id\":\"01a11267-2ab5-7fb0-a1eb-89e5b20ee7c3\",\"thread_source\":\"user\",\"turn_trigger\":\"exec\",\"sandbox\":\"none\",\"sandbox_mode\":\"danger-full-access\",\"auto_review_enabled\":false,\"node_repl_auto_review_required\":true,\"node_repl_disabled\":false,\"turn_started_at_unix_ms\":1791310113463,\"analytics_enabled\":true,\"model\":\"gpt-6-astra\",\"reasoning_effort\":\"xhigh\"}",
+    "session_id": "01a11267-2a8d-7181-b8f2-a1baeda16bc5",
+    "x-codex-installation-id": "d7c28da6-d9b4-4cfa-9033-2062c940a7e0",
+    "x-codex-window-id": "01a11267-2a8d-7181-b8f2-a1baeda16bc5:0",
+    "turn_id": "01a11267-2ab5-7fb0-a1eb-89e5b20ee7c3",
+    "root_turn_id": "01a11267-2ab5-7fb0-a1eb-89e5b20ee7c3",
+    "thread_id": "01a11267-2a8d-7181-b8f2-a1baeda16bc5"
+  }
+}

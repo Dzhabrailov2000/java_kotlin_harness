@@ -1,0 +1,309 @@
+[
+  {
+    "returncode": 1,
+    "seconds": 6.218,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T02",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-2mf8oxyj",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 6.033,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T02",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-sbx2c1rh",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 6.056,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T03",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-83k03cs8",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 6.121,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T03",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-uyuswu4d",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 6.366,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 5,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T04",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-nlkm4w3q",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 6.155,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T04",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-dofnamwr",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 5.76,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 3,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T05",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-mfvlj1eh",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 5.731,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T05",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-el5kzd0l",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 5.746,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T06",
+    "variant": "base",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-lqh7ivsu",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 5.79,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 3,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T06",
+    "variant": "mutation",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-yxrscsjy",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 0.094,
+    "command": [
+      "python3",
+      "verify_sql.py"
+    ],
+    "observation": {
+      "applied": false,
+      "lock_modes_during_validation": [],
+      "blocks_regular_writes": false
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T07",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-a16jk_c2",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 0.108,
+    "command": [
+      "python3",
+      "verify_sql.py"
+    ],
+    "observation": {
+      "applied": true,
+      "lock_modes_during_validation": [
+        "ShareUpdateExclusiveLock"
+      ],
+      "blocks_regular_writes": false
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T07",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-rw0kuej_",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 0.101,
+    "command": [
+      "python3",
+      "verify_sql.py"
+    ],
+    "observation": {
+      "applied": true,
+      "lock_modes_during_validation": [
+        "ShareUpdateExclusiveLock"
+      ],
+      "blocks_regular_writes": false
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T08",
+    "variant": "base",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-xrn1s52s",
+    "valid": true
+  },
+  {
+    "returncode": 1,
+    "seconds": 0.109,
+    "command": [
+      "python3",
+      "verify_sql.py"
+    ],
+    "observation": {
+      "applied": true,
+      "lock_modes_during_validation": [
+        "AccessExclusiveLock",
+        "ShareUpdateExclusiveLock"
+      ],
+      "blocks_regular_writes": true
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T08",
+    "variant": "mutation",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-nkann2m6",
+    "valid": true
+  }
+]

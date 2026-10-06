@@ -1,0 +1,3 @@
+Найден один major (существенный дефект): общая транзакция удерживает AccessExclusiveLock во время VALIDATE, блокируя обычные SELECT, INSERT и UPDATE. Подтверждено запуском `./observe-locks`. Нужно разделить ADD и VALIDATE на две транзакции.
+
+Отчет сохранен в [review.json](/private/tmp/jkh-agent-pilot/trial-421b756ccc0949a4815d4330ce9a9355/workspace/review.json). Код и тесты не изменены.

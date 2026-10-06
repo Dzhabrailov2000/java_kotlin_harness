@@ -1,0 +1,116 @@
+package pilot;
+
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class CatalogReaderTest {
+  private final CatalogReader reader = new CatalogReader();
+
+  @Test
+  void negativeLimitIsRejectedBeforeOpeningSource() {
+    Supplier<Stream<String>> source = () -> {
+      fail("Source must not be opened");
+      return Stream.empty();
+    };
+
+    assertThrows(IllegalArgumentException.class, () -> reader.read(source, -1));
+  }
+
+  @Test
+  void zeroLimitDoesNotOpenSource() {
+    assertEquals(List.of(), reader.read(() -> {
+      fail("Source must not be opened");
+      return Stream.empty();
+    }, 0));
+  }
+
+  @Test
+  void trimsBeforeFilteringAndPreservesOrderAndDuplicates() {
+    AtomicInteger closes = new AtomicInteger();
+
+    List<String> result = reader.read(() -> Stream.of(
+        "  ", "\u0000", " alpha ", "\u2003", "alpha", " beta ")
+        .onClose(closes::incrementAndGet), 3);
+
+    assertEquals(List.of("alpha", "\u2003", "alpha"), result);
+    assertEquals(1, closes.get());
+  }
+
+  @Test
+  void stopsReadingAsSoonAsLimitIsReached() {
+    AtomicInteger reads = new AtomicInteger();
+    AtomicInteger closes = new AtomicInteger();
+
+    List<String> result = reader.read(() -> Stream.generate(() -> {
+      int index = reads.incrementAndGet();
+      assertTrue(index <= 5, "Read past the requested number of nonempty lines");
+      return index <= 2 ? " " : " value ";
+    }).onClose(closes::incrementAndGet), 3);
+
+    assertEquals(List.of("value", "value", "value"), result);
+    assertEquals(5, reads.get());
+    assertEquals(1, closes.get());
+  }
+
+  @Test
+  void closesExhaustedSourceWithFewerResultsThanLimit() {
+    AtomicInteger closes = new AtomicInteger();
+
+    assertEquals(List.of("value"), reader.read(
+        () -> Stream.of(" ", " value ").onClose(closes::incrementAndGet), 10));
+    assertEquals(1, closes.get());
+  }
+
+  @Test
+  void closesEmptySource() {
+    AtomicInteger closes = new AtomicInteger();
+
+    assertEquals(List.of(), reader.read(
+        () -> Stream.<String>empty().onClose(closes::incrementAndGet), 1));
+    assertEquals(1, closes.get());
+  }
+
+  @Test
+  void preservesTraversalFailureAndSuppressesCloseFailure() {
+    RuntimeException traversalFailure = new IllegalStateException("traversal");
+    RuntimeException closeFailure = new IllegalStateException("close");
+    AtomicInteger closes = new AtomicInteger();
+
+    RuntimeException thrown = assertThrows(RuntimeException.class, () -> reader.read(
+        () -> Stream.<String>generate(() -> {
+          throw traversalFailure;
+        }).onClose(() -> {
+          closes.incrementAndGet();
+          throw closeFailure;
+        }), 1));
+
+    assertSame(traversalFailure, thrown);
+    assertArrayEquals(new Throwable[] {closeFailure}, thrown.getSuppressed());
+    assertEquals(1, closes.get());
+  }
+
+  @Test
+  void propagatesCloseFailureAfterSuccessfulTraversal() {
+    RuntimeException closeFailure = new IllegalStateException("close");
+
+    RuntimeException thrown = assertThrows(RuntimeException.class, () -> reader.read(
+        () -> Stream.of("value").onClose(() -> { throw closeFailure; }), 1));
+
+    assertSame(closeFailure, thrown);
+  }
+
+  @Test
+  void propagatesOpeningFailure() {
+    RuntimeException openingFailure = new IllegalStateException("open");
+
+    RuntimeException thrown = assertThrows(RuntimeException.class, () -> reader.read(
+        () -> { throw openingFailure; }, 1));
+
+    assertSame(openingFailure, thrown);
+  }
+}

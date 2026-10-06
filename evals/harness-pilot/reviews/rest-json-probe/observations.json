@@ -1,0 +1,178 @@
+{
+  "R26": {
+    "samples": [
+      {
+        "input": "{\"accountId\":\"123\",\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":123,\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":true,\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "true/csv"
+        ]
+      }
+    ],
+    "execution": {
+      "returncode": 0,
+      "seconds": 6.922,
+      "command": [
+        "sandbox-exec",
+        "-f",
+        "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness/evals/harness-pilot/reviews/rest-json-probe/R26/sandbox.sb",
+        "./gradlew",
+        "test",
+        "--no-build-cache"
+      ],
+      "counts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "workspace": "/private/tmp/jkh-rest-json-probe-uxws4c_a"
+    }
+  },
+  "R27": {
+    "samples": [
+      {
+        "input": "{\"accountId\":\"123\",\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":123,\"format\":\"csv\"}",
+        "status": 400,
+        "queue_calls": []
+      },
+      {
+        "input": "{\"accountId\":true,\"format\":\"csv\"}",
+        "status": 400,
+        "queue_calls": []
+      }
+    ],
+    "execution": {
+      "returncode": 0,
+      "seconds": 6.487,
+      "command": [
+        "sandbox-exec",
+        "-f",
+        "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness/evals/harness-pilot/reviews/rest-json-probe/R27/sandbox.sb",
+        "./gradlew",
+        "test",
+        "--no-build-cache"
+      ],
+      "counts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "workspace": "/private/tmp/jkh-rest-json-probe-jx1exm4s"
+    }
+  },
+  "R28": {
+    "samples": [
+      {
+        "input": "{\"accountId\":\"123\",\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":123,\"format\":\"csv\"}",
+        "status": 400,
+        "queue_calls": []
+      },
+      {
+        "input": "{\"accountId\":true,\"format\":\"csv\"}",
+        "status": 400,
+        "queue_calls": []
+      }
+    ],
+    "execution": {
+      "returncode": 0,
+      "seconds": 6.578,
+      "command": [
+        "sandbox-exec",
+        "-f",
+        "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness/evals/harness-pilot/reviews/rest-json-probe/R28/sandbox.sb",
+        "./gradlew",
+        "test",
+        "--no-build-cache"
+      ],
+      "counts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "workspace": "/private/tmp/jkh-rest-json-probe-hbgpzn6a"
+    }
+  },
+  "frozen-oracle": {
+    "samples": [
+      {
+        "input": "{\"accountId\":\"123\",\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":123,\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "123/csv"
+        ]
+      },
+      {
+        "input": "{\"accountId\":true,\"format\":\"csv\"}",
+        "status": 202,
+        "queue_calls": [
+          "true/csv"
+        ]
+      }
+    ],
+    "execution": {
+      "returncode": 0,
+      "seconds": 6.421,
+      "command": [
+        "sandbox-exec",
+        "-f",
+        "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness/evals/harness-pilot/reviews/rest-json-probe/frozen-oracle/sandbox.sb",
+        "./gradlew",
+        "test",
+        "--no-build-cache"
+      ],
+      "counts": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "workspace": "/private/tmp/jkh-rest-json-probe-ejzujoxi"
+    }
+  }
+}

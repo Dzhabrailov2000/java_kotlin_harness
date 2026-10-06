@@ -1,0 +1,754 @@
+{
+  "R01": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R02": {
+    "skills": {
+      "java-kotlin-collections": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сделай преобразование понятным по входу, шагам и результату. В новом коде выбери простую форму;",
+          "- Определи порядок, дубликаты, пустой вход, null, мутацию и размер данных. List, Set и Map",
+          "не взаимозаменяемы. Не меняй контракт коллекции ради более короткой цепочки. [S1] [S2]"
+        ]
+      },
+      "java-kotlin-numeric-modeling": {
+        "first_request": "0005-request.json",
+        "matched_body_lines": [
+          "Установи точность и предметный смысл до выбора типа. В ревью предложи правки;",
+          "выполняй их по заданию. Политику денег и округления не выводи из технической библиотеки.",
+          "Запиши величину, единицу/валюту, допустимый диапазон, способ округления и границу применения."
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0005-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R03": {
+    "skills": {
+      "java-kotlin-collections": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сделай преобразование понятным по входу, шагам и результату. В новом коде выбери простую форму;",
+          "- Определи порядок, дубликаты, пустой вход, null, мутацию и размер данных. List, Set и Map",
+          "не взаимозаменяемы. Не меняй контракт коллекции ради более короткой цепочки. [S1] [S2]"
+        ]
+      },
+      "java-kotlin-domain-modeling": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Вырази предметный смысл простыми типами и явными операциями. В новом коде выбери форму сразу;",
+          "в ревью предложи обоснованное изменение, редактируй только по заданию.",
+          "- Установи язык предметной области, владельца правил, жизненный цикл и реальные операции."
+        ]
+      },
+      "java-kotlin-numeric-modeling": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Установи точность и предметный смысл до выбора типа. В ревью предложи правки;",
+          "выполняй их по заданию. Политику денег и округления не выводи из технической библиотеки.",
+          "Запиши величину, единицу/валюту, допустимый диапазон, способ округления и границу применения."
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      },
+      "java-kotlin-contracts": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Установи, что тип или операция обещает потребителю, и обеспечь это обещание на значимых путях.",
+          "Под контрактом здесь понимается поведение API и состояния объектов. Kotlin `contracts {}` описывает",
+          "сведения для компилятора и сам по себе не проверяет бизнес-ограничения во время выполнения. [S1]"
+        ]
+      },
+      "java-kotlin-errors": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Сохрани различия отказов, которые нужны вызывающему, и не изображай успех после сбоя.",
+          "В новом коде реализуй контракт; в ревью предложи минимальную правку, редактируй только по задаче.",
+          "- Установи нормальный результат, ожидаемое отсутствие, ошибку ввода, нарушение состояния"
+        ]
+      },
+      "java-kotlin-naming": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Добейся того, чтобы имя помогало правильно использовать код: передавало предметный смысл,",
+          "ответственность и существенное поведение. Сначала проверяй это, затем языковое написание.",
+          "Работай в области текущей задачи; выбор имени одной функции не означает аудит всего репозитория."
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R04": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R05": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R06": {
+    "skills": {
+      "java-kotlin-sql-migrations": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани данные и совместимость на реальном пути обновления. Подготовка файла не означает",
+          "разрешение применить его к живой БД. При ревью предложи изменения; редактируй в рамках задания.",
+          "- Прочитай СУБД/версию, историю миграций, convention имен, transaction mode, constraints"
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R07": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R08": {
+    "skills": {
+      "java-kotlin-sql-migrations": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани данные и совместимость на реальном пути обновления. Подготовка файла не означает",
+          "разрешение применить его к живой БД. При ревью предложи изменения; редактируй в рамках задания.",
+          "- Прочитай СУБД/версию, историю миграций, convention имен, transaction mode, constraints"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R09": {
+    "skills": {
+      "java-kotlin-contracts": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Установи, что тип или операция обещает потребителю, и обеспечь это обещание на значимых путях.",
+          "Под контрактом здесь понимается поведение API и состояния объектов. Kotlin `contracts {}` описывает",
+          "сведения для компилятора и сам по себе не проверяет бизнес-ограничения во время выполнения. [S1]"
+        ]
+      },
+      "java-kotlin-errors": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани различия отказов, которые нужны вызывающему, и не изображай успех после сбоя.",
+          "В новом коде реализуй контракт; в ревью предложи минимальную правку, редактируй только по задаче.",
+          "- Установи нормальный результат, ожидаемое отсутствие, ошибку ввода, нарушение состояния"
+        ]
+      },
+      "java-kotlin-resources": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Назначь владельца ресурса и обеспечь завершение на успехе, отказе и отмене.",
+          "В новом коде реализуй это сразу; в ревью покажи путь утечки, меняй код только по заданию.",
+          "- Кто создает, использует, передает и закрывает ресурс? Зафиксируй передачу владения в API,"
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R10": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R11": {
+    "skills": {
+      "java-kotlin-resources": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Назначь владельца ресурса и обеспечь завершение на успехе, отказе и отмене.",
+          "В новом коде реализуй это сразу; в ревью покажи путь утечки, меняй код только по заданию.",
+          "- Кто создает, использует, передает и закрывает ресурс? Зафиксируй передачу владения в API,"
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0005-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R12": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R13": {
+    "skills": {
+      "java-kotlin-resilience": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Ограничи время и нагрузку, сохрани правильность эффекта. В ревью предложи правки;",
+          "выполняй их по задаче. Не добавляй все механизмы сразу к каждому вызову.",
+          "Найди caller deadline, настройки клиента/SDK, очередь, лимиты зависимости и требование к результату."
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R14": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R15": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R16": {
+    "skills": {
+      "java-kotlin-contracts": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Установи, что тип или операция обещает потребителю, и обеспечь это обещание на значимых путях.",
+          "Под контрактом здесь понимается поведение API и состояния объектов. Kotlin `contracts {}` описывает",
+          "сведения для компилятора и сам по себе не проверяет бизнес-ограничения во время выполнения. [S1]"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R17": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R18": {
+    "skills": {
+      "java-kotlin-concurrency": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Сохрани инвариант, время жизни операции и ограниченный расход ресурсов при реальных interleavings.",
+          "В новом коде выбери механизм сразу; в ревью обоснуй нарушение, меняй код только по заданию.",
+          "- Найди владельца состояния, всех читателей/писателей и необходимую область атомарности:"
+        ]
+      },
+      "java-kotlin-errors": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Сохрани различия отказов, которые нужны вызывающему, и не изображай успех после сбоя.",
+          "В новом коде реализуй контракт; в ревью предложи минимальную правку, редактируй только по задаче.",
+          "- Установи нормальный результат, ожидаемое отсутствие, ошибку ввода, нарушение состояния"
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R19": {
+    "skills": {
+      "java-kotlin-concurrency": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани инвариант, время жизни операции и ограниченный расход ресурсов при реальных interleavings.",
+          "В новом коде выбери механизм сразу; в ревью обоснуй нарушение, меняй код только по заданию.",
+          "- Найди владельца состояния, всех читателей/писателей и необходимую область атомарности:"
+        ]
+      },
+      "java-kotlin-errors": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани различия отказов, которые нужны вызывающему, и не изображай успех после сбоя.",
+          "В новом коде реализуй контракт; в ревью предложи минимальную правку, редактируй только по задаче.",
+          "- Установи нормальный результат, ожидаемое отсутствие, ошибку ввода, нарушение состояния"
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R20": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R21": {
+    "skills": {
+      "java-kotlin-contracts": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Установи, что тип или операция обещает потребителю, и обеспечь это обещание на значимых путях.",
+          "Под контрактом здесь понимается поведение API и состояния объектов. Kotlin `contracts {}` описывает",
+          "сведения для компилятора и сам по себе не проверяет бизнес-ограничения во время выполнения. [S1]"
+        ]
+      },
+      "java-kotlin-resilience": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Ограничи время и нагрузку, сохрани правильность эффекта. В ревью предложи правки;",
+          "выполняй их по задаче. Не добавляй все механизмы сразу к каждому вызову.",
+          "Найди caller deadline, настройки клиента/SDK, очередь, лимиты зависимости и требование к результату."
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R22": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R23": {
+    "skills": {
+      "java-kotlin-resilience": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Ограничи время и нагрузку, сохрани правильность эффекта. В ревью предложи правки;",
+          "выполняй их по задаче. Не добавляй все механизмы сразу к каждому вызову.",
+          "Найди caller deadline, настройки клиента/SDK, очередь, лимиты зависимости и требование к результату."
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R24": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R25": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R26": {
+    "skills": {
+      "java-kotlin-errors": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани различия отказов, которые нужны вызывающему, и не изображай успех после сбоя.",
+          "В новом коде реализуй контракт; в ревью предложи минимальную правку, редактируй только по задаче.",
+          "- Установи нормальный результат, ожидаемое отсутствие, ошибку ввода, нарушение состояния"
+        ]
+      },
+      "java-kotlin-rest-api": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сделай внешний контракт однозначным и сохрани поведение клиента. В новом коде реализуй его;",
+          "в ревью обоснуй предложения, редактируй только в области задания. Установи MVC или WebFlux.",
+          "- Установи ресурс, действие, доступ, допустимые состояния и совместимость существующих клиентов."
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      },
+      "java-kotlin-validation": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Проверь заявленные требования в реально вызываемом механизме. Не придумывай ограничения",
+          "на имя, знак, длину или пустоту. В ревью предложи правки, редактируй в области задачи.",
+          "- **Рекомендация OWASP:** различай синтаксис и предметную допустимость, проверяй их на входной"
+        ]
+      },
+      "java-kotlin-nullability": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Сделай отсутствие явным и сохрани его предметный смысл. В новом коде выбери контракт;",
+          "- Установи, означает ли null нормальное отсутствие, неизвестное значение, непрочитанное поле,",
+          "удаление или ошибку. Не своди разные состояния к одному null для удобства."
+        ]
+      },
+      "java-kotlin-security": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Защити конкретные данные и операции на изменяемой границе. В новом коде обеспечь проверку;",
+          "в ревью покажи достижимый сценарий, исправляй только в области задания.",
+          "- Назови недоверенный вход, защищаемый объект, действующее лицо и проверяющий компонент."
+        ]
+      },
+      "java-kotlin-serialization": {
+        "first_request": "0004-request.json",
+        "matched_body_lines": [
+          "Сохрани смысл данных при чтении и записи. Используй mapper и настройки проекта.",
+          "В ревью предложи правки, выполняй их по заданию. Проверки ниже - методика навыка.",
+          "Прочитай реальные serializer, модули, настройки, payload и потребителей. Установи формат ID,"
+        ]
+      },
+      "java-kotlin-observability": {
+        "first_request": "0005-request.json",
+        "matched_body_lines": [
+          "Сделай наблюдаемым нужный исход без утечки данных и бесконтрольного объема.",
+          "В ревью предложи правки; выполняй их по задаче. Набор сигналов выбери по диагностическому вопросу.",
+          "- **Выбор навыка:** для операции определи начало/завершение, результат, длительность и допустимый"
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R27": {
+    "skills": {
+      "java-kotlin-rest-api": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сделай внешний контракт однозначным и сохрани поведение клиента. В новом коде реализуй его;",
+          "в ревью обоснуй предложения, редактируй только в области задания. Установи MVC или WebFlux.",
+          "- Установи ресурс, действие, доступ, допустимые состояния и совместимость существующих клиентов."
+        ]
+      },
+      "java-kotlin-testing": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Докажи значимое обещание или воспроизведи дефект минимальной подходящей проверкой.",
+          "Не наращивай тесты ради числа и покрытия. При ревью предложи изменения; правь по заданию.",
+          "- Установи поведение, которое меняется, и конкретный риск. Для найденного дефекта сначала"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R28": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R29": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R30": {
+    "skills": {
+      "java-kotlin-sql-migrations": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани данные и совместимость на реальном пути обновления. Подготовка файла не означает",
+          "разрешение применить его к живой БД. При ревью предложи изменения; редактируй в рамках задания.",
+          "- Прочитай СУБД/версию, историю миграций, convention имен, transaction mode, constraints"
+        ]
+      }
+    },
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R31": {
+    "skills": {},
+    "names_in_initial_request": [],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  },
+  "R32": {
+    "skills": {
+      "java-kotlin-sql-migrations": {
+        "first_request": "0003-request.json",
+        "matched_body_lines": [
+          "Сохрани данные и совместимость на реальном пути обновления. Подготовка файла не означает",
+          "разрешение применить его к живой БД. При ревью предложи изменения; редактируй в рамках задания.",
+          "- Прочитай СУБД/версию, историю миграций, convention имен, transaction mode, constraints"
+        ]
+      }
+    },
+    "names_in_initial_request": [
+      "java-kotlin-build-dependencies",
+      "java-kotlin-caching",
+      "java-kotlin-collections",
+      "java-kotlin-concurrency",
+      "java-kotlin-configuration",
+      "java-kotlin-contracts",
+      "java-kotlin-domain-modeling",
+      "java-kotlin-errors",
+      "java-kotlin-generics",
+      "java-kotlin-interop",
+      "java-kotlin-messaging",
+      "java-kotlin-modularity",
+      "java-kotlin-naming",
+      "java-kotlin-nullability",
+      "java-kotlin-numeric-modeling",
+      "java-kotlin-observability",
+      "java-kotlin-performance",
+      "java-kotlin-persistence",
+      "java-kotlin-reactive",
+      "java-kotlin-refactoring",
+      "java-kotlin-resilience",
+      "java-kotlin-resources",
+      "java-kotlin-rest-api",
+      "java-kotlin-security",
+      "java-kotlin-serialization",
+      "java-kotlin-solid",
+      "java-kotlin-sql-migrations",
+      "java-kotlin-testing",
+      "java-kotlin-time",
+      "java-kotlin-validation"
+    ],
+    "method": "At least two distinct >=70-character body lines unique among 30 snapshot skills occur in actual request string values. Catalog and filename matches alone do not count."
+  }
+}

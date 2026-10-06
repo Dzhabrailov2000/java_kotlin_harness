@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/private/tmp/jkh-verifier-z43qdlwk/verify_sql.py", line 16, in <module>
+    assert not result['blocks_regular_writes'],modes
+AssertionError: ['AccessExclusiveLock', 'ShareUpdateExclusiveLock']

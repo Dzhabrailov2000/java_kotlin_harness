@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="pilot.PaymentContractTest" tests="2" skipped="0" failures="1" errors="0" timestamp="2026-10-06T15:54:13.023Z" hostname="w992303it2.corp.tander.ru" time="0.017">
+  <properties/>
+  <testcase name="lost response does not repeat charge and key belongs to one logical call()" classname="pilot.PaymentContractTest" time="0.008">
+    <failure message="java.io.IOException: response lost after commit" type="java.io.IOException">java.io.IOException: response lost after commit
+	at pilot.PaymentContractTest.lost_response_does_not_repeat_charge_and_key_belongs_to_one_logical_call$lambda$0(PaymentContractTest.kt:8)
+	at pilot.PaymentService.charge(PaymentService.kt:6)
+	at pilot.PaymentContractTest.lost response does not repeat charge and key belongs to one logical call(PaymentContractTest.kt:10)
+</failure>
+  </testcase>
+  <testcase name="rejection is not retried and exhausted io keeps exception()" classname="pilot.PaymentContractTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

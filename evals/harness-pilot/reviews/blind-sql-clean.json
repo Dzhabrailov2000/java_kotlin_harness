@@ -1,0 +1,30 @@
+[
+  {
+    "packet": "P08",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет."
+  },
+  {
+    "packet": "P10",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет."
+  },
+  {
+    "packet": "P24",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет."
+  },
+  {
+    "packet": "P32",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет."
+  }
+]

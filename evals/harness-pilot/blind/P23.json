@@ -1,0 +1,68 @@
+{
+  "id": "P23",
+  "task": "T07",
+  "kind": "review",
+  "instruction": "Проверь SQL-миграцию migrations/V2__balance_check.sql для PostgreSQL. accounts - большая\nтаблица; balance BIGINT NOT NULL, существующие значения неотрицательны. Цель - добавить и\nпровалидировать CHECK balance >= 0. Допустимо кратко заблокировать записи при добавлении\nограничения, но длительное сканирование VALIDATE не должно удерживать блокировку, которая\nнесовместима с обычными SELECT, INSERT и UPDATE. Каждая явная транзакция в SQL исполняется\nотдельно: внешний runner НЕ заворачивает файл целиком в транзакцию. Никакого backfill,\nизменения типа, удаления колонки или дополнительного ограничения не требуется.\nВ README описана команда воспроизведения lock modes на подготовленной локальной БД.\n\nСделай ревью исходников, при необходимости используй терминал и тесты. Код и существующие\nтесты не изменяй. Сохрани review.json вида {\"findings\":[{\"file\":\"...\",\"line\":1,\n\"severity\":\"critical|major\",\"problem\":\"...\",\"scenario\":\"...\",\"fix\":\"...\"}]},\nгде findings может быть пустым. Включай только доказанные дефекты поведения; стиль и\nпредположения о неуказанных требованиях не являются дефектами. Не нужно искать заданное\nчисло ошибок. В конце кратко сообщи вывод.\n",
+  "original": {
+    "migrations/V2__balance_check.sql": "BEGIN;\nALTER TABLE accounts ADD CONSTRAINT balance_nonnegative CHECK (balance >= 0) NOT VALID;\nALTER TABLE accounts VALIDATE CONSTRAINT balance_nonnegative;\nCOMMIT;\n"
+  },
+  "submitted": {},
+  "review": {
+    "findings": [
+      {
+        "file": "migrations/V2__balance_check.sql",
+        "line": 3,
+        "severity": "critical",
+        "problem": "VALIDATE CONSTRAINT выполняется в той же явной транзакции (BEGIN в строке 1, COMMIT в строке 4), что и ADD CONSTRAINT ... NOT VALID в строке 2. ADD CHECK берёт на accounts ACCESS EXCLUSIVE, а табличные блокировки держатся до конца транзакции, поэтому всё полное сканирование VALIDATE идёт под ACCESS EXCLUSIVE, который конфликтует с ACCESS SHARE (SELECT) и ROW EXCLUSIVE (INSERT/UPDATE). Разделение на NOT VALID + VALIDATE теряет смысл. ./observe-locks сразу после VALIDATE и до COMMIT показывает LOCK:AccessExclusiveLock и LOCK:ShareUpdateExclusiveLock.",
+        "scenario": "Миграция запускается на большой таблице accounts. Строка 2 без сканирования добавляет ограничение и получает ACCESS EXCLUSIVE; строка 3 начинает полное сканирование для проверки balance >= 0, не отпуская ACCESS EXCLUSIVE. До COMMIT в строке 4 любые SELECT, INSERT и UPDATE по accounts ждут в очереди блокировок всё время сканирования, то есть чтение и запись в accounts недоступны на время длительного VALIDATE.",
+        "fix": "Завершить транзакцию сразу после добавления ограничения и выполнить VALIDATE в отдельной транзакции: BEGIN; ALTER TABLE accounts ADD CONSTRAINT balance_nonnegative CHECK (balance >= 0) NOT VALID; COMMIT; BEGIN; ALTER TABLE accounts VALIDATE CONSTRAINT balance_nonnegative; COMMIT;. Тогда ACCESS EXCLUSIVE держится только во время короткого ADD, а VALIDATE берёт лишь SHARE UPDATE EXCLUSIVE, совместимый с SELECT/INSERT/UPDATE. Проверено тем же локальным observer: для такого варианта после VALIDATE остаётся только LOCK:ShareUpdateExclusiveLock."
+      }
+    ]
+  },
+  "rubric": {
+    "has_issue": true,
+    "required_issue": "ADD CHECK retains AccessExclusiveLock to transaction end; NOT VALID followed by VALIDATE in the same transaction holds it through the scan.",
+    "must_not": [
+      "Claim VALIDATE by itself takes AccessExclusiveLock.",
+      "Require transaction separation when the supplied SQL already commits between phases.",
+      "Invent absent legacy negative data or a wrapping transaction contrary to the task."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "observation": {
+        "applied": true,
+        "lock_modes_during_validation": [
+          "AccessExclusiveLock",
+          "ShareUpdateExclusiveLock"
+        ],
+        "blocks_regular_writes": true
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T07",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "observation": {
+        "applied": true,
+        "lock_modes_during_validation": [
+          "ShareUpdateExclusiveLock"
+        ],
+        "blocks_regular_writes": false
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T07",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": null,
+  "protected_file_changes": []
+}

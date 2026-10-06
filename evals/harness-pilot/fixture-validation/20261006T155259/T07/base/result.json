@@ -1,0 +1,18 @@
+{
+  "returncode": 1,
+  "seconds": 0.094,
+  "command": [
+    "python3",
+    "verify_sql.py"
+  ],
+  "observation": {
+    "applied": true,
+    "lock_modes_during_validation": [
+      "AccessExclusiveLock",
+      "ShareUpdateExclusiveLock"
+    ],
+    "blocks_regular_writes": true
+  },
+  "executed": true,
+  "pass": false
+}

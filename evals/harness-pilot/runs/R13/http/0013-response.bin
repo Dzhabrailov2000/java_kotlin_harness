@@ -1,0 +1,462 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfmKPE1q6GhFvTTpztrGP","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":2,"cache_creation_input_tokens":463,"cache_read_input_tokens":43460,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":463},"output_tokens":5,"service_tier":"standard","inference_geo":"not_available"},"diagnostics":null,"context_management":null}            }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}      }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":50}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":null}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"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"}           }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0          }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Н"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ашел один критичный деф"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ект:"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" при повторе после IOException"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" с"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ервис ка"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ждый раз созд"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ает новый ключ идем"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"потентности ("}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"id"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"empotencyKey, по"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" н"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ему шлюз узнает"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" повтор той же о"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"платы). Из-за"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" этого один"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" вызов `"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"charge` может списать день"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ги два или три раза."} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Он"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" записан в `review.json`"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":","}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" других"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" до"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"казанных дефектов н"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ет.\n\n**Д"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ефект."}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"** В `src/main/k"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"otlin/pilot/"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"PaymentService.kt"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":":6` функ"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ция `newKey()` в"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызывается внутри цик"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ла повторов. Шл"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"юз отс"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"екает дубли"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" только по ключу, поэ"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"тому повтор с"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" новым ключом для него вы"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"глядит как новая опл"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ата."}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Пример:\n- Первая"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" попытка списывает 100"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", но"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" ответ теряется, и"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" сервис получает IOException"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":".\n- Вторая поп"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ытка ид"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ет с новым ключом и"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" списывает еще 100."}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\nЕсли ответ теря"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ется во"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" всех трех попытках,"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" списано 300, а выз"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ывающий получает "}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ошибку. Есть и"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" об"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ратный случ"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ай: если после"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" первого списания денег на сч"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ете не хватает, пов"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"тор получает Rejected"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Charge. Вызыв"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ающий видит отказ,"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" хотя деньги уже"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" списаны.\n\n**Ис"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"правление.** Получ"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ать ключ один раз до"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" цикла ("}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`val key = newKey()"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`) и передавать его во"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" все попытки. Стро"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ить ключ из данных `"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Charge` нельзя"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":": тогда от"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"дельные о"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"платы с одинаков"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ыми данными склеятся"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" в одну.\n\n**Как"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" проверял"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":".**\n- Напис"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ал временный тест с фей"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ковым шлюзом ("}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"тестовая"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" подделка),"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" который от"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"секает дубли"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" по ключу, как треб"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ует контракт. На текущ"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ем коде спис"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ано 200 и 300 "}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"вместо 100, три поп"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ытки "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ушли с тремя разными"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" ключами.\n- Во"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" временной копии про"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"екта применил исправление."}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Там"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" все 8 про"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"верок"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" и исходный т"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ест пр"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ошли.\n- Осталь"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ные пункты контракта код"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" соблюдает: не"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" больше трех попыток,"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" RejectedCharge не"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" повторяется, в"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" том числе на пов"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"торной попытке, отд"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ельные вызовы с од"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"инаковыми данными д"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ают от"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"дельные оплаты."}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Состояние про"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"екта.** Код и существ"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ующие тесты не менял"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":". Временный тест и коп"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ию про"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"екта удалил."}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Исходный набор тест"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ов после"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" этого сн"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ова про"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ходит (`B"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"UILD SUCCES"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"SFUL`), а `"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"review.json` проход"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ит проверку как"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" кор"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ректный JSON. Нов"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ые ка"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"талоги `build/` и"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `.gradle/` созд"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ал Gradle при пр"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"огонах, они в `."}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"gitignore`."}            }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1          }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":2,"cache_creation_input_tokens":463,"cache_read_input_tokens":43460,"output_tokens":1638,"output_tokens_details":{"thinking_tokens":820},"iterations":[{"input_tokens":2,"output_tokens":1638,"cache_read_input_tokens":43460,"cache_creation_input_tokens":463,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":463},"type":"message"}]},"context_management":{"applied_edits":[]}           }
+
+event: message_stop
+data: {"type":"message_stop"     }
+

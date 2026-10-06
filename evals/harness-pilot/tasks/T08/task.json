@@ -1,0 +1,16 @@
+{
+  "id": "T08",
+  "kind": "review",
+  "postgres": true,
+  "rubric": {
+    "has_issue": false,
+    "required_issue": null,
+    "must_not": [
+      "Claim VALIDATE by itself takes AccessExclusiveLock.",
+      "Require transaction separation when the supplied SQL already commits between phases.",
+      "Invent absent legacy negative data or a wrapping transaction contrary to the task."
+    ]
+  },
+  "expected_test_count": null,
+  "origin": "New author-created public-domain fixture; no private project code; not copied from skill examples."
+}

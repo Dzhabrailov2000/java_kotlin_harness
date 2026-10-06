@@ -1,0 +1,136 @@
+--- before/src/main/kotlin/pilot/ExportController.kt
++++ after/src/main/kotlin/pilot/ExportController.kt
+@@ -1,4 +1,38 @@
+ package pilot
++import org.slf4j.LoggerFactory
++import org.springframework.http.HttpStatus
++import org.springframework.http.MediaType
++import org.springframework.http.ResponseEntity
++import org.springframework.web.bind.annotation.PostMapping
++import org.springframework.web.bind.annotation.RequestBody
+ import org.springframework.web.bind.annotation.RestController
++import org.springframework.web.util.UriComponentsBuilder
++
++private val SUPPORTED_FORMATS = setOf("csv", "json")
++
+ @RestController
+-class ExportController(private val queue: ExportQueue)
++class ExportController(private val queue: ExportQueue) {
++    private val log = LoggerFactory.getLogger(javaClass)
++
++    // produces проверяет Accept до вызова метода: иначе экспорт встал бы в очередь, а клиент получил бы 406.
++    @PostMapping("/exports", produces = [MediaType.APPLICATION_JSON_VALUE])
++    fun enqueue(@RequestBody request: ExportRequest): ResponseEntity<ExportResponse> {
++        val accountId = request.accountId?.trim()
++        val format = request.format?.takeIf { it in SUPPORTED_FORMATS }
++        if (accountId.isNullOrEmpty() || format == null) {
++            return ResponseEntity.badRequest().build()
++        }
++        val id = try {
++            queue.enqueue(accountId, format)
++        } catch (e: QueueUnavailableException) {
++            log.warn("Export queue is unavailable", e)
++            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build()
++        }
++        val location = UriComponentsBuilder.fromPath("/exports/{id}").build(id)
++        return ResponseEntity.accepted().location(location).body(ExportResponse(id, "pending"))
++    }
++}
++
++data class ExportRequest(val accountId: String?, val format: String?)
++
++data class ExportResponse(val id: String, val state: String)
+--- before/src/test/kotlin/pilot/ExportControllerTest.kt
++++ after/src/test/kotlin/pilot/ExportControllerTest.kt
+@@ -0,0 +1,91 @@
++package pilot
++import org.junit.jupiter.api.Assertions.assertEquals
++import org.junit.jupiter.api.Assertions.assertFalse
++import org.junit.jupiter.api.Test
++import org.springframework.http.MediaType
++import org.springframework.mock.web.MockHttpServletResponse
++import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
++import org.springframework.test.web.servlet.setup.MockMvcBuilders
++import tools.jackson.module.kotlin.jacksonObjectMapper
++import tools.jackson.module.kotlin.readValue
++
++class ExportControllerTest {
++    private val queue = RecordingExportQueue()
++    private val mockMvc = MockMvcBuilders.standaloneSetup(ExportController(queue)).build()
++
++    @Test
++    fun `accepts csv export and enqueues trimmed account id once`() {
++        val response = postExport("""{"accountId":"  acc-1 ","format":"csv"}""")
++
++        assertEquals(202, response.status)
++        assertEquals("/exports/exp-1", response.getHeader("Location"))
++        assertEquals(
++            mapOf("id" to "exp-1", "state" to "pending"),
++            jacksonObjectMapper().readValue<Map<String, Any?>>(response.contentAsString),
++        )
++        assertEquals(listOf("acc-1" to "csv"), queue.calls)
++    }
++
++    @Test
++    fun `accepts json export`() {
++        val response = postExport("""{"accountId":"acc-1","format":"json"}""")
++
++        assertEquals(202, response.status)
++        assertEquals(listOf("acc-1" to "json"), queue.calls)
++    }
++
++    @Test
++    fun `rejects invalid input without enqueueing`() {
++        val invalidBodies = listOf(
++            """{"accountId":"   ","format":"csv"}""",
++            """{"accountId":null,"format":"csv"}""",
++            """{"format":"csv"}""",
++            """{"accountId":"acc-1","format":"xml"}""",
++            """{"accountId":"acc-1","format":"CSV"}""",
++            """{"accountId":"acc-1"}""",
++            """{"accountId":"acc-1","format":""",
++        )
++
++        invalidBodies.forEach { body -> assertEquals(400, postExport(body).status, body) }
++        assertEquals(emptyList<Pair<String, String>>(), queue.calls)
++    }
++
++    @Test
++    fun `returns 503 without exception message when queue is unavailable`() {
++        val message = "broker 10.0.0.5:5672 refused connection"
++        queue.failure = QueueUnavailableException(message)
++
++        val response = postExport("""{"accountId":"acc-1","format":"csv"}""")
++
++        assertEquals(503, response.status)
++        assertFalse(response.contentAsString.contains(message))
++        assertEquals(listOf("acc-1" to "csv"), queue.calls)
++    }
++
++    @Test
++    fun `does not enqueue when client does not accept json`() {
++        val response = mockMvc.perform(
++            post("/exports")
++                .contentType(MediaType.APPLICATION_JSON)
++                .accept(MediaType.TEXT_PLAIN)
++                .content("""{"accountId":"acc-1","format":"csv"}"""),
++        ).andReturn().response
++
++        assertEquals(406, response.status)
++        assertEquals(emptyList<Pair<String, String>>(), queue.calls)
++    }
++
++    private fun postExport(body: String): MockHttpServletResponse =
++        mockMvc.perform(post("/exports").contentType(MediaType.APPLICATION_JSON).content(body)).andReturn().response
++}
++
++private class RecordingExportQueue : ExportQueue {
++    val calls = mutableListOf<Pair<String, String>>()
++    var failure: RuntimeException? = null
++
++    override fun enqueue(accountId: String, format: String): String {
++        calls += accountId to format
++        failure?.let { throw it }
++        return "exp-1"
++    }
++}

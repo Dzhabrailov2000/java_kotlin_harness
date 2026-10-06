@@ -1,0 +1,155 @@
+{
+  "id": "R25",
+  "task": "T01",
+  "engine": "claude",
+  "arm": "A",
+  "started": "2026-10-06T18:21:30.982010+00:00",
+  "workspace": "/private/tmp/jkh-agent-pilot/trial-a89dd39a27de4fde9a79a0ba5349f656/workspace",
+  "returncode": 1,
+  "seconds": 4203.251,
+  "http_requests": 18,
+  "changed_files": [],
+  "protected_file_changes": [],
+  "evidence": {
+    "session_id": "a23c7b95-f6d6-4016-a11f-6daf208babf0",
+    "client_completed": false,
+    "model_requests": 18,
+    "requested_models": [
+      "claude-opus-5-5"
+    ],
+    "requested_efforts": [
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      },
+      {
+        "effort": "max"
+      }
+    ],
+    "core_present": false,
+    "kotlin_rule_present": false,
+    "skill_catalog_present": false,
+    "unexpected_context_markers": [],
+    "tool_calls": 12,
+    "forbidden_delegation": [],
+    "skill_calls": [],
+    "skill_file_accesses": [],
+    "hook_responses": [],
+    "permission_denials": [],
+    "usage": {
+      "input_total": 24598,
+      "input_uncached": 6,
+      "cache_write": 2287,
+      "cache_read": 22305,
+      "output": 1621,
+      "list_price_estimate_usd": 0.0657388,
+      "raw": {
+        "input_tokens": 6,
+        "cache_creation_input_tokens": 2287,
+        "cache_read_input_tokens": 22305,
+        "output_tokens": 1621,
+        "output_tokens_details": {
+          "thinking_tokens": 290
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 2287,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 463,
+            "cache_read_input_tokens": 9549,
+            "cache_creation_input_tokens": 822,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 822
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard"
+      }
+    },
+    "final": "Request timed out",
+    "context_valid": true
+  },
+  "grader": {
+    "returncode": 1,
+    "seconds": 7.035,
+    "command": [
+      "sandbox-exec",
+      "-f",
+      "/Users/dzabrailovramzan/IdeaProjects/java_kotlin_harness/evals/harness-pilot/runs/R25/grader/sandbox.sb",
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "workspace": "/private/tmp/jkh-verifier-pughpax2",
+    "required_test_count": 4
+  },
+  "task_pass": false,
+  "valid_attempt": false,
+  "finished": "2026-10-06T19:31:41.381876+00:00"
+}

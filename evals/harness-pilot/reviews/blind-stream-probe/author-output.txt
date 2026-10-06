@@ -1,0 +1,85 @@
+Local probe; candidate snapshots are copied without modification.
+openjdk version "21.0.12.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Corretto-21.0.12.9.1 (build 21.0.12.1+9-LTS)
+OpenJDK 64-Bit Server VM Corretto-21.0.12.9.1 (build 21.0.12.1+9-LTS, mixed mode, sharing)
+javac 21.0.12.1
+JVM flag: -Djava.util.concurrent.ForkJoinPool.common.parallelism=2
+Parallel trials per case: 10
+
+ORIGINAL
+compile_exit=0
+early_limit=-1 threw=AssertionError opened=1
+early_limit=0 threw=AssertionError opened=1
+trim_contract=false code_points=[[], [120], [120]] closed=0
+infinite_sequential=[x, x, x] read=6 closed=0
+sequential_error_same=true suppressed_close=false closed=0
+close_only_returned=[x] closed=0
+parallel_prefix trials=10 returned_expected=0 threw=10 closed=0 first_thrown=IllegalStateException:after-prefix
+parallel_error trials=10 original_thrown=6 original_in_cause=4 close_suppressed_on_thrown=0 close_suppressed_on_original=0 closed=0 worker_throws=4
+parallel_error_first same=true,class=IllegalStateException,message=parallel-traversal,cause_same=false,throw_thread=main
+run_exit=0
+
+CONTROL_TWR_LIMIT
+compile_exit=0
+early_limit=-1 threw=IllegalArgumentException opened=0
+early_limit=0 result=[] opened=0
+trim_contract=true code_points=[[8195], [120], [120]] closed=1
+infinite_sequential=[x, x, x] read=6 closed=1
+sequential_error_same=true suppressed_close=true closed=1
+close_error_same=true closed=1
+parallel_prefix trials=10 returned_expected=0 threw=10 closed=10 first_thrown=IllegalStateException:after-prefix
+parallel_error trials=10 original_thrown=4 original_in_cause=6 close_suppressed_on_thrown=10 close_suppressed_on_original=4 closed=10 worker_throws=6
+parallel_error_first same=true,class=IllegalStateException,message=parallel-traversal,cause_same=false,throw_thread=main
+run_exit=0
+
+P13
+compile_exit=0
+early_limit=-1 threw=IllegalArgumentException opened=0
+early_limit=0 result=[] opened=0
+trim_contract=true code_points=[[8195], [120], [120]] closed=1
+infinite_sequential=[x, x, x] read=6 closed=1
+sequential_error_same=true suppressed_close=true closed=1
+close_error_same=true closed=1
+parallel_prefix trials=10 returned_expected=0 threw=10 closed=10 first_thrown=IllegalStateException:after-prefix
+parallel_error trials=10 original_thrown=2 original_in_cause=8 close_suppressed_on_thrown=10 close_suppressed_on_original=2 closed=10 worker_throws=8
+parallel_error_first same=false,class=IllegalStateException,message=java.lang.IllegalStateException: parallel-traversal,cause_same=true,throw_thread=ForkJoinPool.commonPool-worker-2
+run_exit=0
+
+P17
+compile_exit=0
+early_limit=-1 threw=IllegalArgumentException opened=0
+early_limit=0 result=[] opened=0
+trim_contract=true code_points=[[8195], [120], [120]] closed=1
+infinite_sequential=[x, x, x] read=6 closed=1
+sequential_error_same=true suppressed_close=true closed=1
+close_error_same=true closed=1
+parallel_prefix trials=10 returned_expected=0 threw=10 closed=10 first_thrown=IllegalStateException:after-prefix
+parallel_error trials=10 original_thrown=2 original_in_cause=8 close_suppressed_on_thrown=10 close_suppressed_on_original=2 closed=10 worker_throws=8
+parallel_error_first same=false,class=IllegalStateException,message=java.lang.IllegalStateException: parallel-traversal,cause_same=true,throw_thread=ForkJoinPool.commonPool-worker-1
+run_exit=0
+
+P25
+compile_exit=0
+early_limit=-1 threw=IllegalArgumentException opened=0
+early_limit=0 result=[] opened=0
+trim_contract=true code_points=[[8195], [120], [120]] closed=1
+infinite_sequential=[x, x, x] read=6 closed=1
+sequential_error_same=true suppressed_close=true closed=1
+close_error_same=true closed=1
+parallel_prefix trials=10 returned_expected=10 threw=0 closed=10 first_thrown=none
+parallel_error trials=10 original_thrown=10 original_in_cause=0 close_suppressed_on_thrown=10 close_suppressed_on_original=10 closed=10 worker_throws=0
+parallel_error_first same=true,class=IllegalStateException,message=parallel-traversal,cause_same=false,throw_thread=main
+run_exit=0
+
+P28
+compile_exit=0
+early_limit=-1 threw=IllegalArgumentException opened=0
+early_limit=0 result=[] opened=0
+trim_contract=true code_points=[[8195], [120], [120]] closed=1
+infinite_sequential=[x, x, x] read=6 closed=1
+sequential_error_same=true suppressed_close=true closed=1
+close_error_same=true closed=1
+parallel_prefix trials=10 returned_expected=10 threw=0 closed=10 first_thrown=none
+parallel_error trials=10 original_thrown=10 original_in_cause=0 close_suppressed_on_thrown=10 close_suppressed_on_original=10 closed=10 worker_throws=0
+parallel_error_first same=true,class=IllegalStateException,message=parallel-traversal,cause_same=false,throw_thread=main
+run_exit=0

@@ -1,0 +1,69 @@
+{
+  "id": "P20",
+  "task": "T05",
+  "kind": "review",
+  "instruction": "Проверь PaymentService. Контракт: один вызов charge - одна логическая оплата. Gateway атомарно\nдедуплицирует по idempotencyKey; IOException может означать потерю ответа ПОСЛЕ списания.\nПовторить IOException можно до трех попыток; RejectedCharge повторять нельзя. Отдельные\nвызовы charge, даже с одинаковыми данными, означают отдельные оплаты. Проверка суммы,\nbackoff и долговременное хранение ключей выполняются вызывающим слоем и не входят в задачу.\n\nСделай ревью исходников, при необходимости используй терминал и тесты. Код и существующие\nтесты не изменяй. Сохрани review.json вида {\"findings\":[{\"file\":\"...\",\"line\":1,\n\"severity\":\"critical|major\",\"problem\":\"...\",\"scenario\":\"...\",\"fix\":\"...\"}]},\nгде findings может быть пустым. Включай только доказанные дефекты поведения; стиль и\nпредположения о неуказанных требованиях не являются дефектами. Не нужно искать заданное\nчисло ошибок. В конце кратко сообщи вывод.\n",
+  "original": {
+    "src/main/kotlin/pilot/PaymentService.kt": "package pilot\nimport java.io.IOException\nclass PaymentService(private val gateway:PaymentGateway,private val newKey:()->String) {\n  fun charge(request:Charge):Receipt {\n    for(attempt in 1..3) {\n      try { return gateway.charge(request,newKey()) }\n      catch(e:IOException) { if(attempt==3)throw e }\n    }\n    error(\"unreachable\")\n  }\n}\n",
+    "src/main/kotlin/pilot/PaymentTypes.kt": "package pilot\nimport java.io.IOException\ndata class Charge(val accountId:String,val cents:Long)\ndata class Receipt(val id:String)\nclass RejectedCharge:RuntimeException()\nfun interface PaymentGateway { fun charge(request:Charge,idempotencyKey:String):Receipt }\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/PaymentService.kt": "package pilot\nimport java.io.IOException\nclass PaymentService(private val gateway:PaymentGateway,private val newKey:()->String) {\n  fun charge(request:Charge):Receipt {\n    for(attempt in 1..3) {\n      try { return gateway.charge(request,newKey()) }\n      catch(e:IOException) { if(attempt==3)throw e }\n    }\n    error(\"unreachable\")\n  }\n}\n",
+    "src/main/kotlin/pilot/PaymentTypes.kt": "package pilot\nimport java.io.IOException\ndata class Charge(val accountId:String,val cents:Long)\ndata class Receipt(val id:String)\nclass RejectedCharge:RuntimeException()\nfun interface PaymentGateway { fun charge(request:Charge,idempotencyKey:String):Receipt }\n"
+  },
+  "review": {
+    "findings": [
+      {
+        "file": "src/main/kotlin/pilot/PaymentService.kt",
+        "line": 6,
+        "severity": "critical",
+        "problem": "newKey() вызывается внутри цикла повторов, поэтому каждая попытка одного вызова charge уходит в шлюз с новым idempotencyKey. Шлюз дедуплицирует только по ключу, и повтор после IOException для него - новая оплата. Нарушен контракт \"один вызов charge - одна логическая оплата\".",
+        "scenario": "charge(Charge(\"acc-1\", 100)). Попытка 1: шлюз списывает 100, ответ теряется, сервис получает IOException. Попытка 2 идет с другим ключом: шлюз списывает еще 100 и возвращает чек. Итог: один вызов, два списания. Если ответ теряется во всех трех попытках, списано 300, а вызывающий получает IOException. Если после первого списания денег на счете не хватает, вторая попытка с новым ключом получает RejectedCharge: вызывающий видит отказ, хотя деньги уже списаны. Воспроизведено тестом с фейковым шлюзом, который дедуплицирует по ключу: списано 200 и 300 вместо 100, в трех попытках три разных ключа.",
+        "fix": "Получать ключ один раз на вызов charge, до цикла: val key = newKey(), и передавать его во все попытки: gateway.charge(request, key). Ключ не выводить из данных Charge, иначе отдельные вызовы с одинаковыми данными склеятся в одну оплату. С этой правкой те же тесты проходят."
+      }
+    ]
+  },
+  "rubric": {
+    "has_issue": true,
+    "required_issue": "A fresh idempotency key on each retry can charge again after a committed payment with a lost response.",
+    "must_not": [
+      "Require deduplication between separate logical calls.",
+      "Require unspecified backoff or validation.",
+      "Treat style or a hypothetical change as a present defect."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 3,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T05",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T05",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": null,
+  "protected_file_changes": []
+}

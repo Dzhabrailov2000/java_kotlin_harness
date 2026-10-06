@@ -1,0 +1,30 @@
+[
+  {
+    "packet": "P05",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Одно подтвержденное замечание: migrations/V2__balance_check.sql:3 выполняет VALIDATE до COMMIT строки 4, поэтому AccessExclusiveLock от ADD CHECK строки 2 удерживается во время сканирования. Сценарий блокировки SELECT/INSERT/UPDATE соответствует контракту. COMMIT после ADD и отдельная транзакция VALIDATE освобождают сильную блокировку до сканирования. fixture_proof подтверждает оба режима. Ложных дополнительных замечаний нет."
+  },
+  {
+    "packet": "P22",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Заданный дефект найден в релевантной строке migrations/V2__balance_check.sql:3: AccessExclusiveLock получена на ADD CHECK и сохраняется общей транзакцией до COMMIT, а не возникает от самостоятельного VALIDATE. Ожидание конкурентных SELECT/INSERT/UPDATE и исправление COMMIT; BEGIN; между строками 2 и 3 причинно верны и согласуются с fixture_proof. Единственный finding помечен critical; отдельной шкалы различения critical/major в контракте нет. Ложных дополнительных замечаний нет."
+  },
+  {
+    "packet": "P23",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Одно подтвержденное замечание в migrations/V2__balance_check.sql:3: VALIDATE сканирует таблицу при еще удерживаемой AccessExclusiveLock от строки 2, поскольку COMMIT находится только в строке 4. Сценарий ожидания обычных чтений и записей воспроизводит нарушение контракта; отдельные транзакции ADD и VALIDATE устраняют причину, что согласуется с fixture_proof. Единственный finding помечен critical; это не дополнительный дефект и контракт не задает отдельной шкалы severity. Ложных дополнительных замечаний нет."
+  },
+  {
+    "packet": "P29",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Релевантная строка migrations/V2__balance_check.sql:3 и реальный дефект определены правильно: общая транзакция удерживает AccessExclusiveLock от ADD CHECK через весь VALIDATE, блокируя конкурентные SELECT/INSERT/UPDATE. Предложенный COMMIT перед VALIDATE учитывает явно заданное отсутствие внешней оборачивающей транзакции и оставляет на сканировании совместимую ShareUpdateExclusiveLock. Причинность подтверждается fixture_proof. Ложных дополнительных замечаний нет."
+  }
+]

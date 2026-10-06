@@ -1,0 +1,243 @@
+--- before/src/main/kotlin/pilot/BatchLoader.kt
++++ after/src/main/kotlin/pilot/BatchLoader.kt
+@@ -1,5 +1,7 @@
+ package pilot
+ import kotlinx.coroutines.*
++import kotlinx.coroutines.sync.Semaphore
++import kotlinx.coroutines.sync.withPermit
+ import java.io.IOException
+ fun interface ItemClient { suspend fun fetch(id:String):String }
+ sealed interface ItemResult {
+@@ -8,6 +10,18 @@
+ }
+ class BatchLoader(private val client:ItemClient) {
+   suspend fun load(ids:List<String>,parallelism:Int):List<ItemResult> = coroutineScope {
+-    ids.map { id -> async { runCatching { ItemResult.Found(id,client.fetch(id)) }.getOrElse { ItemResult.Failed(id) } } }.awaitAll()
++    require(parallelism > 0) { "parallelism must be positive" }
++    val semaphore = Semaphore(parallelism)
++    ids.map { id ->
++      async {
++        semaphore.withPermit {
++          try {
++            ItemResult.Found(id,client.fetch(id))
++          } catch (_: IOException) {
++            ItemResult.Failed(id)
++          }
++        }
++      }
++    }.awaitAll()
+   }
+ }
+--- before/src/test/kotlin/pilot/BatchLoaderTest.kt
++++ after/src/test/kotlin/pilot/BatchLoaderTest.kt
+@@ -0,0 +1,210 @@
++package pilot
++
++import java.io.IOException
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.CompletableDeferred
++import kotlinx.coroutines.async
++import kotlinx.coroutines.awaitCancellation
++import kotlinx.coroutines.cancelAndJoin
++import kotlinx.coroutines.channels.Channel
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.runBlocking
++import kotlinx.coroutines.withTimeout
++import kotlinx.coroutines.yield
++import org.junit.jupiter.api.Assertions.assertEquals
++import org.junit.jupiter.api.Assertions.assertFalse
++import org.junit.jupiter.api.Assertions.assertInstanceOf
++import org.junit.jupiter.api.Assertions.assertSame
++import org.junit.jupiter.api.Assertions.assertTrue
++import org.junit.jupiter.api.Test
++
++class BatchLoaderTest {
++  @Test
++  fun `preserves order and duplicates when calls complete out of order`() = runBlocking {
++    withTimeout(5_000) {
++      val started = Channel<Int>(Channel.UNLIMITED)
++      val completed = Channel<Int>(Channel.UNLIMITED)
++      val releases = List(3) { CompletableDeferred<Unit>() }
++      var calls = 0
++      val loader = BatchLoader {
++        val index = calls++
++        started.send(index)
++        releases[index].await()
++        completed.send(index)
++        "value-$index"
++      }
++
++      val loading = async { loader.load(listOf("a", "b", "a"), 3) }
++      repeat(3) { started.receive() }
++      for (index in listOf(2, 1, 0)) {
++        releases[index].complete(Unit)
++        assertEquals(index, completed.receive())
++      }
++
++      assertEquals(
++        listOf(
++          ItemResult.Found("a", "value-0"),
++          ItemResult.Found("b", "value-1"),
++          ItemResult.Found("a", "value-2"),
++        ),
++        loading.await(),
++      )
++      assertEquals(3, calls)
++    }
++  }
++
++  @Test
++  fun `uses available parallelism without exceeding the limit`() = runBlocking {
++    withTimeout(5_000) {
++      for (parallelism in listOf(1, 2, 8)) {
++        val ids = listOf("a", "b", "c", "d", "e")
++        val started = Channel<String>(Channel.UNLIMITED)
++        val releases = Channel<Unit>()
++        var active = 0
++        var maximum = 0
++        val loader = BatchLoader { id ->
++          active++
++          maximum = maxOf(maximum, active)
++          try {
++            started.send(id)
++            releases.receive()
++            if (id == "a") throw IOException("unavailable")
++            "value-$id"
++          } finally {
++            active--
++          }
++        }
++
++        val loading = async { loader.load(ids, parallelism) }
++        val expectedActive = minOf(parallelism, ids.size)
++        repeat(expectedActive) { started.receive() }
++        yield()
++        assertEquals(expectedActive, active)
++        assertTrue(started.tryReceive().isFailure)
++
++        repeat(ids.size - expectedActive) {
++          releases.send(Unit)
++          started.receive()
++          yield()
++          assertEquals(expectedActive, active)
++        }
++        repeat(expectedActive) { releases.send(Unit) }
++
++        assertEquals(
++          listOf(
++            ItemResult.Failed("a"),
++            ItemResult.Found("b", "value-b"),
++            ItemResult.Found("c", "value-c"),
++            ItemResult.Found("d", "value-d"),
++            ItemResult.Found("e", "value-e"),
++          ),
++          loading.await(),
++        )
++        assertEquals(expectedActive, maximum)
++        assertEquals(0, active)
++      }
++    }
++  }
++
++  @Test
++  fun `propagates client cancellation and cancels a waiting sibling`() = runBlocking {
++    assertPropagatedFailure(CancellationException("client cancelled"))
++  }
++
++  @Test
++  fun `propagates programming exceptions and cancels a waiting sibling`() = runBlocking {
++    assertPropagatedFailure(IllegalStateException("invalid state"))
++  }
++
++  @Test
++  fun `propagates errors and cancels a waiting sibling`() = runBlocking {
++    assertPropagatedFailure(AssertionError("broken invariant"))
++  }
++
++  @Test
++  fun `caller cancellation stops active calls without returning results`() = runBlocking {
++    withTimeout(5_000) {
++      val started = Channel<String>(Channel.UNLIMITED)
++      val stopped = mutableSetOf<String>()
++      var returned = false
++      val loader = BatchLoader { id ->
++        started.send(id)
++        try {
++          awaitCancellation()
++        } finally {
++          stopped.add(id)
++        }
++      }
++
++      val loading = launch {
++        loader.load(listOf("a", "b", "c"), 2)
++        returned = true
++      }
++      repeat(2) { started.receive() }
++      loading.cancelAndJoin()
++
++      assertTrue(loading.isCancelled)
++      assertFalse(returned)
++      assertEquals(setOf("a", "b"), stopped)
++      assertTrue(started.tryReceive().isFailure)
++    }
++  }
++
++  @Test
++  fun `rejects nonpositive parallelism before calling the client`() = runBlocking {
++    var calls = 0
++    val loader = BatchLoader { calls++; it }
++
++    for (parallelism in listOf(0, -1, Int.MIN_VALUE)) {
++      for (ids in listOf(emptyList(), listOf("a"))) {
++        var failure: IllegalArgumentException? = null
++        try {
++          loader.load(ids, parallelism)
++        } catch (caught: IllegalArgumentException) {
++          failure = caught
++        }
++        assertInstanceOf(IllegalArgumentException::class.java, failure)
++        assertEquals(0, calls)
++      }
++    }
++  }
++
++  @Test
++  fun `returns an empty result without calling the client for empty ids`() = runBlocking {
++    val loader = BatchLoader { throw AssertionError("unexpected client call") }
++
++    assertEquals(emptyList<ItemResult>(), loader.load(emptyList(), 2))
++  }
++
++  private suspend fun assertPropagatedFailure(expected: Throwable) {
++    withTimeout(5_000) {
++      val siblingStarted = CompletableDeferred<Unit>()
++      var siblingStopped = false
++      val loader = BatchLoader { id ->
++        if (id == "waiting") {
++          siblingStarted.complete(Unit)
++          try {
++            awaitCancellation()
++          } finally {
++            siblingStopped = true
++          }
++        } else {
++          siblingStarted.await()
++          throw expected
++        }
++      }
++
++      var actual: Throwable? = null
++      try {
++        loader.load(listOf("waiting", "failing"), 2)
++      } catch (caught: Throwable) {
++        actual = caught
++      }
++
++      assertEquals(expected.javaClass, actual?.javaClass)
++      // Восстановление стека корутин может создать копию с исходным исключением в cause.
++      assertSame(expected, generateSequence(actual) { it.cause }.last())
++      assertTrue(siblingStopped)
++    }
++  }
++}

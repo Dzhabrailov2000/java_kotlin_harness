@@ -1,0 +1,24 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :compileKotlin NO-SOURCE
+> Task :compileJava
+> Task :processResources NO-SOURCE
+> Task :classes
+> Task :jar
+> Task :processTestResources NO-SOURCE
+> Task :compileTestKotlin
+> Task :compileTestJava
+> Task :testClasses
+
+> Task :test FAILED
+
+CatalogReaderTest > closesSuccessfulReadAndStopsEarly() FAILED
+    org.opentest4j.AssertionFailedError at CatalogReaderTest.java:11
+
+CatalogReaderTest > preservesPrimaryFailureAndSuppressesCloseFailure() FAILED
+    org.opentest4j.AssertionFailedError at CatalogReaderTest.java:23
+
+CatalogReaderTest > doesNotOpenForZeroOrInvalidLimit() FAILED
+    org.opentest4j.AssertionFailedError at CatalogReaderTest.java:18
+5 actionable tasks: 5 executed

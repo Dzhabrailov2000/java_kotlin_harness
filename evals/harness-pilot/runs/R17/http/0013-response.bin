@@ -1,0 +1,666 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfmLtqREpQKntxNxEchSQ","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":2,"cache_creation_input_tokens":735,"cache_read_input_tokens":66790,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":735},"output_tokens":8,"service_tier":"standard","inference_geo":"not_available"},"diagnostics":null,"context_management":null}     }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}               }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":50}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":200}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":200}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":200} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":200}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":150}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":null}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"CAQSgU0KEAgSGAI4AUIIdGhpbmtpbmcSDFLRGvrM+omjH+ubJRoMWxc7dvpVVPkFZmZUIjBT6vBkHQGAHBi+Gyo3GRMlpxJpLAgSSGgIWRtEQc+1jO+NeMsu9PKSdiQKlBkRPsMqnkwZ6YrleLcVWoQIgjNWe/bbC0VDzlcovYTkZrGWQohhdoBOtzdsqjC09J+1Tm0FdheIHsYFwuUzt5ignSdhJblpchJs1wg1gkfVB8KoKi4Ug3QVSsl4DNSUEBZzRxAUU/iucszqMNV73ZU32SA+scZtb+EqBhXlVHiAyQxs+ewF+SaXGK1BeYvkAj0VFe6ufXkFeA3sq3ngCpafZs64ObJ4IgngxqnF3KBje1wjr2Gd1NY+sYnWs1gaHVO+Yt0rPldtYf1d6Vvi/d5e41MDFy/8Vnwqpv7eFLe/3gGDwWBiTOEfr9YM8saFPx30cDLl+cIK3bryZ/0g9okMw9BRj+QzDyujBXRCNLV8QoLLp6Vc/qescA1tCtheQEfbehSSMgKVbd78ohNOykoVqrFt2o9X6tnze2qteCSUq4x5Gdld/uuoOf6P7/ypc/2zPF+gh4jbFH7yH/rwiks/X79i/VTG3Xxihh5rqJx0knlBmXKeWcz1JBeC93zB84EvlXgTE0Y0HsZggvSe5tIZUUC6iV/BpX8OkhtWvt8vBSZrcjzliyuu8woIK7TVXIroiQtDX30UhYTodenLnNIvfI0Ni9oOe9MNRhibbTGlM4szShhZhby/roRPOTyrFiyyCEWzgGFMgPo08qLGPEbVSeN9+6XnfPUqadZBEzuBeo82tHMHcZYHuCNKP3qizm2EkTrQ6EtMXJO7hubjA49AQ8U4Wy7hTNfGifxBmGQeKoyCw1STBSfGWdnh43XUJfTg0UfAf6AzYN1KU9T3nSrwF5+AZpN3IsjKQePN3AItf3tHw9VCKg7VQ22DTCgsiFhDN+mSo5NYIGgKPMCvw1sCESyv9PVEZCl7DPgj3QK22956BPt9W2p1vZUdrn8oyVtiasFRHCCHdMug8lFl74A9zdGs45SqJ52rEDjO6gc9NA5cPHF16toN/2rV8nyCLmhOZvU5j9OXbXWHgXf9cvm8dcfV79ood6iVo13S+aVo6+YIV7FnXf7nTvKXxr1ixQ1GoeZXUvSBKznfjhp79pnr6kbOZCAfYHZxqAFuVuOd5/8+u6XpTS64WQaCPdg+TMjviP0RiR7J/Pau74Vk12vUwoRq7XsCJwaJSNKa/1QvObbX68+IrJ0cIuSasm7+Y4NFAonxKFQ7oRcvB7/r146aiWBUnV4KBfgdBrjmTntGC6UtgzaD4S/wsm9n01jBY4wbC5olfjheBEc0a4AaQf/LuWaSFsdRu3cXxJz6RgTId0VXIZhQIjK+pZEHO5/VHw799ccR52IAJtQ2RaiY3oh33DrfxTwvLeT5h+WOwF30jSo0Omfl/SqZfMU+1BQm8v7UkqvL/uzNYLhlCQoF8Y53l/WFLHTctpdLsHCFvZJgfk35bs9nl4IekKJw37hbx7JeEl894Gg+NO8oOlSod1aJXPVeLfBE8AAPSXeu7VUwrYJFSWmwD8N2MvBirTI1RU9xZ+xYsNG+OlY8KnJJ/vtL+cvxOOVUDpAaCE86e9lVS3CcxQAJQaRmlok4VOzLudjaHVCe3RcgjkDCFoSYj1pWnMf8zq8i2TyRbdM0RbcpFFJVADSzlEivOvvdMZd46i4uUmT4UM+So/8cxpoFmHyyiH0+hEh9xyUVynXZvU3fw6S82W9fGNu0Gmbjj2yT22ygXz2RqrvVg1t0tfFAqn5BSZzDHi6Seo4xZSoJkSdF/xXrzyjCmMs4EvaPFFMxvAJKLqS5gwzKbrQfDchhCAxekXiKoFPC3ACVTo8JzkLa8mwCB/njkpGeIyJts5McyiRzCRljgNj0J99356Qp3OmmwoVzQ0Fn1zhif56nUa/8vDxFy9tWlutWsnLNw8oYl6oFc9J8ew+kE9Kfro6pG5pSzCrWPZLueY8puD619gOUUdiLMRBqz74o7Z4kEx2CPgJCoZqf5dtpzSQq61hpZqlrGASYScTyt28pW+39UT2R6c9cBm07eRTw+hiyDGGN6XGa91ZFCzgbMYLpjHlHeSbmqx6/Q2OA/6ZMTFnZj7rGFmdA/Pf4xIVtyyEQ/S83OXGPDdaa98R8T6PsSlV3xENPfmYjbOP7oj6NjEpS5zDHxk8FzFKQW+QfFu/Us1tq/FY5qAKdmcpGj3dabdCLY/VGdk8H+q4IBfiSCrRFzRdtWFtTVrCeSamz9csr1TLN7xh2JHKTAC9ZGIUKWIkgmilMuxYnWOUkNunYpQvlze5YcEj5qDCEdheJ88Q21+0ULXd5lvzraTec4MuxgGTaSWFdALGahLgV+GGoyrYr2CkSWFxXlTEBvec9DjT5JswYpy6Jn1Hrxrol+9eIoD7DQ5/Ua3Ldta1W58kwedGSChUrOEfNqrnrOzuT9k/aMGxJs9dJhsUMqjiTcbHhtK2Y4EPHsfHWmab4QD9KFNZrxB8L2uMFK3JnQ/sZ66TD83FhPJ92kQlcXNFmFINd0u+KRNJHLwWW9Li7v0GMnuWSxfG5aZPFq78dl5V7pQgrhU6mCZLU+2gWtUTs+BFlgJdXUw+L1IPO2YdV+x/hfXbkYxhv1OrltvqX3c4Wtro8v8BfF64p1h6+Spuz7PTmzGlBPeSNiVftF+DschtJPD9h5sa+RcREjSh9y+cekDHR1iirhq6LVBVdgBpcSc6Ag/8UBKyMdPb9zBPpKMni6FfHpjGvuksWrJB8Zs3sm4Yy0/4yxG6Wev2XF43Gud408Vva+QoRYIZog/Er+XUMIComxYDRbmVY7s0EXkzIlzakAl48rkF/BFvuyMZT9+Uz67pg6FVphtuVmZ4Wz23rHjSaDTOLs2Wx7YbqnkfjoDKaRYNxcrypPcVInrUUPSkCLF9Zn/dko/9lHz8pbIrai7ziMTcUIWMGjmEmUkUbkh2fTVVLuwX3brz8V+xx2q6Nv6uDdinSIjC2FSRN8PAIT9KQB3DQA2I5Syo1K+or0f1ySDhO1m65Oed7swmsn8tG8wPFtSNLi72//rZTrGhVY+b2BX8Cfqsbt6uuQ5DVCpaitHxRQN/ZHWLX1BNCoKCKIQWFx89jtbiSLskQFLaUrBrY1dH8Y8mxwnbTfpjyoHhGBKNAj4lBcLiTtVsHVTZ1tQSQ+5b6tJWCysFjW1nae6oU7ITQIJb5xbJdXagdyyHYitY0KgAWH3jNe7tVuXWtoWxVvXPcjmEhXnojLfGSD4Iv8WuYh1VWUh6+l7/RnRhvXNvQe6s87SWIiJtRt9yp0xl/2cUrsTc2C39jCfVl9J2W4W5WIJhrn57RvVB/OyzPR174iuANbAyT77QAm6pqvXCcyXH1KczCjzRsUGuizc4YzuIB7yK96X8lleh3qU1tYhzFFNYzjwUYXEwRevb6ikAcy4BGSFpwg4mnR8qYfOg4p4bg1qG5AVbaKdWk1PnhwXRlNtOR0joi9mfVMcKy/jzZVMhKZ+JLidRhsq3juxPDjjJ4tU/paet/tmiefTu09gjI3x9G3xcu0t2syHtA1ZHcFstGrQ6ZcM+g/iRn0EniwycpgrrpkwPW298OTGajjklyAz/i+jwJHzH4m5G6jBP+FtKHvX4DG90P5uMT1X0rY9QUcae1xmbvOq3nMUM0M1VuanBqX1sKQK8rUjDdKwhP1MfvCJbf6dn74Sbq0z6hDIMko/2h9SqmdwRsF7JbvUxDX+CPqYy1s+ToZDVx/OnGHd6YevneCyQcMMklDNIZejdFXIbhWqkls9L8PjPl9sBUdX8wwfLCQt1SnxU5Q7pzUHye4Gb60357vIyuVJs2l7aKV3lBPyoOVNXD3qTfy6niobNsoXTRXVMH4etdmdXKGYYEPfxcOt+PL+uNjZ9SGV9BOk19dxXzGVOVbqKLCjgzn3xNX4UQEpdYoaMn8VbDBd9UjBwnukOZ/QQuPgeNvM1qXBdk3XnH7Nd/FyfkdOhKIQr204pOQ/mtp1utWZsUcZzDVy7xfA5H2wYKwFv1+6rKEUUGtCc1uc6Rh42lBtht4gbjCo0rhBkHXAq1Z0fqEzOjzedYFYLbDunqEkyz3UKTPnvSklefaIV0wDcP5p5rpuuxpy5b2+ObcTJLyNNdgmE/eYmBFQurwvzllnp7XdnsfVaha5o2iLewuHzocV7xKjJkNXD5B1gNR0z1vnfUj1DzdFhhBpNFQOiULuenQG9hKT61qkADJ11Vj5U9jOuMZaV5ZZnoJPGkK0fa2waFBNjo2LCMGgv5YcJrFCXdk7pcsc/Fnx2im00PBtlNHsRMl6sGP25yjM8tHgcfBLG7zJhO2zwnqmM6gw6hsu3KQnuyElhDDjT8YQguI+hbA8ad/kwaWWwC4AtGuaFFFKVuRHuC7fb0tqlejTvk9yTw7kN05SVqml1jQ5k/mtfX9AQL1eK5MXl11PNFeHHwA6FhiqMzSAr7lYdZJwiMCWVIPRTCD3b66ydiT+r+vgwRX0gWSOyOlH3OavgbNiwtlGKrS5xwmCIrS8iZpJtGJk4cxEhQQicv69ISxMDNfDI44rvweO12WndkhdGZRREmxoh+0hAbEUeKgFdXrJneLqh5UPU7YhnUypzr+CoZ0VrWiu0Z/9qY1BBxkGxkcWVpTguhS3xiTX6mYNBbyp4g6g53vQSvjnO4cnEXI4CjQ/mQKvaKYR5eXBb7/eAK0PvB4xJcZguGxEYupr/GvpO/t4fCc5XA5ymcZyiCfiWGdYVNRxl3GKuCxlkCK90+cYh9Qpzp1Lhe7+sn/NlTMiUZYhII+A3AzOalr37n0Pmb3LePchgpR7NSWEcmv4igWtb+tYOeNSlysvR0ysuSOJG88P6a//yFMvm9AiKefDQQiymzsTUSVuxYbYz2MOx85XARwgKUX6HwtJ5rfjECYvc2ISqascX2nkmvxmjYV98CTcM8YA0QBHwCq26LCi79Nx/iRJQlmpaoBenfkiAsGbqPjAhJE+J+XgqWpfopQbd5fCj4hkSmS60DDrmxjkPeump8RIxjc1GHDV46TRLCuelplJHJZTUC1nno8Cm++VXB/kY9up/ULic4FrfImodcQ/QQXQ8H+wqyOg01tevv3W7agF4VqKscdkHAQKeBZ+5X+5JRcPENzPu/6M/qK6veIpq/YKA2SbGLYNOK/ppTKtrLP+COkCszlIuM5ftHT/QowWgYWOluMFCKZRzWm6ftxo0wCeDaqVjQcN1hRCxJhm09Kk83Uy0pAXDa/LhW9f62B3/e8tNacIx37Y/07mKrnqTtezQStAXJz2EpussZ+QeB+OcXmeVx0FTVl18pBMr2/fXqq9k9HtLo0ak66ZN2i+l9dWJecyMMfMOuMdHXHtDRIZhAbeXpJa5j9mIPYkPNlBqZqHEOMtyaoVNal1QB+ZKNr3USLTB0EWBsgQ9FsYQFVit3HURl4J08V22p/8cXw+qqX//UdVx7xAL0aASi+ZOY3ma1Lem1CYBFFL4uYvfsa8ZjbirslyhtP7MhJpFDho8gbO+mIlHHQyNyU5GnGbpHNjqi8frPH5ru2PbowwJMIOIF78Me/w19cUhbpRocGA4MCFaoidvOQ+RBjSvVOHXLJVsTx6DQQHQoME5IVwOFCY8V/8fNbDqayQUTjIoW4MZ+TPv5gDYmbTslgDDMKzsgrpdFbA0AcuUnVi1rP5zKcv9tXNmjI94KUhSdm96FW7aZQDRibH+LMwXxF51J5S6DpnuJH3nAaxQlo8AjV8QyikZhVBs4gtC5PEZGUqGYZWW7twj7ekkFRLCM8JM3pnsDTMMe7Sm8K91s916+Ii0Jp/xxxWWXELwCGXf3gHXUy2OLoYKaNmXnrOrJghhP1Uh3vCcfvMjuRnmak2pMu/uMe5atg9+yX/tquP+IDE64lo18XbreblQZ9dfRj/koSBx6n8rRSGXR1WPSlamVt/9I+SORH5guKTl8V8qvj3NYmbFVUnXMApDm45BhYLlFPF5Tj43W7eEGectL9LGh8DvPLS4R8UWMW4SwLyyBRN6fvHtjIfh6VElK8pMinz5XErg8SSMxFJMGHBjY34X9wjEZG2dRtfKTsQOLD5pxRSjnmTnox6XpjvMA5GCf0DE9lYNWxh2yyw75FAVJ+LWLe8JLmgMfEyNVaMu2IV5d6n+bJY0mTy3RUDOMpCQeB4COdd9A9evyJu3sOgQSsbh1hTV/8eDLnhedFP+PyTZoKiwU3TgpkHS+xSlTWyNv6LPWRfONMNuGZfzeZddrNU/ySKx97sYfOGw7anXKxWK3WE6OggRxhUrs3MXYQwkkzvUpdxAXsix3N78ZQNMTjS44n7fVDV2IAox1kFzjmL0X/8aIlESzXPbsCaoieC12FRFINqbfpV3BeffKbykILVjIL2bVP3x0axvj0FmeB47Dxai8/+fxoW4utm36FGslIKRUrtu2t5f/fNhLC77FSgekpD0FaFKIojt+BYHCT+UcxN1sdJYGlgTBQo9T4GBfD9IP4pbpQALVc30CuRc0z0yp3eW8S+Ap+PueoI9B3+dT99e1ssBhYFhUnsOFIlWu1CMLlv0sWhS3GrKX69dz+aswh4NfREsrDOx78vsT3C6FWTPgiCd89rUU0ahrLdkvJKXjlNvTQgkLXR53H/wE/VmvO66RK9NTDGJkYtr3gtq8A9HV1rXxeJSdpE3FNjCyYm4+6OcXDyj1sLw6UEnr09hbISsemn5lhoE5GdLwITSDm8Z5Km3W+ooc5PbblRNtSUbsXM9ECaLWMEE9KJp+dT88hllLaXcPFJiGPAO2P2Uuan7XkEtWrFnih/Gnk8gXyz+tAQCOgBtjI2MUrllhLar/mrzq77zpoIHS6TRboMY8ene+JOTMm0mLNz64LnHdl8OM9EoirjcqIDnN0L3BXZxsdnAM0vHTKicLj92SdZGgjNOyZJ98oQd/IfCEtDoFGlntXvSKjNwmNXTes0ievoelLgU/MJoQYQxqAmkLsBl3CWMgmChdtgL2056M5xbkNx3w7jPEpOjRGYs7CzkB2I4xdn/V57HIFITXoWLBNj5oHeBNFSFwUwFh1Ke+jUrE4dzuwd1aEOuvgmcSS6xL9b1GRVu1eiPKcvQxAkke7/6aOf3/E/N222j0Q1/vbIxfA9eUmk5ctUTkNjlMLbNdUHia3LhYYHOBHf/JPOAV9lYqZjomxmsxijYr6CCP59svM0ATPHIXBCqMHvSU777XqCKEyLnmQ8iZGH1pvYi4n+PKoLDFUdo4JX4m2b0FKFh+3cLq/24tS6gZEK3I9xPi8kQVej4v06I2WQ7xsQr3m8/7/69tGS1dLF9Bbh7sw5eQl1vZNDzviJsclon8tcLJAh24esTutKRPa/0qPsa/7Ruwi8/fagVYv1lu86IIkzdGSbW3e5IKyU/XSvTD/14dfAaBIa50dMVjEUvHJfnPSV+cesmzyPRXo9ucQWl1GavjDrXxAUBHbtRV6MMnepOkvM5n6KOhiIGBEK9OxBWzzh4VUs0YDArG6haW0dWMrFRRD7PzWpf5NeEh9U+UZpkdw29ZMUzsktMY2TPZD9CKoq8jcagl/XB5eYO1M8kdjqj2T5GQaB9BudElXjhABhEY1BjL9WH3xOoTHzQtwkXpyB/RDITViMQ2gCAwUo+iLrQIF/n+lCzV9nq894gczGLDNNoERn+OhnVZWzEityxpu3/68dio1vvfHDojCKyPAeXGKykxof65gPTwri1fhuWsbqogQQ9408RU8o6WnTr3ltERzIBqwyX/Kg+nfSP6vcy4QDR9YyTvCiefHUfMZZwAdnNPq/Im1FIrv3/HpoFI2W2DeBasRHRgSN0URTSFIHxm95lY1MUcOjz2GGjtfGrLr22HFlVbCuiWAbq1xBYMV/L3GgHpxuSKxSYZBRuC9ryaQJWwU0AK+bocZO9IdbQBT8JeH/YN+UOWrMXlsEd4l3zgRh9K3AX5/MDDK6ZgKpMv27iIN+LpYdyCTZvsRhfFZfZL5nN1tktFSszFFzK8NPb9/4w+W0bPtWt29BulgIbSDBSn2inNkZTsanSB7z8I3ZYIE3b9Iio3bAyHz3I2milx/s/+IRUyuw2X29o49NkwLp4s3TMrl17lO5JZyhky8uk1HMXIhklpopLenmVkDpDPrBc2Z+GGO2/s2RTzdfMeQe6FqfiMwCtXGFTGu5dQ1SeXEnIrYclvnYp+6aKqsRJDm7qn22SecIsMzp28KqSIEjVAi2z0Fps/3c0CCIx0Es/UNeWqCwJp8VNIMzkHh4e89VF5TB7K++7gpeegyZBxIXseNtndf3HtLABy1Z3mpONoOzz7bYR8Q6pJAjAPU2KXDEKt/WkjREjdGUm7YMl7UQBqa/o6mx/+/5beOSopa9497XzuH4dxTWMKC3zqK+47IXM1aM7PGyIstW0I2qmYyhdnhPrvdLIn3bEB6/U+EUzmHzxSHbVPPZYvGV460mGzwzFpAH7nZmTIHoMIgy+9NBDyxZuo18UPXVzpi/A9PjDDY1vzQZQjMdQYD7+2cjSEw89NRvCFVyNqIq3BPgp5d9ZxgqU2zTBZcwEUxSiPtKBY+Qs9vcZ/DvNM/NXoSrZ+eGVXde8jiSsL9Bip6hd6JYIeMLfWMWQOM6oJCSbc5IMB9YQciYkJpEEzH7buV0dO/nVnL5Fxm+M4eRaRQvQVzMRK5AocGmzKCvv8p7z6jd12S3uqoaJ/Jtiks6icI350+Tk7V/Xscn4ELHgC43glqnZwWcm/1AwORO/0KQB/WCKvdqeH25C8Jav79LtTZ2f8/88i7j0HY64HsveU6f/QL96fCUacJfeVm83zUwVkvYFYeZzOtBCxZ1gWcoNtcKpytcdGCxaA85TlxVITpn+P05VSjmg5QI9/semG+BsjUAByQT8WysZr41zQZgFFevnVysbdh6O4y6j2OcB/VUJQDlxG/TFW2XVWJP/FIzmWq+TC7X2rzCm8puI+JYTc5+/p0T1iCGzv9/m2hE6HCoBVGSZY+BfWbdfE9tS8JIQUxfZjgNtgJnUd+TqRtwvv8HdgDb75ced5CLeGRVAINCVOx/CeJGJbcibwcmar4Bp4NowWtOOG8jsGPqPNPqp3sNaSofa0DrNcfmVMmoO20gE3XRmu0eeHQR4pgZkdaZE4V1IRo2q8a4F3BmzfO1bEvet1FYONDEsPDS4GhHBZP50Ze1csmwS8ctaCGCFBFVJz+BxLHEz/Kb83r4nET57KjkG8QXpz345//03C86xdICMn7EK/SMMd12pkTR4ebGn95KwMlczcCrUHJMlkmny4O1kc43esTNg/etHMlyCGW8upj1JpHCEu/JAeGCdBFHqfyEUbdXTbh4XhRClow46uipqq8RYmtcjEI03HThkmLdinMizHq5YA3k0xnFx6ZxSRYoiYT90JDK2Ww666mPhD/ILEkA8FRWEyNUSoM8pUqgeY82iyoR9TyZi7nCwkHVOB6UlfmyJ4Uh84acHKZ2T6zkmbdjJAhtqnF+aOlgLao5XfFOiMs9E3MnF4suiQLf7Rq3xW56kE4gzKORjs5xFJwCwiQnZySTJM6rgVFc60Xy5BnxJpBX3eIiUwdPGpqcdI2hjsFBki8M64Kzl+Hpk0k/ZQLvBVpIPmmp3aX9BJ5IUhRZgcybPLaSycugy0NMD+8XtsyhO0qxjEI5o4hcrMSnwjU+cv2uebj3lazg44ScHbTI/hl8SdB/gV03D/Y9wEWtWqKkmBJXa9UBcEicaCKODuBsEcTMaCgfBpKn0B5z8eNa5L3vXsrDNEV/x1vz6BhTq3Wpxnilfphrt7ZkV7WGl8x5598loT0ocvcanVRlm5j27+c67YVMXLOUY1QUcx1KtdJ55taLfKjMk/FSLDeWi1IuxeLg30/46SnUnWrzkcPq9nvQo4GxuWqtSk/C9hkVi64z6o3RQlglEd60JWsY+ACw415ylwtFycj+Atff535dqTojXbGWi1JrHxirqu91G5ZLavDZBPAgewVTSizTwu4S4ZujiOoyvMyleStWb0IYw7huc1LvGIOmOqySiGM+SViRlMh8kaLO+xTpI+PjgOY5s0YJr2/upT8GvBeGq5aoAl/CXY3cw2kk0Wl9MbiRH4VPEPE4fFYUYmsuVd4bwe8BvxWoVX4+IWDpwiPYwRpRIT7htDO2OLiFfxeugUWU56b3RbwFKUNOF7ajiCNMw6YdT0ayi+nWLvr51eKDBJmdwD6KY7WNX+oQQIzwG4g/n+7PhrbGkxi3+o7kJPqf1elbLg/lrBqOPTYoOqllTPKa6TvNIlzgLIya3VNCeTHX/8y5mq6FNCMAqTkaCsUZX2wZEMZuNM+CDpSHacZm7wzJxHGbuuu6tU4Eh1m0NvGgZnyi9koD9plbUZcbFjhO2QtKG6oroPC+ELSBueR4Q6AyJqSYRgARnimxaudyST0ztlS6V5KFiWJ2gOHFIdOsuKhWQ/IJXgywgf+7NAcBGztzyBXEdPx9uCo4zC/lZRDEJ78frdEDt4katLVri12+/j36AniDBn9UDc4EjYqSxtlbyxadbfEPeN9EdmzH4wdvZiK19cG8fn5hTRSDO/C9Kv9SFlCkHYoQ3JbyEuiyoaVjLW09U2CTDWHgboiglDJJdlr2zxlN9h93rlW363dfR9XWsbbuK8X77MpwqjAsn08PLPuB4LLb82232tVM6Iop55H9lquknM6d2ez14Lpa7nFuas08KAbGW8GeCoS/aS3KjV9UGk24C01g1uUovXkAh3OcSU3mukVOWomZWGuRaZDDoLMraqVMm168+M6asnxvWUqvhhzvP9O52y7wXTGvHxLCKMME2/pJNbONUf1DHOxfQ6JSmfOn/QYAJXVTSXtBET+iad+E+sgw3KumlqVM7Eqs4rKGy4Z2IztFp41xNhAcTmM0NQFG063nvbxUUp+D2bCS3YNeBAd0qktcAo8vSqSfOikuWsTdMA/GEKproGlFd+riCsJiyWfMigGXUejYBCh3bu3bPz313lhwbW/Mt5iGpQJGTWWHvIgCNYZfotoJsUpaw1SXJhf2/PHU6YzVIxEqBaKpPBsbxSBlhoqeQjxEeCVwZc+bh4FDONXvSIAvP5n7IbmslqBH6mZiavXYJPg/dMUOlwKMDJ3PeYWlB+4ePhuwyfhQPjEKT498wHkGK+gK/oWSrnQG5Tfdk+2OcoR5zcJNyLmM6TgNWxtoPz2n7+58HyI6lfdDciEihggKdmKg0bChjciaaYhUw4uRnxoQEe2lsZzaFwsQCKjSBRDkkhxuDLCrmGeYp6StszErH90oFBazQ2TW0iT7+N4m37xvetGBkVo58ROL17ioJqcaQxJArGJ+RsDokox5YNySPINQoZiW6UWYFMDghCFpwQq7IH1Trlip1rqKzNXXvq8UTtwW7JYsBjF3VDHiv10Dt4LkBxNotvuSPqqdKhBFBNseAYhp+5sHYdKOlHj9xsvXFO1po1tbVZp2uTd9sTphqJte74XW1kC4Ore1BnjThXAGSENXr6pW8it7HcMhYSAg7MdSqRFDIsQQ+RVm0cOXb2vKNN7RkRm51C9RJ/3inHQYjxnUdG5DSjVjilaJyPFqKmg8QDE3uWqyTTMLCIE8h0iZwhs59lVRKjz4ffo695A104re3E+ubxYBbGbL8LcpdWhF3IFx0NRgQDvJaLzp12Czzlc8K6DELSD0on2Jvtybq3b5K9p9iUNDtpLMvT4WGaEX0cC0nNdUQjzVvZAEAXzE0L13RVDtEkEnfJiFOA3eINsh9o48GIH5f4H5n9efw25w9SUWmbYzIa1kLZxmP1hn8l75ty/xX0xptGD6oFwJzRQg5HCYwwSPXzxmMykBCa2BboUQZwiP5uuHpaI+IF27X0y1aVFMjz0PPd8YQad6dqvsjT9H0V/FE3ms194yL3cvQm1qhagKaew6nQStovFhe/mfQ6B2eE116m4ghMYc2BrS7+GnymU0nUWtCrqkSGFPWXgPhsXoamzJUrAumfVl4mwTVU/5AivOleOvu+SHml+jMIoIXX8tE9waueVliDFEJbaxdtd8eDTCuaajHspfZDTHxKP5YRhC+Z54dUTURE94ROzINXmIKKZxYOpLSyNAfJ+Zl7vUfWbO3pj/9FpFzDZxwES4DWGRPnwAEGoQEtLPCHRjy9GTNWH4gSIWxRr2EvHs1IY2q+gINmK1l1H43yk5qaZG7xqTNoPk23tK1bfuxJywUgIfD4wCgcXrllJ5DqlALhRnPI3IBHoFvjl+hwCDvlRtwAR1uPIoWQ1MhEu12VCwzNqMJLopCf5y+/+7OBoy/5nA9cqqBc782JGJqABRNfIe3dV7a07fZb0MfpReXMsJU4XfymtUkRcdv74YEZijXWZ5PLOdOPiY01Hb/h9F1zv4Vu/sFSQ2U+hyonFYx7cVTmKMAOR02v8g5pCGU9UAtaMITLFmQCQ//puJYf7nPXtM123WfuBwk33fiiWoT1VicHkWG2aePyCQdTCmw8PdtaLr8SzYn6ZXdyUq1U9YAMYs7OW/flGEwwPIi3zK+MDtZEjuLD4gQIAri2pAKr3NbRu9+GGIOmtm81DM17lFJdkJk3WNeEeGbX4J4PRhP72sWzDOtVhiBRDwPQUQkSHv/1B214p1TMV59/gdgL0tJNW1qI2rQlbK0910cyF9zLpxVFRiLvUwZN3/ioC1rexJxw0G2XE8PIJUaJvo4rgrsUM5rQV3BetXMqm1m2503gtt1a3SxffFBHI9GkZdy04VtA258XhgVHwYRIfXR/5lTWDgWNQP10UkBKu2tvjSpP5RK0k6qyJn81ttMC6FQcDz5hOTYMaRBOc/oHSiJF60/vzuyXL2bgfxGX5RkdfblpRZglyGtORxMnQkPgDu5IwbCobHvQ/i1KU8hJBBCxLh2QAZrIhf5Lv+qypPGI5UIHnq6dhCdNylihuXz1hMJvTdAWZD+dinRhkJseQXaxZypQ4INbi6a64bpVFZY/IrEc0u+k2B3ymu2/4/cGwWO++LOmsVgxOhOZBwUzAKPZegysPpl75ZqhiQ/9exSR7HiqHCL4LIWewBbAQLXwBLbOthEPX38Vn+0ewWcyiPkvHRzDfn41h7spxanVHNmnZgdsDtiw2muSlxgB"}           }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0    }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"text","text":""}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"BatchLoader` ис"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"правлен, `./grad"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"lew test` проходит:"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" 10 тестов из "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"10 (9 мо"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"их и `SmokeT"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"est`). Пять пов"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"торных прогонов подря"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"д тоже прошли."}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Что было"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" не так в"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" исходном коде:**"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n- `runCatching` прев"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ращал в `Failed`"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" люб"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ые"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" исключения, включ"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ая `CancellationException`"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", `Error` и ош"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ибки программы.\n-"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Все в"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызовы кл"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"иента запускались од"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"новременно, "}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ограничения"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `parallelism` не было"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":".\n- `parallelism"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"` не проверялся."}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Исправление** (`"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"src/main/kotlin"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"/pilot/Batch"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Loader.kt:12"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`):\n- `require(par"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"allelism > 0)`"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" стоит первой строкой"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", поэтому `Ill"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"egalArgumentException`"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" б"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"росается до в"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызова клиента, даже"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" при пустом `ids`"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":".\n- Не"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" больше `"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"parallelism` вызов"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ов клиента одновременно"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" обеспечивает `"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Semaphore` из `k"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"otlinx.corout"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ines.sync`: он при"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"останавливает корутину"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", а не блокирует по"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ток.\n- Пор"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ядок и повторы сох"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"раняются:"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `ids.map { async {"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" … } }.awaitA"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ll()` внутри `co"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"routineScope`,"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" без"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" глобального scope.\n-"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `fetch` (`:"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"20`) ловит только `"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"IOException` (с"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" подклассами) и возв"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ращает `Failed` только"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" для этого элемента."}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n- Ошибка программы"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" отменяет остальные в"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызовы и до"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ходит до вызывающего"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":". `CancellationException`"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" от клиента и"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" отмена со"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" стороны вызывающего"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" т"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"оже прерывают весь"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"load`, а"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" не"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" прев"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ращаются в `Failed"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`.\n- Сигн"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"атуры и `Item"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Result` не менялись."}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Тесты** ("}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`src/test/kotl"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"in/pilot/Bat"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"chLoaderTest."}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"kt`,"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" новый файл;"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" с"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"борку и `"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"SmokeTest` не"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" трогал):\n- поряд"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ок и повторы, когда"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" ответы приходят в друг"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ом порядке;\n- п"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"и"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ковое число одновременных в"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызовов на однопоточ"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ном ди"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"спетчере и на `"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Dispatchers.Default"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"`. Этот т"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ест не зависит от времени"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":": если пара"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ллелизм не используется,"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" он пад"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ает по та"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ймауту, если"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" лимит превышен —"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" на проверке"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":";"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n- `"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Failed` только для своего эл"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"емента, в том числе для"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" дубликата;\n- про"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"брос `IllegalSt"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ateException` и `Error`"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":", `"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"CancellationException` от кл"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"иента,"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" отмена вызывающим"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":";\n- про"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"верка `parallelism`"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" и пустой список."}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\nЧтобы уб"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"едиться, что тесты"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" "}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ловят ошибки, я"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" временно подставлял три"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" не"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"правильные версии: исход"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ный код, последовательную об"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"работку и сем"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"афор с"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `runCatching`. На"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" каждой"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" пад"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ает"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" хотя бы один тест"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":". Ис"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"правленный файл после"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" этого восстановлен."}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"\n\n**Что стоит уч"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"есть:**\n- Пов"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"торя"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ющиеся id не объедин"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"яются: для каждого в"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"хождения,"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" как и раньше, от"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"дельный вызов кли"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ента. Иначе "}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ошибка одного вхожд"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ения задела"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" бы остальные.\n-"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Параллель"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ные"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" вызовы ид"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ут на диспетчере в"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ызывающего. На одноп"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"оточном диспетчере"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" они ч"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ередуются, пока кл"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"иент ждёт "}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ответа, но в"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" разных потоках не выпол"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"няются.\n- Корут"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ина создаётся сразу"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" на каждый id, прос"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"то кл"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"иента"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" вызывают не больше `"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"parallelism` из них."}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" Для очень больших батч"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ей это лишний"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" расход памяти.\n-"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `withTimeout` вн"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"утри клиента бросает"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" `CancellationException`,"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" поэтому так"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ой таймаут прервё"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"т весь `"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"load`, а не даст `"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Failed`. Если н"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"ужен `Failed`,"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" клиент"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":" должен бросать `IO"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Exception`, например `Socket"}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"TimeoutException`."}    }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1       }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":2,"cache_creation_input_tokens":735,"cache_read_input_tokens":66790,"output_tokens":4199,"output_tokens_details":{"thinking_tokens":3007},"iterations":[{"input_tokens":2,"output_tokens":4199,"cache_read_input_tokens":66790,"cache_creation_input_tokens":735,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":735},"type":"message"}]},"context_management":{"applied_edits":[]}            }
+
+event: message_stop
+data: {"type":"message_stop"            }
+

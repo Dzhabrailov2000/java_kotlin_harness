@@ -1,0 +1,7 @@
+(version 1)
+(allow default)
+(deny file-write* (subpath "/Users/dzabrailovramzan"))
+(allow file-write* (subpath "/Users/dzabrailovramzan/.codex") (subpath "/Users/dzabrailovramzan/.claude") (subpath "/Users/dzabrailovramzan/.gradle"))
+(deny file-write* (subpath "/Users/dzabrailovramzan/.gradle/init.d") (subpath "/Users/dzabrailovramzan/.gradle/caches/modules-2/files-2.1") (literal "/Users/dzabrailovramzan/.gradle/init.gradle") (literal "/Users/dzabrailovramzan/.gradle/init.gradle.kts") (literal "/Users/dzabrailovramzan/.gradle/gradle.properties"))
+(deny file-read-data file-write* (subpath "/Users/dzabrailovramzan/IdeaProjects") (subpath "/Users/dzabrailovramzan/.local/share/code-reviews") (subpath "/Users/dzabrailovramzan/.agents") (subpath "/Users/dzabrailovramzan/.claude/skills") (subpath "/Users/dzabrailovramzan/.claude/commands") (subpath "/Users/dzabrailovramzan/.claude/rules") (subpath "/Users/dzabrailovramzan/.claude/plugins") (subpath "/Users/dzabrailovramzan/.codex/memories") (subpath "/Users/dzabrailovramzan/.codex/plugins") (subpath "/Users/dzabrailovramzan/.codex/skills") (literal "/Users/dzabrailovramzan/AGENTS.md") (literal "/Users/dzabrailovramzan/CLAUDE.md") (literal "/Users/dzabrailovramzan/.claude/CLAUDE.md") (literal "/Users/dzabrailovramzan/.codex/AGENTS.md"))
+(deny file-read-data file-write* (require-all (regex #"^/private/tmp/jkh-") (require-not (subpath "/private/tmp/jkh-agent-pilot/trial-bb6426b3ad134073832948b6cc719d0c/workspace"))))

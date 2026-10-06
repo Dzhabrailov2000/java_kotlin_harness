@@ -1,0 +1,5 @@
+Доказанных дефектов не найдено. Сохранен [review.json](/private/tmp/jkh-agent-pilot/trial-ca8fb963ec8745c4938bc56b98837024/workspace/review.json) с пустым findings.
+
+Локальный запуск `./observe-locks` подтвердил: VALIDATE удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT, INSERT и UPDATE. Добавление ограничения завершается отдельным COMMIT до проверки.
+
+Исходники и тесты не изменены.

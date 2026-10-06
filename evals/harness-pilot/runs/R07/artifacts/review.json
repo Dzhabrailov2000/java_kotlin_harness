@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "file": "migrations/V2__balance_check.sql",
+      "line": 3,
+      "severity": "major",
+      "problem": "VALIDATE выполняется в одной транзакции с ADD CONSTRAINT, поэтому полученная при добавлении ограничения AccessExclusiveLock удерживается до COMMIT, включая всё сканирование таблицы. Она несовместима с AccessShareLock обычного SELECT и RowExclusiveLock INSERT/UPDATE. Команда ./observe-locks подтвердила наличие AccessExclusiveLock вместе с ShareUpdateExclusiveLock после VALIDATE и до COMMIT.",
+      "scenario": "На большой accounts длительная валидация удерживает блокировку, из-за которой обычные SELECT, INSERT и UPDATE из других транзакций ожидают завершения миграции. Это нарушает требование о совместимости блокировок во время сканирования.",
+      "fix": "Завершить транзакцию сразу после ADD CONSTRAINT ... NOT VALID, затем выполнить VALIDATE CONSTRAINT в отдельной транзакции. Так AccessExclusiveLock освободится до сканирования, а ShareUpdateExclusiveLock валидации совместима с обычными SELECT, INSERT и UPDATE. Внешний runner по условию не объединяет эти транзакции."
+    }
+  ]
+}

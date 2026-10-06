@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="pilot.CatalogReaderTest" tests="4" skipped="0" failures="4" errors="0" timestamp="2026-10-06T15:53:43.471Z" hostname="w992303it2.corp.tander.ru" time="0.018">
+  <properties/>
+  <testcase name="filtersAfterTrim()" classname="pilot.CatalogReaderTest" time="0.009">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;[a,  , b]&gt; but was: &lt;[, a, b]&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;[a,  , b]&gt; but was: &lt;[, a, b]&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1199)
+	at pilot.CatalogReaderTest.filtersAfterTrim(CatalogReaderTest.java:13)
+</failure>
+  </testcase>
+  <testcase name="closesSuccessfulReadAndStopsEarly()" classname="pilot.CatalogReaderTest" time="0.003">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;1&gt; but was: &lt;0&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;1&gt; but was: &lt;0&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:569)
+	at pilot.CatalogReaderTest.closesSuccessfulReadAndStopsEarly(CatalogReaderTest.java:11)
+</failure>
+  </testcase>
+  <testcase name="preservesPrimaryFailureAndSuppressesCloseFailure()" classname="pilot.CatalogReaderTest" time="0.001">
+    <failure message="org.opentest4j.AssertionFailedError: array lengths differ, expected: &lt;1&gt; but was: &lt;0&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: array lengths differ, expected: &lt;1&gt; but was: &lt;0&gt;
+	at org.junit.jupiter.api.Assertions.assertArrayEquals(Assertions.java:1528)
+	at pilot.CatalogReaderTest.preservesPrimaryFailureAndSuppressesCloseFailure(CatalogReaderTest.java:23)
+</failure>
+  </testcase>
+  <testcase name="doesNotOpenForZeroOrInvalidLimit()" classname="pilot.CatalogReaderTest" time="0.001">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;0&gt; but was: &lt;2&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;0&gt; but was: &lt;2&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:569)
+	at pilot.CatalogReaderTest.doesNotOpenForZeroOrInvalidLimit(CatalogReaderTest.java:18)
+</failure>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

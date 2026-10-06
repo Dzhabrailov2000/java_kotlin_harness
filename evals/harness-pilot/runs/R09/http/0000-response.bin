@@ -1,0 +1,126 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfmHgH3tDjgTBGaSyLPg2","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":2,"cache_creation_input_tokens":3123,"cache_read_input_tokens":5832,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":3123},"output_tokens":8,"service_tier":"standard","inference_geo":"not_available"},"diagnostics":null,"context_management":null}             }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}               }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":50}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":null}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"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"}         }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0  }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_01GAMfnfpTW1CAFc432UbK25","name":"Bash","input":{},"caller":{"type":"direct"}}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":""}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"comma"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"nd\": \"c"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"d /priv"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ate/tmp"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"/jkh-ag"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ent-pil"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ot/tria"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"l-072a2"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"74b1832"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"417eaf6"}              }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"8855053"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"5f01c9/"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"workspa"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ce && l"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"s -la &"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"& find "}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":". -type"}    }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":" f -not"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":" -path "}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"'*/.git"}   }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"/*' | h"}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ead -10"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"0\""}      }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":", \"desc"}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ription"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"\": \"Lis"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"t works"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"pace fi"}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"les\"}"}    }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1     }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":2,"cache_creation_input_tokens":3123,"cache_read_input_tokens":5832,"output_tokens":454,"output_tokens_details":{"thinking_tokens":311},"iterations":[{"input_tokens":2,"output_tokens":454,"cache_read_input_tokens":5832,"cache_creation_input_tokens":3123,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":3123},"type":"message"}]},"context_management":{"applied_edits":[]}     }
+
+event: message_stop
+data: {"type":"message_stop"       }
+

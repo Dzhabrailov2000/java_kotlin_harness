@@ -1,0 +1,46 @@
+[
+  {
+    "returncode": 1,
+    "seconds": 8.426,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": false,
+    "task": "T01",
+    "variant": "base",
+    "expected": false,
+    "workspace": "/private/tmp/jkh-verifier-7bcewu5s",
+    "valid": true
+  },
+  {
+    "returncode": 0,
+    "seconds": 6.432,
+    "command": [
+      "./gradlew",
+      "test",
+      "--no-build-cache"
+    ],
+    "counts": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "executed": true,
+    "pass": true,
+    "task": "T01",
+    "variant": "oracle",
+    "expected": true,
+    "workspace": "/private/tmp/jkh-verifier-myllmtp4",
+    "valid": true
+  }
+]

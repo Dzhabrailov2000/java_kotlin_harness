@@ -1,0 +1,162 @@
+{
+  "R08": {
+    "packet": "P05",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Одно подтвержденное замечание: migrations/V2__balance_check.sql:3 выполняет VALIDATE до COMMIT строки 4, поэтому AccessExclusiveLock от ADD CHECK строки 2 удерживается во время сканирования. Сценарий блокировки SELECT/INSERT/UPDATE соответствует контракту. COMMIT после ADD и отдельная транзакция VALIDATE освобождают сильную блокировку до сканирования. fixture_proof подтверждает оба режима. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-sql-first.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R06": {
+    "packet": "P22",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Заданный дефект найден в релевантной строке migrations/V2__balance_check.sql:3: AccessExclusiveLock получена на ADD CHECK и сохраняется общей транзакцией до COMMIT, а не возникает от самостоятельного VALIDATE. Ожидание конкурентных SELECT/INSERT/UPDATE и исправление COMMIT; BEGIN; между строками 2 и 3 причинно верны и согласуются с fixture_proof. Единственный finding помечен critical; отдельной шкалы различения critical/major в контракте нет. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-sql-first.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R05": {
+    "packet": "P23",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Одно подтвержденное замечание в migrations/V2__balance_check.sql:3: VALIDATE сканирует таблицу при еще удерживаемой AccessExclusiveLock от строки 2, поскольку COMMIT находится только в строке 4. Сценарий ожидания обычных чтений и записей воспроизводит нарушение контракта; отдельные транзакции ADD и VALIDATE устраняют причину, что согласуется с fixture_proof. Единственный finding помечен critical; это не дополнительный дефект и контракт не задает отдельной шкалы severity. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-sql-first.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R07": {
+    "packet": "P29",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Релевантная строка migrations/V2__balance_check.sql:3 и реальный дефект определены правильно: общая транзакция удерживает AccessExclusiveLock от ADD CHECK через весь VALIDATE, блокируя конкурентные SELECT/INSERT/UPDATE. Предложенный COMMIT перед VALIDATE учитывает явно заданное отсутствие внешней оборачивающей транзакции и оставляет на сканировании совместимую ShareUpdateExclusiveLock. Причинность подтверждается fixture_proof. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-sql-first.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R15": {
+    "packet": "P02",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Единственное critical-замечание подтверждено: src/main/kotlin/pilot/PaymentService.kt:6 вызывает newKey() внутри цикла, поэтому после списания и потери ответа попытка с k2 не дедуплицируется с k1. Сценарий двух или трех списаний соответствует контракту. Один ключ до цикла внутри каждого charge устраняет причину и сохраняет независимость разных вызовов. Ложных дополнительных требований нет.",
+    "judge_source": "reviews/blind-payment-defect.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R14": {
+    "packet": "P04",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Дефект, строка src/main/kotlin/pilot/PaymentService.kt:6 и исправление верны: новый idempotencyKey на каждой попытке допускает повторное списание после IOException; ключ должен создаваться один раз на вызов charge. Сценарий RejectedCharge при исчерпании средств является возможным последствием той же ошибки у допустимого шлюза, а не вторым замечанием или требованием проверять баланс в сервисе. Собственные заявленные прогоны участника отдельно не проверялись. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-payment-defect.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R16": {
+    "packet": "P18",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "Единственное critical-замечание соответствует контракту: src/main/kotlin/pilot/PaymentService.kt:6 создает K2 после потерянного ответа на уже выполненное списание K1, поэтому дедупликация по ключу не защищает от второй оплаты. Сценарий воспроизводим, исправление сохраняет один ключ для попыток и новый ключ для отдельного вызова. Не добавлены backoff, валидация или дедупликация разных вызовов. Ложных замечаний нет.",
+    "judge_source": "reviews/blind-payment-defect.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R13": {
+    "packet": "P20",
+    "pass": true,
+    "true_findings": 1,
+    "false_findings": 0,
+    "reason": "В src/main/kotlin/pilot/PaymentService.kt:6 правильно найден новый ключ на каждую попытку. Потери ответа после списания допускают три списания и итоговый IOException при трех потерях. Один ключ до цикла устраняет причину; ключ, не зависящий только от Charge, сохраняет независимость отдельных вызовов. Сценарий RejectedCharge при недостатке средств не является отдельной находкой. Собственные заявленные прогоны участника отдельно не проверялись. Ложных дополнительных замечаний нет.",
+    "judge_source": "reviews/blind-payment-defect.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R22": {
+    "packet": "P07",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен: src/main/kotlin/pilot/PaymentService.kt:5 создает ключ один раз на вызов, строка 7 переиспользует его во всех попытках, а строки 6-8 допускают не более трех попыток и повторяют только IOException. RejectedCharge наследует RuntimeException и не перехватывается. Следующий charge снова вызывает newKey, поэтому отдельные оплаты не склеиваются. Подтвержденных дефектов по заданному контракту нет, ложных замечаний нет.",
+    "judge_source": "reviews/blind-payment-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R23": {
+    "packet": "P12",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен: src/main/kotlin/pilot/PaymentService.kt:5 создает ключ один раз на вызов, строка 7 переиспользует его во всех попытках, а строки 6-8 допускают не более трех попыток и повторяют только IOException. RejectedCharge наследует RuntimeException и не перехватывается. Следующий charge снова вызывает newKey, поэтому отдельные оплаты не склеиваются. Подтвержденных дефектов по заданному контракту нет, ложных замечаний нет.",
+    "judge_source": "reviews/blind-payment-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R21": {
+    "packet": "P14",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен: src/main/kotlin/pilot/PaymentService.kt:5 создает ключ один раз на вызов, строка 7 переиспользует его во всех попытках, а строки 6-8 допускают не более трех попыток и повторяют только IOException. RejectedCharge наследует RuntimeException и не перехватывается. Следующий charge снова вызывает newKey, поэтому отдельные оплаты не склеиваются. Подтвержденных дефектов по заданному контракту нет, ложных замечаний нет.",
+    "judge_source": "reviews/blind-payment-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R24": {
+    "packet": "P31",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен: src/main/kotlin/pilot/PaymentService.kt:5 создает ключ один раз на вызов, строка 7 переиспользует его во всех попытках, а строки 6-8 допускают не более трех попыток и повторяют только IOException. RejectedCharge наследует RuntimeException и не перехватывается. Следующий charge снова вызывает newKey, поэтому отдельные оплаты не склеиваются. Подтвержденных дефектов по заданному контракту нет, ложных замечаний нет.",
+    "judge_source": "reviews/blind-payment-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R31": {
+    "packet": "P08",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет.",
+    "judge_source": "reviews/blind-sql-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R30": {
+    "packet": "P10",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет.",
+    "judge_source": "reviews/blind-sql-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R29": {
+    "packet": "P24",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет.",
+    "judge_source": "reviews/blind-sql-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  },
+  "R32": {
+    "packet": "P32",
+    "pass": true,
+    "true_findings": 0,
+    "false_findings": 0,
+    "reason": "Пустой findings корректен. migrations/V2__balance_check.sql:3 завершает транзакцию ADD CHECK ... NOT VALID и освобождает ее AccessExclusiveLock до VALIDATE в строке 5. Отдельная транзакция валидации удерживает ShareUpdateExclusiveLock, совместимую с обычными SELECT/INSERT/UPDATE. Внешний runner по контракту не объединяет транзакции. fixture_proof подтверждает только ShareUpdateExclusiveLock и blocks_regular_writes=false для исходного SQL. Подтвержденных дефектов и ложных замечаний нет.",
+    "judge_source": "reviews/blind-sql-clean.json",
+    "author_confirmed": true,
+    "author_basis": "Submitted source/contract, actual review text, frozen fixture proof; no added scoring requirement."
+  }
+}

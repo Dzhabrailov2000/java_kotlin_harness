@@ -1,0 +1,174 @@
+package pilot
+
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+
+class BatchLoaderTest {
+  @Test
+  fun `preserves order and duplicates when requests finish in reverse order`() = runBlocking {
+    withTimeout(5_000) {
+      val ids = listOf("first", "second", "first")
+      val requests = Channel<Pair<String, CompletableDeferred<String>>>(Channel.UNLIMITED)
+      val loader = BatchLoader { id ->
+        val response = CompletableDeferred<String>()
+        requests.send(id to response)
+        response.await()
+      }
+
+      val result = async { loader.load(ids, 3) }
+      val pending = ids.map { requests.receive() }
+      assertEquals(ids.sorted(), pending.map { it.first }.sorted())
+      pending.reversed().forEach { (id, response) -> response.complete("value-$id") }
+
+      assertEquals(ids.map { ItemResult.Found(it, "value-$it") }, result.await())
+    }
+  }
+
+  @Test
+  fun `uses available parallelism without exceeding the limit`() = runBlocking {
+    withTimeout(5_000) {
+      val ids = (1..7).map { it.toString() }
+      for (parallelism in listOf(1, 2, 4, 20)) {
+        val active = AtomicInteger()
+        val peak = AtomicInteger()
+        val started = Channel<Unit>(Channel.UNLIMITED)
+        val releases = Channel<Unit>(Channel.UNLIMITED)
+        val loader = BatchLoader { id ->
+          val count = active.incrementAndGet()
+          peak.updateAndGet { maxOf(it, count) }
+          try {
+            started.send(Unit)
+            releases.receive()
+            "value-$id"
+          } finally {
+            active.decrementAndGet()
+          }
+        }
+
+        val result = async { loader.load(ids, parallelism) }
+        repeat(minOf(parallelism, ids.size)) { started.receive() }
+        repeat(ids.size) { releases.send(Unit) }
+
+        assertEquals(ids.map { ItemResult.Found(it, "value-$it") }, result.await())
+        assertEquals(minOf(parallelism, ids.size), peak.get())
+        assertEquals(0, active.get())
+      }
+    }
+  }
+
+  @Test
+  fun `IOException fails only its own item`() = runBlocking {
+    withTimeout(5_000) {
+      val loader = BatchLoader { id ->
+        if (id == "broken") throw IOException("unavailable")
+        "value-$id"
+      }
+
+      assertEquals(
+        listOf(
+          ItemResult.Found("before", "value-before"),
+          ItemResult.Failed("broken"),
+          ItemResult.Found("after", "value-after"),
+          ItemResult.Failed("broken"),
+        ),
+        loader.load(listOf("before", "broken", "after", "broken"), 2),
+      )
+    }
+  }
+
+  @Test
+  fun `client cancellation and programming errors propagate and cancel siblings`() {
+    val failures = listOf(
+      CancellationException("client cancelled"),
+      IllegalStateException("client bug"),
+      AssertionError("client error"),
+    )
+    for (failure in failures) {
+      val started = CompletableDeferred<Unit>()
+      val stopped = CompletableDeferred<Unit>()
+      val loader = BatchLoader { id ->
+        if (id == "waiting") {
+          try {
+            started.complete(Unit)
+            awaitCancellation()
+          } finally {
+            stopped.complete(Unit)
+          }
+        } else {
+          started.await()
+          throw failure
+        }
+      }
+
+      val thrown = assertThrows(failure.javaClass) {
+        runBlocking {
+          withTimeout(5_000) { loader.load(listOf("waiting", "broken"), 2) }
+        }
+      }
+
+      assertEquals(failure.message, thrown.message)
+      assertTrue(stopped.isCompleted)
+    }
+  }
+
+  @Test
+  fun `caller cancellation stops active requests and does not return results`() = runBlocking {
+    withTimeout(5_000) {
+      val started = Channel<Unit>(Channel.UNLIMITED)
+      val stopped = AtomicInteger()
+      var returned = false
+      val loader = BatchLoader {
+        try {
+          started.send(Unit)
+          awaitCancellation()
+        } finally {
+          stopped.incrementAndGet()
+        }
+      }
+
+      val job = async {
+        loader.load(listOf("first", "second", "queued"), 2)
+        returned = true
+      }
+      repeat(2) { started.receive() }
+      job.cancelAndJoin()
+
+      assertTrue(job.isCancelled)
+      assertTrue(!returned)
+      assertEquals(2, stopped.get())
+      assertTrue(started.tryReceive().isFailure)
+    }
+  }
+
+  @Test
+  fun `rejects nonpositive parallelism before calling the client even for empty input`() {
+    var calls = 0
+    val loader = BatchLoader { calls++; it }
+    for (parallelism in listOf(0, -1, Int.MIN_VALUE)) {
+      for (ids in listOf(emptyList(), listOf("item"))) {
+        assertThrows(IllegalArgumentException::class.java) {
+          runBlocking { loader.load(ids, parallelism) }
+        }
+      }
+    }
+    assertEquals(0, calls)
+  }
+
+  @Test
+  fun `empty input returns an empty list without calling the client`() = runBlocking {
+    val loader = BatchLoader { error("Client must not be called") }
+    assertEquals(emptyList<ItemResult>(), loader.load(emptyList(), 1))
+  }
+}

@@ -1,0 +1,10 @@
+Реализован `POST /exports`:
+
+- Проверка JSON, trim `accountId`, форматы `csv` и `json`.
+- Неверный ввод: 400 без вызова очереди.
+- Успех: один вызов очереди, 202, `Location: /exports/{id}` и JSON с `id` и `state: "pending"`.
+- `QueueUnavailableException`: 503 с пустым телом.
+
+Контракт `ExportQueue` сохранён. Добавлены HTTP-тесты; существующие тесты и сборка не изменены.
+
+`./gradlew test` — успешно.

@@ -1,0 +1,218 @@
+{
+  "completed": 32,
+  "scored": 32,
+  "complete": true,
+  "groups": {
+    "claude-A": {
+      "code": 3,
+      "bugs": 2,
+      "clean": 2,
+      "completed": 8,
+      "valid": 7,
+      "failed_attempts": 1,
+      "input": 1744278,
+      "output": 148298,
+      "seconds": 6339.775000000001,
+      "median": 222.605,
+      "skill_used": 0,
+      "true_findings": 2,
+      "false_findings": 0,
+      "hooks": 0
+    },
+    "claude-B": {
+      "code": 3,
+      "bugs": 2,
+      "clean": 2,
+      "completed": 8,
+      "valid": 7,
+      "failed_attempts": 1,
+      "input": 3372373,
+      "output": 226621,
+      "seconds": 6131.889,
+      "median": 363.337,
+      "skill_used": 8,
+      "true_findings": 2,
+      "false_findings": 0,
+      "hooks": 14
+    },
+    "codex-A": {
+      "code": 4,
+      "bugs": 2,
+      "clean": 2,
+      "completed": 8,
+      "valid": 8,
+      "failed_attempts": 0,
+      "input": 525555,
+      "output": 16595,
+      "seconds": 701.341,
+      "median": 83.714,
+      "skill_used": 0,
+      "true_findings": 2,
+      "false_findings": 0,
+      "hooks": 0
+    },
+    "codex-B": {
+      "code": 4,
+      "bugs": 2,
+      "clean": 2,
+      "completed": 8,
+      "valid": 8,
+      "failed_attempts": 0,
+      "input": 1386069,
+      "output": 24334,
+      "seconds": 1051.5720000000001,
+      "median": 134.97,
+      "skill_used": 8,
+      "true_findings": 2,
+      "false_findings": 0,
+      "hooks": 0
+    }
+  },
+  "posthoc_findings": [
+    {
+      "id": "stream-parallel-exception",
+      "runs": [
+        "R09",
+        "R12"
+      ],
+      "status": "Дополнительное наблюдение после просмотра ответов; основной балл не изменен"
+    },
+    {
+      "id": "rest-json-scalar-coercion",
+      "runs": [
+        "R26",
+        "R27",
+        "R28"
+      ],
+      "status": "Дополнительная проверка после серии; основной балл не изменен"
+    }
+  ],
+  "transport_affected_attempts": [
+    "R17",
+    "R18",
+    "R25"
+  ],
+  "skill_coverage": {
+    "java-kotlin-build-dependencies": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-caching": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-collections": {
+      "claude": 1,
+      "codex": 1
+    },
+    "java-kotlin-concurrency": {
+      "claude": 1,
+      "codex": 1
+    },
+    "java-kotlin-configuration": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-contracts": {
+      "claude": 2,
+      "codex": 2
+    },
+    "java-kotlin-domain-modeling": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-errors": {
+      "claude": 4,
+      "codex": 1
+    },
+    "java-kotlin-generics": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-interop": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-messaging": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-modularity": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-naming": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-nullability": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-numeric-modeling": {
+      "claude": 1,
+      "codex": 1
+    },
+    "java-kotlin-observability": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-performance": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-persistence": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-reactive": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-refactoring": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-resilience": {
+      "claude": 2,
+      "codex": 1
+    },
+    "java-kotlin-resources": {
+      "claude": 1,
+      "codex": 1
+    },
+    "java-kotlin-rest-api": {
+      "claude": 1,
+      "codex": 1
+    },
+    "java-kotlin-security": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-serialization": {
+      "claude": 1,
+      "codex": 0
+    },
+    "java-kotlin-solid": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-sql-migrations": {
+      "claude": 2,
+      "codex": 2
+    },
+    "java-kotlin-testing": {
+      "claude": 4,
+      "codex": 4
+    },
+    "java-kotlin-time": {
+      "claude": 0,
+      "codex": 0
+    },
+    "java-kotlin-validation": {
+      "claude": 1,
+      "codex": 0
+    }
+  },
+  "skills_observed": 17
+}

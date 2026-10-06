@@ -1,0 +1,102 @@
+event: message_start
+data: {"type":"message_start","message":{"model":"claude-opus-5-5","id":"msg_011CfmFqqmfdV5kqoAX3XMQr","type":"message","role":"assistant","content":[],"container":null,"stop_reason":null,"stop_sequence":null,"stop_details":null,"usage":{"input_tokens":2,"cache_creation_input_tokens":439,"cache_read_input_tokens":10257,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":439},"output_tokens":2,"service_tier":"standard","inference_geo":"not_available"},"diagnostics":null,"context_management":null}     }
+
+event: content_block_start
+data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}   }
+
+event: ping
+data: {"type": "ping"}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":50}       }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":100}}
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"","estimated_tokens":null}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":0,"delta":{"type":"signature_delta","signature":"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"}               }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":0   }
+
+event: content_block_start
+data: {"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_01TYovG3kHRxBtkqgSaT5MV1","name":"Write","input":{},"caller":{"type":"direct"}}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":""}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"{\"file_"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"path\": "}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"\"/priva"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"te/tmp/"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"jkh-age"}               }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"nt-pilo"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"t/20261"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"006T155"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"556-cla"}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ude-B/w"}         }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"orkspac"}            }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"e/probe"} }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"-output"}          }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":".txt\""}             }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":", \"cont"}     }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"ent\": \""}           }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"FIXTURE"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"_INPUT_"}  }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"17\\n42\\"}        }
+
+event: content_block_delta
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"n\"}"}        }
+
+event: content_block_stop
+data: {"type":"content_block_stop","index":1          }
+
+event: message_delta
+data: {"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null,"stop_details":null,"container":null},"usage":{"input_tokens":2,"cache_creation_input_tokens":439,"cache_read_input_tokens":10257,"output_tokens":556,"output_tokens_details":{"thinking_tokens":431},"iterations":[{"input_tokens":2,"output_tokens":556,"cache_read_input_tokens":10257,"cache_creation_input_tokens":439,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":439},"type":"message"}]},"context_management":{"applied_edits":[]} }
+
+event: message_stop
+data: {"type":"message_stop"         }
+

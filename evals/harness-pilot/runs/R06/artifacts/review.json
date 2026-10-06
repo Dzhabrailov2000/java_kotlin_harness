@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "file": "migrations/V2__balance_check.sql",
+      "line": 3,
+      "severity": "critical",
+      "problem": "VALIDATE CONSTRAINT (строка 3) выполняется в той же явной транзакции BEGIN/COMMIT (строки 1 и 4), что и ADD CONSTRAINT ... NOT VALID (строка 2). ADD CONSTRAINT для CHECK берет на accounts блокировку ACCESS EXCLUSIVE, и она держится до COMMIT, то есть все время полного сканирования таблицы в VALIDATE. ACCESS EXCLUSIVE несовместима с ACCESS SHARE (SELECT) и ROW EXCLUSIVE (INSERT, UPDATE), поэтому NOT VALID не дает эффекта. ./observe-locks после VALIDATE и до COMMIT показывает LOCK:AccessExclusiveLock и LOCK:ShareUpdateExclusiveLock.",
+      "scenario": "Миграцию запускают на большой таблице accounts под рабочей нагрузкой. Строка 2 быстро берет ACCESS EXCLUSIVE, строка 3 начинает полное сканирование. Пока оно идет, все SELECT, INSERT и UPDATE по accounts ждут в очереди блокировок до COMMIT в строке 4: чтение и запись балансов недоступны на все время VALIDATE, у приложения копятся соединения и таймауты.",
+      "fix": "Разнести шаги по отдельным транзакциям, например вставить COMMIT; BEGIN; между строками 2 и 3: BEGIN; ALTER TABLE accounts ADD CONSTRAINT balance_nonnegative CHECK (balance >= 0) NOT VALID; COMMIT; BEGIN; ALTER TABLE accounts VALIDATE CONSTRAINT balance_nonnegative; COMMIT;. Тогда ACCESS EXCLUSIVE держится только на короткое изменение каталога, а сканирование VALIDATE идет под SHARE UPDATE EXCLUSIVE, совместимой с SELECT, INSERT и UPDATE. На локальном наблюдателе для такого SQL после VALIDATE видна только LOCK:ShareUpdateExclusiveLock."
+    }
+  ]
+}

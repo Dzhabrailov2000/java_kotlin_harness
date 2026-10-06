@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+import json
+import urllib.request
+from pathlib import Path
+runtime=json.loads(Path('.pilot-runtime.json').read_text())
+body=json.dumps({'sql':Path('migrations/V2__balance_check.sql').read_text()}).encode()
+request=urllib.request.Request(runtime['sql_observer']+'/observe',data=body,headers={'Content-Type':'application/json'})
+with urllib.request.urlopen(request) as response:
+    result=json.load(response)
+print(result['stdout'],end='')
+print(result['stderr'],end='')
+raise SystemExit(result['returncode'])

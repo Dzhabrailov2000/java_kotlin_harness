@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="pilot.RestJsonProbeTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-06T19:57:01.549Z" hostname="w992303it2.corp.tander.ru" time="0.495">
+  <properties/>
+  <testcase name="records scalar coercion without assigning a benchmark score()" classname="pilot.RestJsonProbeTest" time="0.491"/>
+  <system-out><![CDATA[22:57:01.900 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:57:01.902 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:57:01.903 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+POSTHOC_JSON {"input":"{\"accountId\":\"123\",\"format\":\"csv\"}","status":202,"queue_calls":["123/csv"]}
+22:57:02.021 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:57:02.022 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:57:02.022 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 0 ms
+POSTHOC_JSON {"input":"{\"accountId\":123,\"format\":\"csv\"}","status":400,"queue_calls":[]}
+22:57:02.038 [Test worker] INFO org.springframework.mock.web.MockServletContext -- Initializing Spring TestDispatcherServlet ''
+22:57:02.038 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Initializing Servlet ''
+22:57:02.039 [Test worker] INFO org.springframework.test.web.servlet.TestDispatcherServlet -- Completed initialization in 1 ms
+POSTHOC_JSON {"input":"{\"accountId\":true,\"format\":\"csv\"}","status":400,"queue_calls":[]}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

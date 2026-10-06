@@ -1,0 +1,9 @@
+Реализовано и проверено локально в [ExportController.kt](/private/tmp/jkh-agent-pilot/trial-b596f02b16b84b4089c01ebf71f75ced/workspace/src/main/kotlin/pilot/ExportController.kt).
+
+- Неверный ввод возвращает 400 без вызова очереди.
+- Корректный запрос вызывает очередь один раз с нормализованным accountId и возвращает 202, Location и состояние pending.
+- QueueUnavailableException возвращает 503 без текста исключения.
+
+Контракт ExportQueue сохранен. Сборка и существующие тесты не изменены.
+
+`./gradlew test`: все 5 тестов прошли, включая 4 добавленных.

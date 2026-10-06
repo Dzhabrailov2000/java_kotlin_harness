@@ -1,0 +1,58 @@
+{
+  "id": "P15",
+  "task": "T02",
+  "kind": "implement",
+  "instruction": "Реализуй SalesReport.summarize. Вход - список продаж, в котором ключ продажи (accountId, orderId).\nОдинаковая пара и полностью одинаковые поля означают повтор доставки и учитываются один раз.\nЕсли поля для этой пары различаются, брось IllegalArgumentException. Одинаковый orderId у разных\naccountId - разные продажи. Итог сгруппирован по accountId и currency, отсортирован сначала по\naccountId, затем по currency. Суммы BigDecimal складываются без округления, количество означает\nчисло уникальных заказов. Эквивалентные суммы 2.0 и 2.00 считаются одинаковыми. Пустой вход дает\nпустой результат. Вход не изменять. Сохрани публичные типы, используй понятные промежуточные\nсущности вместо позиционных списков и многослойных нетипизированных Map. Запусти тесты.\n",
+  "original": {
+    "src/main/kotlin/pilot/SalesReport.kt": "package pilot\nimport java.math.BigDecimal\ndata class Sale(val accountId:String,val orderId:String,val currency:String,val amount:BigDecimal)\ndata class SalesTotal(val accountId:String,val currency:String,val orders:Int,val amount:BigDecimal)\nclass SalesReport { fun summarize(sales:List<Sale>):List<SalesTotal> = TODO(\"implement\") }\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/SalesReport.kt": "package pilot\nimport java.math.BigDecimal\ndata class Sale(val accountId:String,val orderId:String,val currency:String,val amount:BigDecimal)\ndata class SalesTotal(val accountId:String,val currency:String,val orders:Int,val amount:BigDecimal)\n\nclass SalesReport {\n    fun summarize(sales: List<Sale>): List<SalesTotal> =\n        deduplicate(sales)\n            .groupBy { TotalKey(it.accountId, it.currency) }\n            .map { (key, group) ->\n                SalesTotal(\n                    accountId = key.accountId,\n                    currency = key.currency,\n                    orders = group.size,\n                    amount = group.sumOf { it.amount },\n                )\n            }\n            .sortedWith(compareBy({ it.accountId }, { it.currency }))\n\n    private fun deduplicate(sales: List<Sale>): List<Sale> =\n        sales\n            .groupBy { SaleKey(it.accountId, it.orderId) }\n            .map { (key, deliveries) ->\n                val original = deliveries.first()\n                require(deliveries.all { it.hasSameFieldsAs(original) }) { \"Conflicting sales for $key\" }\n                original\n            }\n}\n\nprivate data class SaleKey(val accountId: String, val orderId: String)\n\nprivate data class TotalKey(val accountId: String, val currency: String)\n\n// compareTo вместо equals: equals различает 2.0 и 2.00 по scale, а это одна сумма.\nprivate fun Sale.hasSameFieldsAs(other: Sale): Boolean =\n    accountId == other.accountId &&\n        orderId == other.orderId &&\n        currency == other.currency &&\n        amount.compareTo(other.amount) == 0\n"
+  },
+  "review": null,
+  "rubric": {
+    "quality": [
+      "Named keys rather than List<Any> or positional containers.",
+      "No monetary rounding or loss of data hidden behind readability."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 4,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T02",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T02",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protected_file_changes": []
+}

@@ -1,0 +1,53 @@
+{
+  "id": "P16",
+  "task": "T03",
+  "kind": "repair",
+  "instruction": "Исправь BatchLoader. load сохраняет порядок и повторы ids, одновременно выполняет не больше\nparallelism вызовов клиента и использует параллелизм при нескольких элементах. IOException\nпревращается в Failed только для этого элемента. CancellationException и ошибки программы\nдолжны распространяться вызывающему; отмена не является результатом Failed. parallelism > 0,\nиначе IllegalArgumentException до вызова клиента. Сигнатуры и ItemResult сохраняются.\nНе используй глобальный scope и не блокируй поток. Запусти тесты.\n",
+  "original": {
+    "src/main/kotlin/pilot/BatchLoader.kt": "package pilot\nimport kotlinx.coroutines.*\nimport java.io.IOException\nfun interface ItemClient { suspend fun fetch(id:String):String }\nsealed interface ItemResult {\n  data class Found(val id:String,val value:String):ItemResult\n  data class Failed(val id:String):ItemResult\n}\nclass BatchLoader(private val client:ItemClient) {\n  suspend fun load(ids:List<String>,parallelism:Int):List<ItemResult> = coroutineScope {\n    ids.map { id -> async { runCatching { ItemResult.Found(id,client.fetch(id)) }.getOrElse { ItemResult.Failed(id) } } }.awaitAll()\n  }\n}\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/BatchLoader.kt": "package pilot\nimport kotlinx.coroutines.*\nimport kotlinx.coroutines.sync.Semaphore\nimport kotlinx.coroutines.sync.withPermit\nimport java.io.IOException\nfun interface ItemClient { suspend fun fetch(id:String):String }\nsealed interface ItemResult {\n  data class Found(val id:String,val value:String):ItemResult\n  data class Failed(val id:String):ItemResult\n}\nclass BatchLoader(private val client:ItemClient) {\n  suspend fun load(ids:List<String>,parallelism:Int):List<ItemResult> = coroutineScope {\n    require(parallelism > 0) { \"parallelism must be positive\" }\n    val semaphore = Semaphore(parallelism)\n    ids.map { id ->\n      async {\n        semaphore.withPermit {\n          try {\n            ItemResult.Found(id,client.fetch(id))\n          } catch (_: IOException) {\n            ItemResult.Failed(id)\n          }\n        }\n      }\n    }.awaitAll()\n  }\n}\n"
+  },
+  "review": null,
+  "rubric": {},
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 5,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T03",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T03",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protected_file_changes": []
+}

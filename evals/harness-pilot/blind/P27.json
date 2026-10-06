@@ -1,0 +1,58 @@
+{
+  "id": "P27",
+  "task": "T02",
+  "kind": "implement",
+  "instruction": "Реализуй SalesReport.summarize. Вход - список продаж, в котором ключ продажи (accountId, orderId).\nОдинаковая пара и полностью одинаковые поля означают повтор доставки и учитываются один раз.\nЕсли поля для этой пары различаются, брось IllegalArgumentException. Одинаковый orderId у разных\naccountId - разные продажи. Итог сгруппирован по accountId и currency, отсортирован сначала по\naccountId, затем по currency. Суммы BigDecimal складываются без округления, количество означает\nчисло уникальных заказов. Эквивалентные суммы 2.0 и 2.00 считаются одинаковыми. Пустой вход дает\nпустой результат. Вход не изменять. Сохрани публичные типы, используй понятные промежуточные\nсущности вместо позиционных списков и многослойных нетипизированных Map. Запусти тесты.\n",
+  "original": {
+    "src/main/kotlin/pilot/SalesReport.kt": "package pilot\nimport java.math.BigDecimal\ndata class Sale(val accountId:String,val orderId:String,val currency:String,val amount:BigDecimal)\ndata class SalesTotal(val accountId:String,val currency:String,val orders:Int,val amount:BigDecimal)\nclass SalesReport { fun summarize(sales:List<Sale>):List<SalesTotal> = TODO(\"implement\") }\n"
+  },
+  "submitted": {
+    "src/main/kotlin/pilot/SalesReport.kt": "package pilot\n\nimport java.math.BigDecimal\n\ndata class Sale(val accountId:String,val orderId:String,val currency:String,val amount:BigDecimal)\ndata class SalesTotal(val accountId:String,val currency:String,val orders:Int,val amount:BigDecimal)\n\nclass SalesReport {\n    fun summarize(sales: List<Sale>): List<SalesTotal> {\n        val uniqueSales = mutableMapOf<SaleKey, Sale>()\n        for (sale in sales) {\n            val key = SaleKey(sale.accountId, sale.orderId)\n            val previous = uniqueSales[key]\n            if (previous == null) {\n                uniqueSales[key] = sale\n            } else {\n                require(previous.currency == sale.currency && previous.amount.compareTo(sale.amount) == 0) {\n                    \"Conflicting sales for accountId=${sale.accountId}, orderId=${sale.orderId}\"\n                }\n            }\n        }\n\n        return uniqueSales.values\n            .groupBy { AccountCurrency(it.accountId, it.currency) }\n            .map { (key, orders) ->\n                SalesTotal(\n                    accountId = key.accountId,\n                    currency = key.currency,\n                    orders = orders.size,\n                    amount = orders.sumOf { it.amount },\n                )\n            }\n            .sortedWith(compareBy<SalesTotal> { it.accountId }.thenBy { it.currency })\n    }\n\n    private data class SaleKey(val accountId: String, val orderId: String)\n\n    private data class AccountCurrency(val accountId: String, val currency: String)\n}\n"
+  },
+  "review": null,
+  "rubric": {
+    "quality": [
+      "Named keys rather than List<Any> or positional containers.",
+      "No monetary rounding or loss of data hidden behind readability."
+    ]
+  },
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 4,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T02",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T02",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protected_file_changes": []
+}

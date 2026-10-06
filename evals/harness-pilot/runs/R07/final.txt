@@ -1,0 +1,5 @@
+Сохранён [review.json](/private/tmp/jkh-agent-pilot/trial-5580dc2913334ebaa151dc356458e67f/workspace/review.json): один дефект уровня `major`.
+
+`ADD CONSTRAINT` и `VALIDATE` находятся в одной транзакции, поэтому `AccessExclusiveLock` сохраняется на всё сканирование и блокирует `SELECT`, `INSERT`, `UPDATE`. Подтверждено через `./observe-locks`. Нужно завершить транзакцию добавления перед валидацией.
+
+Исходники и тесты не изменены.

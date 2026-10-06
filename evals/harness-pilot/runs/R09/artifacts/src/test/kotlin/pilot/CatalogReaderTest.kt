@@ -1,0 +1,79 @@
+package pilot
+
+import java.io.IOException
+import java.io.UncheckedIOException
+import java.util.function.Supplier
+import java.util.stream.Stream
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Test
+
+class CatalogReaderTest {
+    private val reader = CatalogReader()
+
+    @Test
+    fun `returns first non-empty trimmed lines in source order with duplicates`() {
+        val source = TrackedSource { Stream.of(" b ", "", "a", "  ", "\tb", "a", "c") }
+
+        assertEquals(listOf("b", "a", "b"), reader.read(source, 3))
+        assertEquals(1, source.closeCount)
+    }
+
+    @Test
+    fun `treats line as empty only when trim leaves nothing`() {
+        // trim срезает только символы до U+0020, а isBlank смотрит на Unicode-пробелы: на NUL и U+3000 они расходятся
+        val source = TrackedSource { Stream.of("\u0000", "　", "x") }
+
+        assertEquals(listOf("　", "x"), reader.read(source, 5))
+    }
+
+    @Test
+    fun `rejects negative limit before opening source`() {
+        val source = TrackedSource { Stream.of("a") }
+
+        assertThrows(IllegalArgumentException::class.java) { reader.read(source, -1) }
+        assertEquals(0, source.openCount)
+    }
+
+    @Test
+    fun `returns empty list for zero limit without opening source`() {
+        val source = TrackedSource { Stream.of("a") }
+
+        assertEquals(emptyList<String>(), reader.read(source, 0))
+        assertEquals(0, source.openCount)
+    }
+
+    @Test
+    fun `reads only the needed prefix of an infinite source and closes it`() {
+        val source = TrackedSource { Stream.iterate(1) { it + 1 }.map { if (it % 2 == 0) " " else "line $it" } }
+
+        assertEquals(listOf("line 1", "line 3", "line 5"), reader.read(source, 3))
+        assertEquals(1, source.closeCount)
+    }
+
+    @Test
+    fun `closes source on traversal failure and rethrows it with close failure suppressed`() {
+        val traversalFailure = UncheckedIOException(IOException("read failed"))
+        val closeFailure = IllegalStateException("close failed")
+        val source = TrackedSource {
+            Stream.of("a", "b").map { if (it == "b") throw traversalFailure else it }.onClose { throw closeFailure }
+        }
+
+        val thrown = assertThrows(UncheckedIOException::class.java) { reader.read(source, 5) }
+
+        assertSame(traversalFailure, thrown)
+        assertEquals(listOf(closeFailure), thrown.suppressedExceptions)
+        assertEquals(1, source.closeCount)
+    }
+
+    private class TrackedSource(private val open: () -> Stream<String>) : Supplier<Stream<String>> {
+        var openCount = 0
+        var closeCount = 0
+
+        override fun get(): Stream<String> {
+            openCount++
+            return open().onClose { closeCount++ }
+        }
+    }
+}

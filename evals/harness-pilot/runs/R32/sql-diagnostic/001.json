@@ -1,0 +1,10 @@
+{
+  "input": {
+    "sql": "BEGIN;\nALTER TABLE accounts ADD CONSTRAINT balance_nonnegative CHECK (balance >= 0) NOT VALID;\nCOMMIT;\nBEGIN;\nALTER TABLE accounts VALIDATE CONSTRAINT balance_nonnegative;\nCOMMIT;\n"
+  },
+  "result": {
+    "returncode": 0,
+    "stdout": "DROP TABLE\nCREATE TABLE\nINSERT 0 1\nBEGIN\nALTER TABLE\nCOMMIT\nBEGIN\nALTER TABLE\nLOCK:ShareUpdateExclusiveLock\nCOMMIT\n",
+    "stderr": "NOTICE:  table \"accounts\" does not exist, skipping\n"
+  }
+}

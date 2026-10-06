@@ -1,0 +1,53 @@
+{
+  "id": "P13",
+  "task": "T04",
+  "kind": "repair",
+  "instruction": "Исправь CatalogReader.read. Источник возвращает Stream, владение которым переходит методу.\nНужно вернуть первые limit непустых после trim строк, порядок и дубликаты сохранить. limit >= 0,\nотрицательное значение дает IllegalArgumentException до открытия источника. При limit == 0\nисточник вообще не открывается. Открытый stream всегда закрывается, включая ошибку обхода.\nНе материализуй весь источник: он может быть бесконечным. Первичное исключение обхода должно\nсохраняться, а ошибка закрытия быть suppressed. Не перехватывай ошибки в пустой результат.\nПубличную сигнатуру сохрани. Запусти тесты.\n",
+  "original": {
+    "src/main/java/pilot/CatalogReader.java": "package pilot;\nimport java.io.*;\nimport java.util.*;\nimport java.util.function.Supplier;\nimport java.util.stream.Stream;\npublic final class CatalogReader {\n  public List<String> read(Supplier<Stream<String>> source, int limit) {\n    return source.get().filter(line -> !line.isBlank()).map(String::trim).limit(limit).toList();\n  }\n}\n"
+  },
+  "submitted": {
+    "src/main/java/pilot/CatalogReader.java": "package pilot;\nimport java.io.*;\nimport java.util.*;\nimport java.util.function.Supplier;\nimport java.util.stream.Stream;\npublic final class CatalogReader {\n  public List<String> read(Supplier<Stream<String>> source, int limit) {\n    if (limit < 0) {\n      throw new IllegalArgumentException(\"limit must not be negative: \" + limit);\n    }\n    if (limit == 0) {\n      return List.of();\n    }\n    try (Stream<String> lines = source.get()) {\n      return lines.map(String::trim).filter(line -> !line.isEmpty()).limit(limit).toList();\n    }\n  }\n}\n"
+  },
+  "review": null,
+  "rubric": {},
+  "fixture_proof": [
+    {
+      "returncode": 1,
+      "counts": {
+        "tests": 5,
+        "failures": 4,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": false,
+      "task": "T04",
+      "variant": "base",
+      "expected": false,
+      "valid": true
+    },
+    {
+      "returncode": 0,
+      "counts": {
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "executed": true,
+      "pass": true,
+      "task": "T04",
+      "variant": "oracle",
+      "expected": true,
+      "valid": true
+    }
+  ],
+  "grader_counts": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "protected_file_changes": []
+}
