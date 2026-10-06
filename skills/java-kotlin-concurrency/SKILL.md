@@ -63,7 +63,11 @@ description: "Проектирует и проверяет конкурентн�
   Проверь поддержку отмены клиентом. NonCancellable оставляй для необходимого ограниченного cleanup. [S2] [S11] [S7]
 
 - Virtual threads, если доступны в JDK проекта, уменьшают цену ожидания, но не увеличивают емкость
-  БД и не устраняют гонки. Не меняй concurrency-модель без измеренной причины и совместимости. [S8]
+  БД и не устраняют гонки. На JDK 21-23 блокирующий вызов внутри `synchronized` закрепляет виртуальный
+  поток за потоком-носителем на все время ожидания; при частых долгих блокировках замени `synchronized`
+  на `ReentrantLock` или вынеси вызов из блока. Проверь и неявный `synchronized`: вычисление
+  `ConcurrentHashMap.compute`, загрузчик кэша. С JDK 24 `synchronized` поток не закрепляет, поэтому
+  сверяй версию JDK проекта. Не меняй concurrency-модель без измеренной причины и совместимости. [S8] [S14]
 
 ## Примеры
 
@@ -98,12 +102,13 @@ Thread.sleep не доказывает отсутствие гонки. Вирт
 - [S5] - StateFlow.update: повтор lambda.
 - [S6] - GlobalScope: отсутствие structured lifetime.
 - [S7] - Kotlin coroutines: failure, cancellation и supervision.
-- [S8] - JDK virtual threads: limits и blocking.
+- [S8] - JDK 21 virtual threads: pinning, limits и blocking.
 - [S9] - ensureActive: кооперативная отмена.
 - [S10] - InterruptedException: interrupt status.
 - [S11] - OkHttp Call: ошибка после удаленного принятия и close.
 - [S12] - Richardson: outbox и отдельные внешние эффекты.
 - [S13] - kotlinx.coroutines.test: virtual time и threads.
+- [S14] - JEP 491: synchronized без закрепления виртуального потока с JDK 24.
 
 [S1]: https://docs.spring.io/spring-framework/reference/web/webflux/new-framework.html#webflux-concurrency-model
 [S2]: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/run-interruptible.html
@@ -112,9 +117,10 @@ Thread.sleep не доказывает отсутствие гонки. Вирт
 [S5]: https://github.com/Kotlin/kotlinx.coroutines/blob/bd2e9a1b90400fb7b2fa4f8731e7d8148799ab73/kotlinx-coroutines-core/common/src/flow/StateFlow.kt#L224
 [S6]: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-global-scope/
 [S7]: https://kotlinlang.org/docs/exception-handling.html
-[S8]: https://docs.oracle.com/en/java/javase/25/core/virtual-threads.html
+[S8]: https://docs.oracle.com/en/java/javase/21/core/virtual-threads.html
 [S9]: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html
 [S10]: https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/InterruptedException.html
 [S11]: https://github.com/lysine-dev/okhttp/blob/ac3d46c892ef486eca5bd84259dfb9bc8778d909/okhttp/src/commonJvmAndroid/kotlin/okhttp3/Call.kt#L33
 [S12]: https://microservices.io/patterns/data/transactional-outbox.html
 [S13]: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-test/
+[S14]: https://openjdk.org/jeps/491

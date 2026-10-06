@@ -72,7 +72,7 @@ Preemptive timeout может исполнить тест на другом thre
 дает проверку точного типа, когда это действительно обещание:
 
 ~~~kotlin
-val failure = assertThrowsExactly<InvalidRecordException> {
+val failure = assertThrowsExactly(InvalidRecordException::class.java) {
     parser.parse(invalidRecord)
 }
 assertEquals("missing_id", failure.code)
